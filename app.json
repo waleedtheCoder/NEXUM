@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "NEXUM",
+    "slug": "nexum-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#00A859"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.nexum.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#00A859"
+      },
+      "package": "com.nexum.app"
+    },
+    "fonts": [
+      {
+        "Montserrat-Regular": "./assets/fonts/Montserrat-Regular.ttf",
+        "Montserrat-Medium": "./assets/fonts/Montserrat-Medium.ttf",
+        "Montserrat-SemiBold": "./assets/fonts/Montserrat-SemiBold.ttf",
+        "Montserrat-Bold": "./assets/fonts/Montserrat-Bold.ttf"
+      }
+    ],
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}
