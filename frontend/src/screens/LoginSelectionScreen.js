@@ -16,8 +16,8 @@ export default function LoginSelectionScreen() {
     <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <View style={styles.topRow}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="close" size={24} color="#fff" />
+        <TouchableOpacity onPress={() => navigation.navigate('Welcome')}>
+        <Text>✕</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setLang(isUrdu ? 'en' : 'ur')}>
           <Text style={styles.langToggle}>

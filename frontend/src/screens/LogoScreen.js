@@ -14,17 +14,18 @@ export default function LogoScreen() {
     const timer = setTimeout(async () => {
       if (isLoading) return;
       const hasSeenOnboarding = await AsyncStorage.getItem('has_seen_onboarding');
+
       if (isLoggedIn) {
         navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
-      } else if (!hasSeenOnboarding) {
-        navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
       } else {
-        navigation.reset({ index: 0, routes: [{ name: 'LoginSignupOption' }] });
+        // Always go through AuthStack first
+        navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
       }
     }, 2000);
     return () => clearTimeout(timer);
   }, [isLoading, isLoggedIn]);
 
+  // ✅ You must return the JSX
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 8 }]}>
       <View style={styles.center}>
