@@ -99,6 +99,15 @@ def _post_json(url, payload):
         return json.loads(response.read().decode('utf-8'))
 
 
+def _extract_firebase_error_code(raw_body):
+    try:
+        parsed = json.loads(raw_body)
+    except Exception:
+        return ''
+
+    return str(parsed.get('error', {}).get('message', '')).strip().upper()
+
+
 def _firebase_sign_in(email, password):
     api_key = os.getenv('FIREBASE_WEB_API_KEY', '').strip()
     if not api_key:
@@ -116,6 +125,13 @@ def _firebase_sign_in(email, password):
         )
     except urllib.error.HTTPError as exc:
         body = exc.read().decode('utf-8', errors='ignore')
+        firebase_code = _extract_firebase_error_code(body)
+
+        if firebase_code in {'INVALID_LOGIN_CREDENTIALS', 'EMAIL_NOT_FOUND', 'INVALID_PASSWORD'}:
+            raise RuntimeError('Invalid email or password.') from exc
+        if firebase_code == 'USER_DISABLED':
+            raise RuntimeError('This Firebase account is disabled.') from exc
+
         raise RuntimeError(f'Firebase sign-in failed: {body or str(exc)}') from exc
 
     id_token = result.get('idToken')

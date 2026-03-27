@@ -4,7 +4,7 @@
 // For production, replace with your deployed backend URL.
 
 const config = {
-  BACKEND_URL: 'http://192.168.1.100:8000', // ← change this
+  BACKEND_URL: 'http://192.168.1.15:8000',
 };
 
 export default config;

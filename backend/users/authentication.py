@@ -1,10 +1,43 @@
 import firebase_admin
+from django.contrib.sessions.models import Session
+from django.utils import timezone
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
 from firebase_admin import auth
 from django.contrib.auth.models import User
 
 from .models import UserProfile
+
+
+class SessionIDAuthentication(BaseAuthentication):
+    def authenticate(self, request):
+        session_id = request.META.get('HTTP_X_SESSION_ID', '').strip()
+
+        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+        if not session_id and auth_header:
+            parts = auth_header.split(' ')
+            if len(parts) == 2 and parts[0].lower() == 'session' and parts[1]:
+                session_id = parts[1].strip()
+
+        if not session_id:
+            return None
+
+        try:
+            session = Session.objects.get(session_key=session_id, expire_date__gte=timezone.now())
+        except Session.DoesNotExist as exc:
+            raise AuthenticationFailed('Invalid or expired session ID.') from exc
+
+        session_data = session.get_decoded()
+        user_id = session_data.get('user_id')
+        if not user_id:
+            raise AuthenticationFailed('Session is missing user_id.')
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist as exc:
+            raise AuthenticationFailed('User for this session does not exist.') from exc
+
+        return (user, None)
 
 class FirebaseAuthentication(BaseAuthentication):
     def authenticate(self, request):
