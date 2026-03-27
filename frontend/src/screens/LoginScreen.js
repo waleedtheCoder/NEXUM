@@ -293,27 +293,46 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
+import { useUser } from '../context/UserContext';
+import { loginWithBackend, normalizeRoleFromApi } from '../services/authApi';
 import { colors, fonts, spacing, radii } from '../constants/theme';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { login, role } = useUser();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please enter email and password.');
       return;
     }
     setLoading(true);
-    // Mock login — no backend needed
-    setTimeout(() => {
+
+    try {
+      const response = await loginWithBackend({
+        email: email.trim().toLowerCase(),
+        password,
+        role,
+      });
+
+      const userData = response.user || { email };
+      const sessionRole = normalizeRoleFromApi(userData.role || role);
+      await login(response.session_id, userData, sessionRole, {
+        idToken: response.id_token,
+        refreshToken: response.refresh_token,
+      });
+
       setLoading(false);
       navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
-    }, 1000);
+    } catch (err) {
+      setLoading(false);
+      Alert.alert('Sign In Failed', err?.message || 'Unable to sign in right now.');
+    }
   };
 
   return (
@@ -325,9 +344,7 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.subtitle}>
-          Enter any email and password to continue in demo mode.
-        </Text>
+        <Text style={styles.subtitle}>Sign in with your registered email and password.</Text>
 
         <Text style={styles.label}>Email *</Text>
         <TextInput
@@ -375,14 +392,6 @@ export default function LoginScreen() {
             {loading ? 'Signing in...' : 'Sign In'}
           </Text>
         </TouchableOpacity>
-
-        {/* Demo hint */}
-        <View style={styles.demoBox}>
-          <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
-          <Text style={styles.demoText}>
-            Demo mode — type anything and tap Sign In
-          </Text>
-        </View>
 
         <View style={styles.signupRow}>
           <Text style={styles.signupText}>Don't have an account?</Text>
@@ -461,21 +470,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontFamily: fonts.semiBold,
-  },
-  demoBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.primaryLight,
-    borderRadius: radii.md,
-    padding: 12,
-    marginBottom: spacing.lg,
-  },
-  demoText: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: fonts.regular,
-    color: colors.primary,
   },
   signupRow: {
     flexDirection: 'row',

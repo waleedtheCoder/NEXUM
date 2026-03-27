@@ -4,16 +4,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import { useUser } from '../context/UserContext';
+import { forgotPasswordWithBackend, normalizeRoleFromApi, verifyOtpWithBackend } from '../services/authApi';
 import { colors, fonts, spacing, radii } from '../constants/theme';
 
 export default function OTPVerificationScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
-  const { login } = useUser();
+  const { login, role } = useUser();
   const { email = 'user@example.com', flow = 'signup' } = route.params || {};
   const [otp, setOtp] = useState(['', '', '', '']);
   const [countdown, setCountdown] = useState(60);
+  const [loading, setLoading] = useState(false);
   const inputRefs = useRef([]);
 
   useEffect(() => {
@@ -37,11 +39,50 @@ export default function OTPVerificationScreen() {
 
   const handleVerify = async () => {
     if (otp.some((d) => !d)) { Alert.alert('Error', 'Please enter all 4 digits.'); return; }
-    if (flow === 'reset') {
-      navigation.navigate('ResetPassword');
-    } else {
-      await login('demo_session', { name: 'Demo User', email }, 'shopkeeper');
+
+    const otpCode = otp.join('');
+    setLoading(true);
+    try {
+      const response = await verifyOtpWithBackend({
+        email: String(email).trim().toLowerCase(),
+        flow,
+        otp: otpCode,
+      });
+
+      if (flow === 'reset') {
+        setLoading(false);
+        navigation.replace('ResetPassword', {
+          email: String(email).trim().toLowerCase(),
+          otp: otpCode,
+        });
+        return;
+      }
+
+      const userData = response.user || { email };
+      const sessionRole = normalizeRoleFromApi(userData.role || role);
+      await login(response.session_id, userData, sessionRole, {
+        idToken: response.id_token,
+        refreshToken: response.refresh_token,
+      });
+      setLoading(false);
       navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
+    } catch (err) {
+      setLoading(false);
+      Alert.alert('Verification Failed', err?.message || 'Could not verify OTP.');
+    }
+  };
+
+  const handleResend = async () => {
+    if (countdown > 0 || loading) return;
+    try {
+      if (flow === 'reset') {
+        await forgotPasswordWithBackend({ email: String(email).trim().toLowerCase() });
+      }
+      setCountdown(60);
+      setOtp(['', '', '', '']);
+      Alert.alert('OTP Sent', 'A new OTP has been sent.');
+    } catch (err) {
+      Alert.alert('Resend Failed', err?.message || 'Unable to resend OTP now.');
     }
   };
 
@@ -72,13 +113,13 @@ export default function OTPVerificationScreen() {
           {countdown > 0 ? (
             <Text style={styles.countdownText}>Resend in {countdown}s</Text>
           ) : (
-            <TouchableOpacity onPress={() => { setCountdown(60); setOtp(['', '', '', '']); }}>
+            <TouchableOpacity onPress={handleResend}>
               <Text style={styles.resendText}>Resend OTP</Text>
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity style={[styles.verifyBtn, !allFilled && styles.verifyBtnDisabled]} onPress={handleVerify} disabled={!allFilled}>
-          <Text style={styles.verifyBtnText}>Verify</Text>
+        <TouchableOpacity style={[styles.verifyBtn, (!allFilled || loading) && styles.verifyBtnDisabled]} onPress={handleVerify} disabled={!allFilled || loading}>
+          <Text style={styles.verifyBtnText}>{loading ? 'Verifying...' : 'Verify'}</Text>
         </TouchableOpacity>
       </View>
     </View>

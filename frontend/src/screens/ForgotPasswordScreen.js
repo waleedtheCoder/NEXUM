@@ -3,16 +3,27 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, StatusBar }
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
+import { forgotPasswordWithBackend } from '../services/authApi';
 import { colors, fonts, spacing, radii } from '../constants/theme';
 
 export default function ForgotPasswordScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (!email) { Alert.alert('Error', 'Please enter your email.'); return; }
-    navigation.navigate('OTPVerification', { email, flow: 'reset' });
+
+    try {
+      setLoading(true);
+      await forgotPasswordWithBackend({ email: email.trim().toLowerCase() });
+      setLoading(false);
+      navigation.navigate('OTPVerification', { email: email.trim().toLowerCase(), flow: 'reset' });
+    } catch (err) {
+      setLoading(false);
+      Alert.alert('Request Failed', err?.message || 'Could not send OTP right now.');
+    }
   };
 
   return (
@@ -27,8 +38,8 @@ export default function ForgotPasswordScreen() {
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
             <Text style={styles.backBtnText}>Back</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.resetBtn} onPress={handleReset}>
-            <Text style={styles.resetBtnText}>Send OTP</Text>
+          <TouchableOpacity style={[styles.resetBtn, loading && styles.resetBtnDisabled]} onPress={handleReset} disabled={loading}>
+            <Text style={styles.resetBtnText}>{loading ? 'Sending...' : 'Send OTP'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -46,5 +57,6 @@ const styles = StyleSheet.create({
   backBtn: { flex: 1, borderRadius: radii.md, paddingVertical: 14, backgroundColor: colors.primary, alignItems: 'center' },
   backBtnText: { color: '#fff', fontSize: 14, fontFamily: fonts.semiBold },
   resetBtn: { flex: 1, borderRadius: radii.md, paddingVertical: 14, backgroundColor: colors.accent, alignItems: 'center' },
+  resetBtnDisabled: { opacity: 0.6 },
   resetBtnText: { color: '#fff', fontSize: 14, fontFamily: fonts.semiBold },
 });

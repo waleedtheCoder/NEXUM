@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
+import { useUser } from '../context/UserContext';
+import { signupWithBackend } from '../services/authApi';
 import { colors, fonts, spacing, radii } from '../constants/theme';
 
 function PasswordRule({ valid, text }) {
@@ -20,12 +22,14 @@ function PasswordRule({ valid, text }) {
 export default function SignUpScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { role } = useUser();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const rules = {
     minLength: password.length >= 8,
@@ -36,11 +40,31 @@ export default function SignUpScreen() {
   };
   const allValid = Object.values(rules).every(Boolean);
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (!name || !email || !password || !confirm) { Alert.alert('Error', 'Please fill in all fields.'); return; }
     if (!allValid) { Alert.alert('Error', 'Password does not meet requirements.'); return; }
     if (password !== confirm) { Alert.alert('Error', 'Passwords do not match.'); return; }
-    navigation.navigate('OTPVerification', { email, flow: 'signup' });
+
+    try {
+      setLoading(true);
+      await signupWithBackend({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+        role,
+      });
+      setLoading(false);
+      navigation.navigate('OTPVerification', {
+        email: email.trim().toLowerCase(),
+        flow: 'signup',
+        name: name.trim(),
+        password,
+        role,
+      });
+    } catch (err) {
+      setLoading(false);
+      Alert.alert('Sign Up Failed', err?.message || 'Unable to start signup right now.');
+    }
   };
 
   return (
@@ -70,8 +94,8 @@ export default function SignUpScreen() {
           <PasswordRule valid={rules.hasNumber} text="One number" />
           <PasswordRule valid={rules.hasSpecial} text="One special character" />
         </View>
-        <TouchableOpacity style={styles.ctaBtn} onPress={handleVerify}>
-          <Text style={styles.ctaBtnText}>Verify with OTP</Text>
+        <TouchableOpacity style={[styles.ctaBtn, loading && styles.ctaBtnDisabled]} onPress={handleVerify} disabled={loading}>
+          <Text style={styles.ctaBtnText}>{loading ? 'Sending OTP...' : 'Verify with OTP'}</Text>
         </TouchableOpacity>
         <View style={styles.loginRow}>
           <Text style={styles.loginText}>Already have an account?</Text>
@@ -100,6 +124,7 @@ const styles = StyleSheet.create({
   ruleText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
   ruleTextValid: { color: colors.green },
   ctaBtn: { backgroundColor: colors.accent, borderRadius: radii.md, paddingVertical: 15, alignItems: 'center', marginTop: spacing.xl },
+  ctaBtnDisabled: { opacity: 0.6 },
   ctaBtnText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
   loginRow: { flexDirection: 'row', justifyContent: 'center', marginTop: spacing.md },
   loginText: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary },

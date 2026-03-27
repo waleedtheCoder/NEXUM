@@ -5,8 +5,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
+import { resetPasswordWithBackend } from '../services/authApi';
 import { colors, fonts, spacing, radii } from '../constants/theme';
 
 function Rule({ valid, text }) {
@@ -22,11 +23,14 @@ function Rule({ valid, text }) {
 
 export default function ResetPasswordScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
   const insets = useSafeAreaInsets();
+  const { email = '', otp = '' } = route.params || {};
   const [newPass, setNewPass] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const rules = {
     minLength: newPass.length >= 8,
@@ -36,10 +40,30 @@ export default function ResetPasswordScreen() {
   };
   const allValid = Object.values(rules).every(Boolean);
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (!allValid) { Alert.alert('Error', 'Password does not meet requirements.'); return; }
     if (newPass !== confirm) { Alert.alert('Error', 'Passwords do not match.'); return; }
-    navigation.navigate('OTPVerification', { flow: 'reset' });
+    if (!email || !otp) {
+      Alert.alert('Error', 'Reset session expired. Please request OTP again.');
+      navigation.reset({ index: 0, routes: [{ name: 'ForgotPassword' }] });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await resetPasswordWithBackend({
+        email: String(email).trim().toLowerCase(),
+        otp,
+        newPassword: newPass,
+      });
+      setLoading(false);
+      Alert.alert('Success', 'Password reset successful. Please sign in.', [
+        { text: 'OK', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }) },
+      ]);
+    } catch (err) {
+      setLoading(false);
+      Alert.alert('Reset Failed', err?.message || 'Unable to reset password.');
+    }
   };
 
   return (
@@ -85,10 +109,10 @@ export default function ResetPasswordScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.verifyBtn, !allValid && styles.verifyBtnDisabled]}
-          onPress={handleVerify} disabled={!allValid}
+          style={[styles.verifyBtn, (!allValid || loading) && styles.verifyBtnDisabled]}
+          onPress={handleVerify} disabled={!allValid || loading}
         >
-          <Text style={styles.verifyBtnText}>Verify with OTP</Text>
+          <Text style={styles.verifyBtnText}>{loading ? 'Resetting...' : 'Reset Password'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

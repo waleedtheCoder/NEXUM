@@ -7,6 +7,8 @@ export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [sessionId, setSessionId] = useState(null);
+  const [idToken, setIdToken] = useState(null);
+  const [refreshToken, setRefreshToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const isLoggedIn = !!sessionId;
@@ -18,10 +20,14 @@ export function UserProvider({ children }) {
         AsyncStorage.getItem('session_id'),
         AsyncStorage.getItem('user_data'),
         AsyncStorage.getItem('user_role'),
+        AsyncStorage.getItem('id_token'),
+        AsyncStorage.getItem('refresh_token'),
       ]);
       if (sid) setSessionId(sid);
       if (userData) setUser(JSON.parse(userData));
       if (userRole) setRole(userRole);
+      if (idToken) setIdToken(idToken);
+      if (refreshToken) setRefreshToken(refreshToken);
     } catch (e) {
       // ignore errors on web
     } finally {
@@ -31,16 +37,23 @@ export function UserProvider({ children }) {
   loadSession();
 }, []);
 
-  const login = async (sid, userData, userRole) => {
+  const login = async (sid, userData, userRole, tokens = {}) => {
     try {
-      await AsyncStorage.multiSet([
+      const pairs = [
         ['session_id', sid],
         ['user_data', JSON.stringify(userData)],
         ['user_role', userRole || 'shopkeeper'],
-      ]);
+      ];
+
+      if (tokens.idToken) pairs.push(['id_token', tokens.idToken]);
+      if (tokens.refreshToken) pairs.push(['refresh_token', tokens.refreshToken]);
+
+      await AsyncStorage.multiSet(pairs);
       setSessionId(sid);
       setUser(userData);
       setRole(userRole || 'shopkeeper');
+      setIdToken(tokens.idToken || null);
+      setRefreshToken(tokens.refreshToken || null);
     } catch (e) {
       console.error('Failed to save session:', e);
     }
@@ -48,9 +61,18 @@ export function UserProvider({ children }) {
 
   const logout = async () => {
     try {
-      await AsyncStorage.multiRemove(['session_id', 'user_data']);
+      await AsyncStorage.multiRemove([
+        'session_id',
+        'user_data',
+        'user_role',
+        'id_token',
+        'refresh_token',
+      ]);
       setSessionId(null);
       setUser(null);
+      setRole(null);
+      setIdToken(null);
+      setRefreshToken(null);
     } catch (e) {
       console.error('Failed to clear session:', e);
     }
@@ -81,6 +103,8 @@ export function UserProvider({ children }) {
         user,
         role,
         sessionId,
+        idToken,
+        refreshToken,
         isLoggedIn,
         isLoading,
         login,
