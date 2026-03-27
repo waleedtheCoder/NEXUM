@@ -13,30 +13,34 @@ export function UserProvider({ children }) {
 
   const isLoggedIn = !!sessionId;
 
+  // Load session data from AsyncStorage on mount
   useEffect(() => {
-  const loadSession = async () => {
-    try {
-      const [sid, userData, userRole] = await Promise.all([
-        AsyncStorage.getItem('session_id'),
-        AsyncStorage.getItem('user_data'),
-        AsyncStorage.getItem('user_role'),
-        AsyncStorage.getItem('id_token'),
-        AsyncStorage.getItem('refresh_token'),
-      ]);
-      if (sid) setSessionId(sid);
-      if (userData) setUser(JSON.parse(userData));
-      if (userRole) setRole(userRole);
-      if (idToken) setIdToken(idToken);
-      if (refreshToken) setRefreshToken(refreshToken);
-    } catch (e) {
-      // ignore errors on web
-    } finally {
-      setIsLoading(false);  // ← this MUST always run
-    }
-  };
-  loadSession();
-}, []);
+    const loadSession = async () => {
+      try {
+        const [sid, userData, userRole, idTok, refreshTok] = await Promise.all([
+          AsyncStorage.getItem('session_id'),
+          AsyncStorage.getItem('user_data'),
+          AsyncStorage.getItem('user_role'),
+          AsyncStorage.getItem('id_token'),
+          AsyncStorage.getItem('refresh_token'),
+        ]);
 
+        if (sid) setSessionId(sid);
+        if (userData) setUser(JSON.parse(userData));
+        if (userRole) setRole(userRole);
+        if (idTok) setIdToken(idTok);
+        if (refreshTok) setRefreshToken(refreshTok);
+      } catch (e) {
+        console.error('Failed to load session:', e);
+      } finally {
+        setIsLoading(false); // Always run
+      }
+    };
+
+    loadSession();
+  }, []);
+
+  // Login function
   const login = async (sid, userData, userRole, tokens = {}) => {
     try {
       const pairs = [
@@ -49,6 +53,7 @@ export function UserProvider({ children }) {
       if (tokens.refreshToken) pairs.push(['refresh_token', tokens.refreshToken]);
 
       await AsyncStorage.multiSet(pairs);
+
       setSessionId(sid);
       setUser(userData);
       setRole(userRole || 'shopkeeper');
@@ -59,6 +64,7 @@ export function UserProvider({ children }) {
     }
   };
 
+  // Logout function
   const logout = async () => {
     try {
       await AsyncStorage.multiRemove([
@@ -68,6 +74,7 @@ export function UserProvider({ children }) {
         'id_token',
         'refresh_token',
       ]);
+
       setSessionId(null);
       setUser(null);
       setRole(null);
@@ -78,6 +85,7 @@ export function UserProvider({ children }) {
     }
   };
 
+  // Update user data
   const updateUser = async (updatedData) => {
     const merged = { ...user, ...updatedData };
     try {
@@ -88,6 +96,7 @@ export function UserProvider({ children }) {
     }
   };
 
+  // Set user role
   const setUserRole = async (newRole) => {
     try {
       await AsyncStorage.setItem('user_role', newRole);
@@ -118,6 +127,7 @@ export function UserProvider({ children }) {
   );
 }
 
+// Hook to use user context
 export function useUser() {
   const context = useContext(UserContext);
   if (!context) throw new Error('useUser must be used inside UserProvider');
