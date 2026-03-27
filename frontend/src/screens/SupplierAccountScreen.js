@@ -122,7 +122,7 @@ export default function SupplierAccountScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={true}>
 
         {/* Profile card */}
         <TouchableOpacity
