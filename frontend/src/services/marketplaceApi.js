@@ -1,0 +1,350 @@
+/**
+ * marketplaceApi.js
+ *
+ * Central API client for all marketplace, chat, and notifications endpoints.
+ * Mirrors the pattern of authApi.js:
+ *   - 15-second AbortController timeout on every request
+ *   - Automatic 401/403 token-refresh + one-retry via the token-refresh endpoint
+ *   - Errors are enriched with .status and .payload for fine-grained handling
+ *
+ * Usage (in any screen):
+ *   import { getListings, saveListingToggle } from '../services/marketplaceApi';
+ *   const data = await getListings({ idToken });
+ */
+
+import config from '../../config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const BASE_URL = (config.BACKEND_URL || '').replace(/\/$/, '');
+const TIMEOUT_MS = 15000;
+
+// ─── Low-level fetch wrapper ──────────────────────────────────────────────────
+
+async function _fetch(path, { method = 'GET', body, idToken, sessionId } = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
+  if (sessionId) headers['X-Session-ID'] = sessionId;
+
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timeout);
+    const message =
+      err?.name === 'AbortError'
+        ? 'Request timed out. Check backend URL and server status.'
+        : 'Network error. Check backend URL and internet/LAN connectivity.';
+    throw new Error(message);
+  }
+
+  clearTimeout(timeout);
+
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch {
+    payload = {};
+  }
+
+  if (!response.ok) {
+    const message = payload?.detail || payload?.message || 'Request failed.';
+    const error = new Error(message);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
+
+  return payload;
+}
+
+// ─── Token-refresh + retry wrapper ───────────────────────────────────────────
+//
+// If a protected call returns 401/403:
+//   1. Call POST /api/users/auth/token-refresh/ with the stored refresh_token
+//   2. Persist the new id_token to AsyncStorage
+//   3. Retry the original request once with the new token
+//
+// The callers pass { idToken, refreshToken, onTokenRefreshed } so the wrapper
+// can update the context without importing it directly here.
+
+async function _fetchWithRefresh(path, options = {}) {
+  try {
+    return await _fetch(path, options);
+  } catch (err) {
+    const isAuthError = err.status === 401 || err.status === 403;
+    const canRefresh = isAuthError && options.refreshToken && options.onTokenRefreshed;
+
+    if (!canRefresh) throw err;
+
+    // Attempt token refresh
+    let newIdToken;
+    try {
+      const refreshed = await _fetch('/api/users/auth/token-refresh/', {
+        method: 'POST',
+        body: { refresh_token: options.refreshToken },
+      });
+      newIdToken = refreshed.id_token;
+
+      // Persist the new token
+      await AsyncStorage.setItem('id_token', newIdToken);
+      if (refreshed.refresh_token) {
+        await AsyncStorage.setItem('refresh_token', refreshed.refresh_token);
+      }
+
+      // Notify the caller (UserContext.updateUser / setIdToken equivalent)
+      options.onTokenRefreshed(newIdToken, refreshed.refresh_token);
+    } catch {
+      // Refresh itself failed — original error is more informative
+      throw err;
+    }
+
+    // Retry with new token
+    return await _fetch(path, { ...options, idToken: newIdToken });
+  }
+}
+
+// ─── Listings & Marketplace ───────────────────────────────────────────────────
+
+/**
+ * GET /api/listings/
+ * Returns active listing cards. Pass category, q, sort, featured as needed.
+ * Public — no auth required.
+ */
+export async function getListings({ category, q, sort, featured } = {}) {
+  const params = new URLSearchParams();
+  if (category) params.set('category', category);
+  if (q) params.set('q', q);
+  if (sort) params.set('sort', sort);
+  if (featured) params.set('featured', 'true');
+  const qs = params.toString();
+  return _fetch(`/api/listings/${qs ? `?${qs}` : ''}`);
+}
+
+/**
+ * GET /api/listings/<id>/
+ * Returns full product detail. Public.
+ */
+export async function getListingDetail(id) {
+  return _fetch(`/api/listings/${id}/`);
+}
+
+/**
+ * GET /api/listings/categories/
+ * Returns the full category tree. Public.
+ */
+export async function getCategories() {
+  return _fetch('/api/listings/categories/');
+}
+
+/**
+ * GET /api/listings/search/?q=<query>
+ * Returns { results: [...listing cards] }. Public.
+ */
+export async function searchListings(q) {
+  return _fetch(`/api/listings/search/?q=${encodeURIComponent(q)}`);
+}
+
+/**
+ * GET /api/listings/my/
+ * Returns the authenticated supplier's own listings.
+ * Protected — requires idToken or sessionId.
+ */
+export async function getMyListings({ idToken, sessionId, refreshToken, onTokenRefreshed, status } = {}) {
+  const qs = status ? `?status=${status}` : '';
+  return _fetchWithRefresh(`/api/listings/my/${qs}`, {
+    idToken,
+    sessionId,
+    refreshToken,
+    onTokenRefreshed,
+  });
+}
+
+/**
+ * POST /api/listings/create/
+ * Creates a new listing. Protected.
+ */
+export async function createListing(data, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/listings/create/', {
+    method: 'POST',
+    body: data,
+    idToken,
+    sessionId,
+    refreshToken,
+    onTokenRefreshed,
+  });
+}
+
+/**
+ * PATCH /api/listings/<id>/manage/
+ * Edits an existing listing (owner only). Protected.
+ */
+export async function updateListing(id, data, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/listings/${id}/manage/`, {
+    method: 'PATCH',
+    body: data,
+    idToken,
+    sessionId,
+    refreshToken,
+    onTokenRefreshed,
+  });
+}
+
+/**
+ * DELETE /api/listings/<id>/manage/
+ * Soft-removes a listing (owner only). Protected.
+ */
+export async function deleteListing(id, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/listings/${id}/manage/`, {
+    method: 'DELETE',
+    idToken,
+    sessionId,
+    refreshToken,
+    onTokenRefreshed,
+  });
+}
+
+/**
+ * POST /api/listings/<id>/save/   — save (heart)
+ * DELETE /api/listings/<id>/save/ — unsave
+ * Protected.
+ */
+export async function toggleSaveListing(id, shouldSave, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/listings/${id}/save/`, {
+    method: shouldSave ? 'POST' : 'DELETE',
+    idToken,
+    sessionId,
+    refreshToken,
+    onTokenRefreshed,
+  });
+}
+
+/**
+ * GET /api/listings/supplier/dashboard/
+ * Returns { performance: [...], recent_inquiries: [...] }. Protected.
+ */
+export async function getSupplierDashboard({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/listings/supplier/dashboard/', {
+    idToken,
+    sessionId,
+    refreshToken,
+    onTokenRefreshed,
+  });
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/chat/
+ * Returns conversations for the authenticated user.
+ * Optional type filter: 'buying' | 'selling' | 'favourites'
+ * Protected.
+ */
+export async function getConversations({ type, idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  const qs = type && type !== 'All' ? `?type=${type.toLowerCase()}` : '';
+  return _fetchWithRefresh(`/api/chat/${qs}`, {
+    idToken,
+    sessionId,
+    refreshToken,
+    onTokenRefreshed,
+  });
+}
+
+/**
+ * POST /api/chat/start/
+ * Creates or retrieves a conversation about a listing.
+ * Body: { listing_id, message }
+ * Protected.
+ */
+export async function startConversation({ listingId, message, idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/chat/start/', {
+    method: 'POST',
+    body: { listing_id: listingId, message },
+    idToken,
+    sessionId,
+    refreshToken,
+    onTokenRefreshed,
+  });
+}
+
+/**
+ * GET /api/chat/<conv_id>/messages/
+ * Returns all messages in a conversation. Also marks incoming messages as read.
+ * Protected.
+ */
+export async function getMessages(convId, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/chat/${convId}/messages/`, {
+    idToken,
+    sessionId,
+    refreshToken,
+    onTokenRefreshed,
+  });
+}
+
+/**
+ * POST /api/chat/<conv_id>/messages/send/
+ * Sends a new message in a conversation.
+ * Body: { text }
+ * Protected.
+ */
+export async function sendMessage(convId, text, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/chat/${convId}/messages/send/`, {
+    method: 'POST',
+    body: { text },
+    idToken,
+    sessionId,
+    refreshToken,
+    onTokenRefreshed,
+  });
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/notifications/
+ * Returns notifications for the authenticated user.
+ * Protected.
+ */
+export async function getNotifications({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/notifications/', {
+    idToken,
+    sessionId,
+    refreshToken,
+    onTokenRefreshed,
+  });
+}
+
+/**
+ * PATCH /api/notifications/<id>/read/
+ * Marks a single notification as read. Protected.
+ */
+export async function markNotificationRead(id, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/notifications/${id}/read/`, {
+    method: 'PATCH',
+    idToken,
+    sessionId,
+    refreshToken,
+    onTokenRefreshed,
+  });
+}
+
+/**
+ * POST /api/notifications/mark-all-read/
+ * Marks all notifications as read. Protected.
+ */
+export async function markAllNotificationsRead({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/notifications/mark-all-read/', {
+    method: 'POST',
+    idToken,
+    sessionId,
+    refreshToken,
+    onTokenRefreshed,
+  });
+}

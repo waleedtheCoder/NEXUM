@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, StatusBar, Alert, Image,
+  StyleSheet, StatusBar, Alert, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
-import { colors, fonts, spacing, radii, shadows } from '../constants/theme';
+import { colors, fonts, spacing, radii } from '../constants/theme';
+import { createListing, updateListing } from '../services/marketplaceApi';
+import { useUser } from '../context/UserContext';
 
 const UNITS = ['kg', 'liters', 'pieces', 'boxes', 'cartons', 'bags', 'bottles'];
 const CONDITIONS = ['New', 'Bulk Wholesale', 'Clearance Stock'];
@@ -16,40 +18,75 @@ export default function CreateListingScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
-  const category = route.params?.category || 'General';
+  const { idToken, sessionId, refreshToken, updateUser } = useUser();
 
-  const [productName, setProductName] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [selectedUnit, setSelectedUnit] = useState('kg');
-  const [selectedCondition, setSelectedCondition] = useState('New');
-  const [location, setLocation] = useState('');
+  const category = route.params?.category || 'General';
+  const editMode = route.params?.editMode || false;
+  const existing = route.params?.existingListing;
+
+  // ── Form state (pre-fill when editing) ──────────────────────────────────
+  const [productName, setProductName] = useState(existing?.productName || '');
+  const [description, setDescription] = useState(existing?.description || '');
+  const [price, setPrice] = useState(existing?.pricePerUnit ? String(existing.pricePerUnit) : '');
+  const [quantity, setQuantity] = useState(existing?.quantity ? String(existing.quantity) : '');
+  const [unit, setUnit] = useState(existing?.unit || 'kg');
+  const [condition, setCondition] = useState(existing?.condition || 'Bulk Wholesale');
+  const [location, setLocation] = useState(existing?.location || '');
   const [loading, setLoading] = useState(false);
 
-  const isValid = productName.trim() && price.trim() && quantity.trim() && location.trim();
+  const authArgs = {
+    idToken, sessionId, refreshToken,
+    onTokenRefreshed: (t) => updateUser({ idToken: t }),
+  };
 
-  const handlePost = () => {
-    if (!isValid) {
-      Alert.alert('Missing Fields', 'Please fill in product name, price, quantity, and location.');
-      return;
-    }
+  const validate = () => {
+    if (!productName.trim()) { Alert.alert('Required', 'Please enter a product name.'); return false; }
+    if (!price.trim() || isNaN(parseFloat(price))) { Alert.alert('Required', 'Please enter a valid price.'); return false; }
+    if (!quantity.trim() || isNaN(parseInt(quantity))) { Alert.alert('Required', 'Please enter a valid quantity.'); return false; }
+    if (!location.trim()) { Alert.alert('Required', 'Please enter a location.'); return false; }
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+
+    const payload = {
+      productName: productName.trim(),
+      description: description.trim(),
+      price: parseFloat(price),
+      quantity: parseInt(quantity, 10),
+      unit,
+      condition,
+      location: location.trim(),
+      category,
+    };
+
+    try {
+      if (editMode && existing?.id) {
+        await updateListing(existing.id, payload, authArgs);
+        Alert.alert('Updated!', 'Your listing has been updated.', [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
+      } else {
+        await createListing(payload, authArgs);
+        Alert.alert(
+          'Listing Submitted!',
+          `Your listing for "${productName}" has been submitted for review. It will go live after approval.`,
+          [{ text: 'View My Listings', onPress: () => navigation.navigate('MyListings') }]
+        );
+      }
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Could not submit listing. Please try again.');
+    } finally {
       setLoading(false);
-      Alert.alert(
-        'Listing Posted!',
-        `Your listing for "${productName}" has been submitted for review.`,
-        [{ text: 'View My Listings', onPress: () => navigation.navigate('MyListings') }]
-      );
-    }, 1200);
+    }
   };
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title="Create Listing" showBack />
+      <ScreenHeader title={editMode ? 'Edit Listing' : 'Create Listing'} showBack />
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -60,9 +97,11 @@ export default function CreateListingScreen() {
         <View style={styles.categoryRow}>
           <Ionicons name="pricetag-outline" size={14} color={colors.primary} />
           <Text style={styles.categoryText}>{category}</Text>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.changeText}>Change</Text>
-          </TouchableOpacity>
+          {!editMode && (
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Text style={styles.changeText}>Change</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Photo upload placeholder */}
@@ -103,7 +142,7 @@ export default function CreateListingScreen() {
           textAlignVertical="top"
         />
 
-        {/* Price & Quantity row */}
+        {/* Price & Quantity */}
         <View style={styles.row2}>
           <View style={styles.flex1}>
             <Text style={styles.label}>Price (Rs) <Text style={styles.required}>*</Text></Text>
@@ -129,79 +168,60 @@ export default function CreateListingScreen() {
           </View>
         </View>
 
-        {/* Unit selection */}
+        {/* Unit selector */}
         <Text style={styles.label}>Unit</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-          {UNITS.map((u) => (
-            <TouchableOpacity
-              key={u}
-              style={[styles.chip, selectedUnit === u && styles.chipActive]}
-              onPress={() => setSelectedUnit(u)}
-            >
-              <Text style={[styles.chipText, selectedUnit === u && styles.chipTextActive]}>{u}</Text>
-            </TouchableOpacity>
-          ))}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
+          <View style={styles.chipRow}>
+            {UNITS.map((u) => (
+              <TouchableOpacity
+                key={u}
+                style={[styles.chip, unit === u && styles.chipActive]}
+                onPress={() => setUnit(u)}
+              >
+                <Text style={[styles.chipText, unit === u && styles.chipTextActive]}>{u}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </ScrollView>
 
-        {/* Condition */}
+        {/* Condition selector */}
         <Text style={styles.label}>Condition</Text>
-        <View style={styles.conditionRow}>
-          {CONDITIONS.map((c) => (
-            <TouchableOpacity
-              key={c}
-              style={[styles.conditionBtn, selectedCondition === c && styles.conditionBtnActive]}
-              onPress={() => setSelectedCondition(c)}
-            >
-              <Text style={[styles.conditionText, selectedCondition === c && styles.conditionTextActive]}>{c}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
+          <View style={styles.chipRow}>
+            {CONDITIONS.map((c) => (
+              <TouchableOpacity
+                key={c}
+                style={[styles.chip, condition === c && styles.chipActive]}
+                onPress={() => setCondition(c)}
+              >
+                <Text style={[styles.chipText, condition === c && styles.chipTextActive]}>{c}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
 
         {/* Location */}
         <Text style={styles.label}>Location <Text style={styles.required}>*</Text></Text>
-        <View style={styles.inputRow}>
-          <Ionicons name="location-outline" size={18} color={colors.textSecondary} style={styles.inputIcon} />
-          <TextInput
-            style={[styles.input, styles.inputWithIcon]}
-            placeholder="e.g. Lahore Wholesale Market"
-            placeholderTextColor={colors.textLight}
-            value={location}
-            onChangeText={setLocation}
-          />
-        </View>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. Lahore Wholesale Market"
+          placeholderTextColor={colors.textLight}
+          value={location}
+          onChangeText={setLocation}
+        />
 
-        {/* Price preview */}
-        {price && quantity ? (
-          <View style={styles.previewCard}>
-            <Ionicons name="calculator-outline" size={18} color={colors.primary} />
-            <View style={styles.previewInfo}>
-              <Text style={styles.previewLabel}>Total Stock Value</Text>
-              <Text style={styles.previewValue}>
-                Rs {(parseFloat(price || 0) * parseFloat(quantity || 0)).toLocaleString()}
-              </Text>
-            </View>
-          </View>
-        ) : null}
-
-        {/* Post button */}
+        {/* Submit */}
         <TouchableOpacity
-          style={[styles.postBtn, (!isValid || loading) && styles.postBtnDisabled]}
-          onPress={handlePost}
-          disabled={!isValid || loading}
+          style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+          onPress={handleSubmit}
+          disabled={loading}
         >
-          {loading ? (
-            <Text style={styles.postBtnText}>Submitting...</Text>
-          ) : (
-            <>
-              <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
-              <Text style={styles.postBtnText}>Post Listing</Text>
-            </>
-          )}
+          {loading
+            ? <ActivityIndicator size="small" color="#fff" />
+            : <Text style={styles.submitText}>
+                {editMode ? 'Save Changes' : 'Post Listing'}
+              </Text>}
         </TouchableOpacity>
-
-        <Text style={styles.disclaimer}>
-          Your listing will be reviewed and go live within a few minutes.
-        </Text>
       </ScrollView>
     </View>
   );
@@ -209,72 +229,52 @@ export default function CreateListingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scroll: { padding: spacing.md, paddingBottom: 32 },
+  scroll: { padding: spacing.md, paddingBottom: 40 },
+
   categoryRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: colors.primaryLight, borderRadius: radii.full,
-    paddingHorizontal: 12, paddingVertical: 7, alignSelf: 'flex-start',
-    marginBottom: spacing.md,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: `${colors.primary}18`, borderRadius: radii.lg,
+    paddingHorizontal: 14, paddingVertical: 10, marginBottom: spacing.md,
   },
-  categoryText: { fontSize: 12, fontFamily: fonts.medium, color: colors.primary, flex: 1 },
-  changeText: { fontSize: 12, fontFamily: fonts.semiBold, color: colors.accent },
+  categoryText: { flex: 1, fontSize: 13, fontFamily: fonts.medium, color: colors.primary },
+  changeText: { fontSize: 12, fontFamily: fonts.medium, color: colors.accent },
+
   photoSection: { marginBottom: spacing.md },
-  photoRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 6 },
+  photoRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8 },
   photoAddBtn: {
-    width: 90, height: 90, borderRadius: radii.lg,
+    width: 90, height: 90, borderRadius: radii.xl,
     borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center', gap: 4,
-    backgroundColor: colors.primaryLight,
   },
-  photoAddText: { fontSize: 10, fontFamily: fonts.medium, color: colors.primary },
+  photoAddText: { fontSize: 11, fontFamily: fonts.medium, color: colors.primary },
   photoHint: { flex: 1 },
   photoHintText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 18 },
-  label: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 6, marginTop: 14 },
-  required: { color: colors.error },
+
+  label: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 6 },
+  required: { color: colors.accent },
   input: {
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radii.md, paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, fontFamily: fonts.regular, color: colors.text,
+    backgroundColor: colors.surface, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: fonts.regular,
+    color: colors.text, marginBottom: spacing.md,
   },
-  textarea: { minHeight: 90, paddingTop: 12 },
+  textarea: { height: 100 },
   row2: { flexDirection: 'row', gap: 12 },
   flex1: { flex: 1 },
-  chipScroll: { marginBottom: 4 },
+
+  chipRow: { flexDirection: 'row', gap: 8 },
   chip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: radii.full,
-    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, marginRight: 8,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: radii.full, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
-  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipActive: { borderColor: colors.primary, backgroundColor: `${colors.primary}18` },
   chipText: { fontSize: 13, fontFamily: fonts.medium, color: colors.textSecondary },
-  chipTextActive: { color: '#fff' },
-  conditionRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
-  conditionBtn: {
-    paddingHorizontal: 14, paddingVertical: 9, borderRadius: radii.md,
-    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
+  chipTextActive: { color: colors.primary },
+
+  submitBtn: {
+    backgroundColor: colors.primary, borderRadius: radii.xl,
+    paddingVertical: 16, alignItems: 'center', marginTop: spacing.md,
   },
-  conditionBtnActive: { backgroundColor: colors.primaryLight, borderColor: colors.primary },
-  conditionText: { fontSize: 13, fontFamily: fonts.medium, color: colors.textSecondary },
-  conditionTextActive: { color: colors.primary },
-  inputRow: { flexDirection: 'row', alignItems: 'center' },
-  inputIcon: { position: 'absolute', left: 12, zIndex: 1 },
-  inputWithIcon: { flex: 1, paddingLeft: 38 },
-  previewCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: colors.primaryLight, borderRadius: radii.md, padding: 14,
-    marginTop: spacing.md, borderWidth: 1, borderColor: 'rgba(15,118,110,0.2)',
-  },
-  previewInfo: { flex: 1 },
-  previewLabel: { fontSize: 12, fontFamily: fonts.regular, color: colors.primary },
-  previewValue: { fontSize: 18, fontFamily: fonts.bold, color: colors.primary },
-  postBtn: {
-    backgroundColor: colors.accent, borderRadius: radii.lg,
-    paddingVertical: 15, flexDirection: 'row', justifyContent: 'center',
-    alignItems: 'center', gap: 8, marginTop: spacing.xl, ...shadows.md,
-  },
-  postBtnDisabled: { opacity: 0.5 },
-  postBtnText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
-  disclaimer: {
-    textAlign: 'center', fontSize: 11, fontFamily: fonts.regular,
-    color: colors.textSecondary, marginTop: 10, lineHeight: 18,
-  },
+  submitBtnDisabled: { opacity: 0.7 },
+  submitText: { color: '#fff', fontSize: 16, fontFamily: fonts.semiBold },
 });

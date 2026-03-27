@@ -1,30 +1,57 @@
-import React, { useState } from 'react';
-import { View, FlatList, StyleSheet, StatusBar } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View, FlatList, StyleSheet, StatusBar, ActivityIndicator,
+  Text, TouchableOpacity,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import FilterChip from '../components/FilterChip';
 import ProductCard from '../components/ProductCard';
 import BottomNav from '../components/BottomNav';
-import { colors, spacing } from '../constants/theme';
+import { colors, fonts, spacing, radii } from '../constants/theme';
+import { getListings } from '../services/marketplaceApi';
 
-const FILTERS = ['All', 'Grains', 'Oils', 'Spices', 'Dairy', 'Hygiene'];
-
-const PRODUCTS = [
-  { id: '1', title: 'Premium Basmati Rice 25kg', price: 8800, imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=300&h=300&fit=crop', isFeatured: true },
-  { id: '2', title: 'Bulk Cooking Oil Carton', price: 12500, imageUrl: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=300&h=300&fit=crop', isFeatured: false },
-  { id: '3', title: 'Wholesale Sugar Bags 50kg', price: 6400, imageUrl: 'https://images.unsplash.com/photo-1621939514649-280e2ee25f60?w=300&h=300&fit=crop', isFeatured: true },
-  { id: '4', title: 'Hand Sanitizer Gel 500ml x20', price: 1900, imageUrl: 'https://images.unsplash.com/photo-1584744982491-665216d95f8b?w=300&h=300&fit=crop', isFeatured: false },
-  { id: '5', title: 'Tea Bags Box of 500', price: 3200, imageUrl: 'https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?w=300&h=300&fit=crop', isFeatured: false },
-  { id: '6', title: 'Wheat Flour Premium 100kg', price: 7500, imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=300&h=300&fit=crop', isFeatured: true },
-];
+const SORT_FILTERS = ['Newest', 'Price ↑', 'Price ↓'];
+const SORT_MAP = { 'Newest': 'newest', 'Price ↑': 'price_asc', 'Price ↓': 'price_desc' };
 
 export default function MobileListingScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const route = useRoute();
   const categoryTitle = route.params?.category || 'Listings';
-  const [activeFilter, setActiveFilter] = useState('All');
+
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeFilter, setActiveFilter] = useState('Newest');
+
+  const fetchProducts = async (sort = 'newest') => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getListings({
+        category: categoryTitle !== 'Listings' ? categoryTitle : undefined,
+        sort,
+      });
+      setProducts(data);
+    } catch (err) {
+      setError(err.message || 'Failed to load listings.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts(SORT_MAP[activeFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryTitle]);
+
+  const handleFilterChange = (label) => {
+    setActiveFilter(label);
+    fetchProducts(SORT_MAP[label]);
+  };
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
@@ -33,36 +60,57 @@ export default function MobileListingScreen() {
 
       <View style={styles.filterWrap}>
         <FlatList
-          horizontal showsHorizontalScrollIndicator={false}
-          data={FILTERS}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={SORT_FILTERS}
           keyExtractor={(f) => f}
           renderItem={({ item }) => (
             <FilterChip
               label={item}
               active={activeFilter === item}
-              onPress={() => setActiveFilter(item)}
+              onPress={() => handleFilterChange(item)}
             />
           )}
           contentContainerStyle={{ paddingHorizontal: spacing.md, paddingVertical: spacing.sm }}
         />
       </View>
 
-      <FlatList
-        data={PRODUCTS}
-        numColumns={2}
-        keyExtractor={(item) => item.id}
-        columnWrapperStyle={styles.colWrap}
-        renderItem={({ item }) => (
-          <View style={styles.cardWrap}>
-            <ProductCard
-              product={item}
-              viewMode="grid"
-              onPress={() => navigation.navigate('ProductDetail', { product: item })}
-            />
-          </View>
-        )}
-        contentContainerStyle={styles.grid}
-      />
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : error ? (
+        <View style={styles.center}>
+          <Ionicons name="cloud-offline-outline" size={48} color={colors.textLight} />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => fetchProducts(SORT_MAP[activeFilter])}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={products}
+          numColumns={2}
+          keyExtractor={(item) => String(item.id)}
+          columnWrapperStyle={styles.colWrap}
+          renderItem={({ item }) => (
+            <View style={styles.cardWrap}>
+              <ProductCard
+                product={{ ...item, price: parseFloat(item.price) }}
+                viewMode="grid"
+                onPress={() => navigation.navigate('ProductDetail', { product: item })}
+              />
+            </View>
+          )}
+          contentContainerStyle={styles.grid}
+          ListEmptyComponent={
+            <View style={styles.center}>
+              <Ionicons name="cube-outline" size={48} color={colors.textLight} />
+              <Text style={styles.errorText}>No listings in this category yet</Text>
+            </View>
+          }
+        />
+      )}
 
       <BottomNav activeTab="listings" />
     </View>
@@ -72,6 +120,10 @@ export default function MobileListingScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   filterWrap: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingTop: 60 },
+  errorText: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
+  retryBtn: { paddingHorizontal: 24, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: radii.full },
+  retryText: { color: '#fff', fontSize: 14, fontFamily: fonts.semiBold },
   colWrap: { paddingHorizontal: spacing.md, gap: 12 },
   cardWrap: { flex: 1 },
   grid: { paddingTop: spacing.md, paddingBottom: 16 },
