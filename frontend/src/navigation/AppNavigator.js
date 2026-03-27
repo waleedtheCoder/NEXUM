@@ -162,6 +162,7 @@ import CreateListingScreen from '../screens/CreateListingScreen';
 import ChatListScreen from '../screens/ChatListScreen';
 import ChatConversationScreen from '../screens/ChatConversationScreen';
 import AccountSettingsScreen from '../screens/AccountSettingsScreen';
+import SupplierAccountScreen from '../screens/SupplierAccountScreen';
 import AccountLoggedOutScreen from '../screens/AccountLoggedOutScreen';
 import AppNavigationScreen from '../screens/AppNavigationScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
@@ -224,6 +225,7 @@ function RootStack() {
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
       <Stack.Screen name="MyListingsManagement" component={MyListingsManagementScreen} />
       <Stack.Screen name="CreateListing" component={CreateListingScreen} />
+      <Stack.Screen name="SupplierAccountScreen" component={SupplierAccountScreen} />
       <Stack.Screen name="ChatConversation" component={ChatConversationScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="AppNavigation" component={AppNavigationScreen} />

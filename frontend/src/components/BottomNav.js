@@ -129,7 +129,7 @@ const SUPPLIER_TABS = [
   { key: 'listings', label: 'Listings', icon: 'cube-outline',       screen: 'MyListings' },
   { key: 'sell',     label: 'Sell',     icon: 'add-circle',         screen: 'CategorySelection', isFAB: true },
   { key: 'chat',     label: 'Chat',     icon: 'chatbubble-outline', screen: 'ChatList' },
-  { key: 'account',  label: 'Account',  icon: 'person-outline',     screen: 'AccountSettings' },
+  { key: 'account',  label: 'Account',  icon: 'person-outline',     screen: 'SupplierAccountScreen' },
 ];
 
 // Shopkeeper — 4 tabs, no Sell, Search tab instead
