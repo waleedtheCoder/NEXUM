@@ -14,45 +14,46 @@ import { getSupplierDashboard } from '../services/marketplaceApi';
 const MENU_ITEMS = [
   {
     title: 'My Listings',
-    desc: 'View and manage all your active listings',
-    icon: 'cube-outline',
+    desc:  'View and manage all your active listings',
+    icon:  'cube-outline',
     screen: 'MyListings',
   },
   {
     title: 'Incoming Orders',
-    desc: 'View and manage orders from shopkeepers',
-    icon: 'receipt-outline',
+    desc:  'View and manage orders from shopkeepers',
+    icon:  'receipt-outline',
     screen: 'IncomingOrders',
     badge: 'New',
   },
   {
+    // FIX: was null (coming soon) — EditProfileScreen now exists
     title: 'Business Profile',
-    desc: 'Update your business name, location and details',
-    icon: 'business-outline',
+    desc:  'Update your business name and details',
+    icon:  'business-outline',
     screen: 'EditProfile',
   },
   {
     title: 'Payout & Banking',
-    desc: 'Manage how you receive payments',
-    icon: 'card-outline',
+    desc:  'Manage how you receive payments',
+    icon:  'card-outline',
     screen: null,
   },
   {
     title: 'Verified Supplier Badge',
-    desc: 'Get verified to build buyer trust',
-    icon: 'shield-checkmark-outline',
+    desc:  'Get verified to build buyer trust',
+    icon:  'shield-checkmark-outline',
     screen: null,
   },
   {
     title: 'Promote Listings',
-    desc: 'Boost your products to reach more buyers',
-    icon: 'trending-up-outline',
+    desc:  'Boost your products to reach more buyers',
+    icon:  'trending-up-outline',
     screen: null,
   },
   {
     title: 'Invite Retailers',
-    desc: 'Earn rewards by inviting shopkeepers',
-    icon: 'person-add-outline',
+    desc:  'Earn rewards by inviting shopkeepers',
+    icon:  'person-add-outline',
     screen: null,
   },
 ];
@@ -72,7 +73,6 @@ export default function SupplierAccountScreen() {
     onTokenRefreshed: (t) => updateUser({ idToken: t }),
   };
 
-  // ── Fetch dashboard on focus ──────────────────────────────────────────────
   const fetchDashboard = async () => {
     setLoading(true);
     setError(null);
@@ -120,7 +120,7 @@ export default function SupplierAccountScreen() {
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
 
-      {/* Header */}
+      {/* Header — FIX: edit pencil now navigates to real EditProfileScreen */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerLeft}>
           <View style={styles.avatar}>
@@ -182,7 +182,8 @@ export default function SupplierAccountScreen() {
                   style={[styles.menuRow, i < inquiries.length - 1 && styles.menuRowBorder]}
                   onPress={() => {
                     markRead(inq.id);
-                    navigation.navigate('ChatConversation', { chat: { id: inq.conv_id } });
+                    // FIX: was inq.conv_id (undefined) — API returns conv ID in inq.id
+                    navigation.navigate('ChatConversation', { chat: { id: inq.id } });
                   }}
                 >
                   <View style={[styles.menuIcon, { backgroundColor: `${colors.primary}18` }]}>
@@ -243,96 +244,34 @@ export default function SupplierAccountScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-
-  header: {
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingBottom: 20,
-  },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  avatar: {
-    width: 54, height: 54, borderRadius: 27,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  avatarText: { color: '#fff', fontSize: 20, fontFamily: fonts.bold },
-  name: { fontSize: 17, fontFamily: fonts.bold, color: '#fff', marginBottom: 2 },
-  role: { fontSize: 13, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.8)', marginBottom: 4 },
-  verifiedRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  container:    { flex: 1, backgroundColor: colors.background },
+  header:       { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingBottom: 20 },
+  headerLeft:   { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  avatar:       { width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },
+  avatarText:   { color: '#fff', fontSize: 20, fontFamily: fonts.bold },
+  name:         { fontSize: 17, fontFamily: fonts.bold, color: '#fff', marginBottom: 2 },
+  role:         { fontSize: 13, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.8)', marginBottom: 4 },
+  verifiedRow:  { flexDirection: 'row', alignItems: 'center', gap: 4 },
   verifiedText: { fontSize: 12, fontFamily: fonts.medium, color: colors.green },
-  editBtn: {
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-
-  sectionLabel: {
-    fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary,
-    letterSpacing: 0.6, paddingHorizontal: spacing.md,
-    paddingTop: 20, paddingBottom: 10,
-    textTransform: 'uppercase',
-  },
-
-  loadingRow: { paddingVertical: 20, alignItems: 'center' },
-  errorBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginHorizontal: spacing.md, marginBottom: spacing.md,
-    backgroundColor: `${colors.accent}18`, borderRadius: radii.lg,
-    paddingHorizontal: 14, paddingVertical: 12,
-    borderWidth: 1, borderColor: `${colors.accent}40`,
-  },
+  editBtn:      { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  sectionLabel: { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary, letterSpacing: 0.6, paddingHorizontal: spacing.md, paddingTop: 20, paddingBottom: 10, textTransform: 'uppercase' },
+  loadingRow:      { paddingVertical: 20, alignItems: 'center' },
+  errorBanner:     { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: spacing.md, marginBottom: spacing.md, backgroundColor: `${colors.accent}18`, borderRadius: radii.lg, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: `${colors.accent}40` },
   errorBannerText: { fontSize: 13, fontFamily: fonts.medium, color: colors.accent },
-
-  statsGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 12,
-    paddingHorizontal: spacing.md, marginBottom: 4,
-  },
-  statCard: {
-    flex: 1, minWidth: '44%', backgroundColor: colors.surface,
-    borderRadius: radii.xl, padding: spacing.md, alignItems: 'center', gap: 6,
-    ...shadows.sm, borderLeftWidth: 3,
-  },
-  statValue: { fontSize: 22, fontFamily: fonts.bold },
-  statLabel: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
-
+  statsGrid:    { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: spacing.md, marginBottom: 4 },
+  statCard:     { flex: 1, minWidth: '44%', backgroundColor: colors.surface, borderRadius: radii.xl, padding: spacing.md, alignItems: 'center', gap: 6, ...shadows.sm, borderLeftWidth: 3 },
+  statValue:    { fontSize: 22, fontFamily: fonts.bold },
+  statLabel:    { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
   inquiriesHeader: { flexDirection: 'row', alignItems: 'center' },
-
-  menuSection: {
-    marginHorizontal: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radii.xl,
-    ...shadows.sm,
-    overflow: 'hidden',
-    marginBottom: 4,
-  },
-  menuRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingHorizontal: spacing.md, paddingVertical: 14,
-  },
-  menuRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  menuIcon: {
-    width: 36, height: 36, borderRadius: radii.md,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  menuText: { flex: 1 },
-  menuTitle: { fontSize: 14, fontFamily: fonts.medium, color: colors.text, marginBottom: 2 },
-  menuDesc: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
-  newBadge: {
-    backgroundColor: colors.accent, borderRadius: radii.full,
-    paddingHorizontal: 8, paddingVertical: 2, marginRight: 4,
-  },
+  menuSection:  { marginHorizontal: spacing.md, backgroundColor: colors.surface, borderRadius: radii.xl, ...shadows.sm, overflow: 'hidden', marginBottom: 4 },
+  menuRow:      { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: spacing.md, paddingVertical: 14 },
+  menuRowBorder:{ borderBottomWidth: 1, borderBottomColor: colors.border },
+  menuIcon:     { width: 36, height: 36, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
+  menuText:     { flex: 1 },
+  menuTitle:    { fontSize: 14, fontFamily: fonts.medium, color: colors.text, marginBottom: 2 },
+  menuDesc:     { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
+  newBadge:     { backgroundColor: colors.accent, borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 2, marginRight: 4 },
   newBadgeText: { color: '#fff', fontSize: 10, fontFamily: fonts.semiBold },
-
-  logoutBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    marginHorizontal: spacing.md, marginTop: 20,
-    paddingVertical: 14, borderRadius: radii.xl,
-    backgroundColor: 'rgba(239,68,68,0.1)',
-    borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)',
-  },
-  logoutText: { fontSize: 15, fontFamily: fonts.semiBold, color: '#EF4444' },
+  logoutBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: spacing.md, marginTop: 20, paddingVertical: 14, borderRadius: radii.xl, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' },
+  logoutText:   { fontSize: 15, fontFamily: fonts.semiBold, color: '#EF4444' },
 });

@@ -47,14 +47,16 @@ import SupplierProfileScreen      from '../screens/SupplierProfileScreen';
 import SavedListingsScreen        from '../screens/SavedListingsScreen';
 import IncomingOrdersScreen       from '../screens/IncomingOrdersScreen';
 
+// ── New screens (edit profile + restock reminders) ──────────────────────────
+import EditProfileScreen          from '../screens/EditProfileScreen';
+import RestockRemindersScreen     from '../screens/RestockRemindersScreen';
+
 const Stack = createStackNavigator();
 const Tab   = createBottomTabNavigator();
 
 const SCREEN_OPTIONS = { headerShown: false };
 
 // ── Bottom Tab Navigator ─────────────────────────────────────────────────────
-// Tab bar is hidden — BottomNav component is rendered manually inside each
-// screen so navigation.navigate() by tab name works from anywhere.
 function MainTabNavigator() {
   return (
     <Tab.Navigator screenOptions={{ headerShown: false, tabBarStyle: { display: 'none' } }}>
@@ -130,9 +132,11 @@ function RootStack() {
       <Stack.Screen name="OrderDetail"  component={OrderDetailScreen} />
 
       {/* ── Account ─────────────────────────────────────────────────────── */}
-      <Stack.Screen name="AppNavigation"    component={AppNavigationScreen} />
-      <Stack.Screen name="AccountLoggedOut" component={AccountLoggedOutScreen} />
-      <Stack.Screen name="EditProfile"      component={AccountSettingsScreen} />
+      <Stack.Screen name="AppNavigation"       component={AppNavigationScreen} />
+      <Stack.Screen name="AccountLoggedOut"    component={AccountLoggedOutScreen} />
+      {/* FIX: was AccountSettingsScreen — now correctly points to dedicated edit form */}
+      <Stack.Screen name="EditProfile"         component={EditProfileScreen} />
+      <Stack.Screen name="RestockReminders"    component={RestockRemindersScreen} />
 
     </Stack.Navigator>
   );

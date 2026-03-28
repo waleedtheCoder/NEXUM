@@ -490,3 +490,12 @@ export async function updateOrderStatus(orderId, newStatus, { idToken, sessionId
     idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
+
+export async function updateProfile(data, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/users/profile/', {
+    method: 'PATCH',
+    body: data,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+ 

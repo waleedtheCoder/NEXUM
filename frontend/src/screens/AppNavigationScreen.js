@@ -10,24 +10,26 @@ import ScreenHeader from '../components/ScreenHeader';
 import { colors, fonts, spacing, radii, shadows } from '../constants/theme';
 
 const FEATURE_CARDS = [
-  { icon: 'business', title: 'Business Profile Settings', screen: 'EditProfile' },
-  { icon: 'storefront', title: 'Saved Suppliers', screen: 'MarketplaceBrowsing' },
-  { icon: 'cube', title: 'Saved Products', screen: 'MarketplaceBrowsing' },
-  { icon: 'receipt', title: 'Purchase History', screen: null },
-  { icon: 'notifications', title: 'Restock Reminders', screen: null },
-  { icon: 'card', title: 'Credits & Limits', screen: null },
+  { icon: 'business',      title: 'Business Profile Settings', screen: 'EditProfile'         },
+  { icon: 'storefront',    title: 'Saved Suppliers',           screen: 'MarketplaceBrowsing' },
+  // FIX: was 'MarketplaceBrowsing' — SavedListings is the correct destination
+  { icon: 'cube',          title: 'Saved Products',            screen: 'SavedListings'       },
+  // FIX: was null (coming soon) — OrderHistory is fully built and registered
+  { icon: 'receipt',       title: 'Purchase History',          screen: 'OrderHistory'        },
+  { icon: 'notifications', title: 'Restock Reminders',         screen: null                  },
+  { icon: 'card',          title: 'Credits & Limits',          screen: null                  },
 ];
 
 const LANGUAGES = [
   { key: 'english', label: 'English' },
-  { key: 'urdu', label: 'اردو (Urdu)' },
+  { key: 'urdu',    label: 'اردو (Urdu)' },
 ];
 
 export default function AppNavigationScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const [langModalOpen, setLangModalOpen] = useState(false);
-  const [selectedLang, setSelectedLang] = useState('english');
+  const [langModalOpen, setLangModalOpen]   = useState(false);
+  const [selectedLang, setSelectedLang]     = useState('english');
 
   const handleFeatureCard = (card) => {
     if (card.screen) {
@@ -43,10 +45,15 @@ export default function AppNavigationScreen() {
       <ScreenHeader title="NEXUM" showBack />
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+
         {/* Feature grid */}
         <View style={styles.grid}>
           {FEATURE_CARDS.map((card, i) => (
-            <TouchableOpacity key={i} style={styles.featureCard} onPress={() => handleFeatureCard(card)}>
+            <TouchableOpacity
+              key={i}
+              style={styles.featureCard}
+              onPress={() => handleFeatureCard(card)}
+            >
               <Ionicons name={`${card.icon}-outline`} size={26} color={colors.primary} />
               <Text style={styles.featureCardText}>{card.title}</Text>
             </TouchableOpacity>
@@ -56,7 +63,10 @@ export default function AppNavigationScreen() {
         {/* Promo card */}
         <View style={styles.promoCard}>
           <Text style={styles.promoText}>Looking to expand your supplier network?</Text>
-          <TouchableOpacity style={styles.promoBtn} onPress={() => navigation.navigate('MarketplaceBrowsing')}>
+          <TouchableOpacity
+            style={styles.promoBtn}
+            onPress={() => navigation.navigate('MarketplaceBrowsing')}
+          >
             <Text style={styles.promoBtnText}>Find Suppliers</Text>
           </TouchableOpacity>
         </View>
@@ -64,9 +74,21 @@ export default function AppNavigationScreen() {
         {/* Settings list */}
         <View style={styles.settingsList}>
           {[
-            { icon: 'globe-outline', label: 'Language', onPress: () => setLangModalOpen(true) },
-            { icon: 'headset-outline', label: 'Customer Support', onPress: () => Alert.alert('Support', 'Email us at support@nexum.pk') },
-            { icon: 'person-add-outline', label: 'Invite Retailers to NEXUM', onPress: () => Alert.alert('Invite', 'Share your referral link with other retailers!') },
+            {
+              icon: 'globe-outline',
+              label: 'Language',
+              onPress: () => setLangModalOpen(true),
+            },
+            {
+              icon: 'headset-outline',
+              label: 'Customer Support',
+              onPress: () => Alert.alert('Support', 'Email us at support@nexum.pk'),
+            },
+            {
+              icon: 'person-add-outline',
+              label: 'Invite Retailers to NEXUM',
+              onPress: () => Alert.alert('Invite', 'Share your referral link with other retailers!'),
+            },
           ].map((item, i, arr) => (
             <TouchableOpacity
               key={i}
@@ -75,15 +97,25 @@ export default function AppNavigationScreen() {
             >
               <Ionicons name={item.icon} size={20} color={colors.primary} />
               <Text style={styles.settingsItemText}>{item.label}</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
             </TouchableOpacity>
           ))}
         </View>
+
       </ScrollView>
 
-      {/* Language modal */}
-      <Modal visible={langModalOpen} transparent animationType="slide" onRequestClose={() => setLangModalOpen(false)}>
-        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setLangModalOpen(false)} />
+      {/* Language picker modal */}
+      <Modal
+        visible={langModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setLangModalOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setLangModalOpen(false)}
+        />
         <View style={styles.modalSheet}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select Language</Text>
@@ -95,7 +127,10 @@ export default function AppNavigationScreen() {
             <TouchableOpacity
               key={lang.key}
               style={styles.langOption}
-              onPress={() => { setSelectedLang(lang.key); setLangModalOpen(false); }}
+              onPress={() => {
+                setSelectedLang(lang.key);
+                setLangModalOpen(false);
+              }}
             >
               <Text style={styles.langOptionText}>{lang.label}</Text>
               <Ionicons
@@ -113,7 +148,8 @@ export default function AppNavigationScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scroll: { padding: spacing.md, paddingBottom: 32 },
+  scroll:    { padding: spacing.md, paddingBottom: 32 },
+
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: spacing.md },
   featureCard: {
     width: '47%', backgroundColor: colors.surface, borderRadius: radii.xl,
@@ -124,36 +160,30 @@ const styles = StyleSheet.create({
     fontSize: 12, fontFamily: fonts.medium, color: colors.textSecondary,
     textAlign: 'center', lineHeight: 17,
   },
+
   promoCard: {
     backgroundColor: colors.surface, borderRadius: radii.xl, borderWidth: 2,
     borderColor: colors.accent, padding: spacing.md, marginBottom: spacing.md, ...shadows.sm,
   },
-  promoText: { fontSize: 14, fontFamily: fonts.regular, color: colors.text, marginBottom: 12 },
-  promoBtn: {
-    backgroundColor: colors.accent, borderRadius: radii.md, paddingVertical: 11, alignItems: 'center',
-  },
+  promoText:    { fontSize: 14, fontFamily: fonts.regular, color: colors.text, marginBottom: 12 },
+  promoBtn:     { backgroundColor: colors.accent, borderRadius: radii.md, paddingVertical: 11, alignItems: 'center' },
   promoBtnText: { color: '#fff', fontSize: 14, fontFamily: fonts.semiBold },
-  settingsList: {
-    backgroundColor: colors.surface, borderRadius: radii.xl, overflow: 'hidden', ...shadows.sm,
-  },
-  settingsItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: spacing.md, paddingVertical: 15,
-  },
+
+  settingsList:       { backgroundColor: colors.surface, borderRadius: radii.xl, overflow: 'hidden', ...shadows.sm },
+  settingsItem:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: spacing.md, paddingVertical: 15 },
   settingsItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  settingsItemText: { flex: 1, fontSize: 14, fontFamily: fonts.regular, color: colors.text },
+  settingsItemText:   { flex: 1, fontSize: 14, fontFamily: fonts.regular, color: colors.text },
+
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   modalSheet: {
     backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     padding: spacing.lg,
   },
   modalHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg,
-  },
-  modalTitle: { fontSize: 18, fontFamily: fonts.semiBold, color: colors.text },
-  langOption: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: colors.border,
+    marginBottom: spacing.lg,
   },
+  modalTitle:     { fontSize: 18, fontFamily: fonts.semiBold, color: colors.text },
+  langOption:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: colors.border },
   langOptionText: { fontSize: 15, fontFamily: fonts.regular, color: colors.text },
 });

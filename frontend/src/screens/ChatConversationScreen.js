@@ -10,6 +10,11 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors, fonts, spacing, radii } from '../constants/theme';
 import { getMessages, sendMessage } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
+import config from '../../config';
+
+// Derive the WebSocket host from the HTTP base URL in config.js
+// e.g. "http://192.168.0.134:8000" → "192.168.0.134:8000"
+const WS_HOST = config.BACKEND_URL.replace(/^https?:\/\//, '');
 
 const QUICK_REPLIES = [
   'What is the price?',
@@ -20,26 +25,30 @@ const QUICK_REPLIES = [
 
 export default function ChatConversationScreen() {
   const navigation = useNavigation();
-  const route = useRoute();
-  const insets = useSafeAreaInsets();
+  const route      = useRoute();
+  const insets     = useSafeAreaInsets();
   const { idToken, sessionId, refreshToken, updateUser } = useUser();
 
-  const chat = route.params?.chat;
+  const chat   = route.params?.chat;
   const convId = chat?.id;
 
-  const listRef = useRef(null);
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState(null);
+  const listRef       = useRef(null);
+  const wsRef         = useRef(null);   // holds the live WebSocket instance
+  const pendingTemps  = useRef([]);     // queue of optimistic tempIds waiting for WS echo
+
+  const [messages,    setMessages]    = useState([]);
+  const [input,       setInput]       = useState('');
+  const [loading,     setLoading]     = useState(true);
+  const [sending,     setSending]     = useState(false);
+  const [error,       setError]       = useState(null);
+  const [wsConnected, setWsConnected] = useState(false); // drives the live indicator dot
 
   const authArgs = {
     idToken, sessionId, refreshToken,
     onTokenRefreshed: (t) => updateUser({ idToken: t }),
   };
 
-  // ── Load messages on mount ──────────────────────────────────────────────
+  // ── 1. Load message history via REST on mount ───────────────────────────
   useEffect(() => {
     if (!convId) { setLoading(false); return; }
     let cancelled = false;
@@ -59,22 +68,73 @@ export default function ChatConversationScreen() {
     return () => { cancelled = true; };
   }, [convId]);
 
-  // Scroll to bottom when messages change
+  // ── 2. Open WebSocket connection on mount, close on unmount ────────────
+  useEffect(() => {
+    if (!convId || !idToken) return;
+
+    const ws = new WebSocket(`ws://${WS_HOST}/ws/chat/${convId}/?token=${idToken}`);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      setWsConnected(true);
+    };
+
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+
+        setMessages((prev) => {
+          // If this is an echo of our own sent message, replace the optimistic placeholder
+          if (msg.mine && pendingTemps.current.length > 0) {
+            const tempId = pendingTemps.current.shift(); // pop oldest pending
+            return prev.map((m) => (m.id === tempId ? msg : m));
+          }
+          // Otherwise it's an inbound message from the other participant — just append
+          // (guard against duplicates: the REST history fetch may have loaded it already)
+          if (prev.some((m) => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
+
+        // Scroll to new message
+        setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+      } catch {
+        // Malformed frame — ignore
+      }
+    };
+
+    ws.onclose = () => {
+      setWsConnected(false);
+      wsRef.current = null;
+    };
+
+    ws.onerror = () => {
+      setWsConnected(false);
+      // Don't null wsRef here — onclose fires immediately after onerror
+    };
+
+    // Cleanup: close the socket when navigating away
+    return () => {
+      ws.close();
+      wsRef.current = null;
+    };
+  }, [convId, idToken]);
+
+  // ── 3. Scroll to bottom when new messages arrive ────────────────────────
   useEffect(() => {
     if (messages.length > 0) {
       setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 100);
     }
   }, [messages.length]);
 
-  // ── Send message ────────────────────────────────────────────────────────
+  // ── 4. Send message — WebSocket primary, REST fallback ─────────────────
   const handleSend = useCallback(async (textOverride) => {
     const text = (textOverride || input).trim();
     if (!text || sending) return;
 
-    // Optimistic message (no id yet)
+    // Append optimistic message immediately so the UI feels instant
     const tempId = `temp-${Date.now()}`;
     const optimisticMsg = {
-      id: tempId,
+      id:   tempId,
       text,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       mine: true,
@@ -83,21 +143,40 @@ export default function ChatConversationScreen() {
     setInput('');
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
 
-    setSending(true);
-    try {
-      const confirmed = await sendMessage(convId, text, authArgs);
-      // Replace the optimistic message with the server-confirmed one
-      setMessages((prev) =>
-        prev.map((m) => (m.id === tempId ? confirmed : m))
-      );
-    } catch {
-      // Remove the optimistic message on failure and restore the input
-      setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      setInput(text);
-    } finally {
+    const ws = wsRef.current;
+    const wsOpen = ws && ws.readyState === WebSocket.OPEN;
+
+    if (wsOpen) {
+      // Primary path: send via WebSocket
+      // The server will broadcast the confirmed message back (with real id + time).
+      // onmessage will receive it and replace the optimistic placeholder.
+      pendingTemps.current.push(tempId);
+      try {
+        ws.send(JSON.stringify({ text }));
+      } catch {
+        // ws.send threw synchronously — fall back to REST
+        pendingTemps.current.pop();
+        await _sendViaRest(tempId, text, optimisticMsg);
+      }
+    } else {
+      // Fallback path: WebSocket not open, use REST silently
+      setSending(true);
+      await _sendViaRest(tempId, text, optimisticMsg);
       setSending(false);
     }
   }, [input, sending, convId, authArgs]);
+
+  // REST fallback helper (used when WS is unavailable)
+  const _sendViaRest = async (tempId, text, optimisticMsg) => {
+    try {
+      const confirmed = await sendMessage(convId, text, authArgs);
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? confirmed : m)));
+    } catch {
+      // Remove optimistic message and restore input so the user can retry
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setInput(text);
+    }
+  };
 
   // ── Render helpers ──────────────────────────────────────────────────────
   const renderMessage = ({ item }) => (
@@ -120,7 +199,7 @@ export default function ChatConversationScreen() {
     >
       <StatusBar barStyle="light-content" backgroundColor="#0D0F12" />
 
-      {/* Header */}
+      {/* ── Header ───────────────────────────────────────────────────────── */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -131,9 +210,13 @@ export default function ChatConversationScreen() {
             <Text style={styles.avatarText}>{chat?.avatarInitial || 'S'}</Text>
           </View>
           <View style={styles.headerText}>
-            <Text style={styles.headerName} numberOfLines={1}>{chat?.username || 'Seller'}</Text>
+            <View style={styles.headerNameRow}>
+              <Text style={styles.headerName} numberOfLines={1}>{chat?.username || 'Seller'}</Text>
+              {/* Live indicator dot — shown when WebSocket is connected */}
+              {wsConnected && <View style={styles.liveDot} />}
+            </View>
             <Text style={styles.headerProduct} numberOfLines={1}>
-              {chat?.productTitle || 'Product inquiry'}
+              {wsConnected ? 'Live' : (chat?.productTitle || 'Product inquiry')}
             </Text>
           </View>
         </TouchableOpacity>
@@ -148,7 +231,7 @@ export default function ChatConversationScreen() {
         </View>
       </View>
 
-      {/* Product context strip */}
+      {/* ── Product context strip ─────────────────────────────────────────── */}
       {chat?.productTitle && (
         <View style={styles.productStrip}>
           <Ionicons name="cube-outline" size={14} color={colors.primary} />
@@ -159,65 +242,60 @@ export default function ChatConversationScreen() {
         </View>
       )}
 
-      {/* Messages */}
+      {/* ── Message list ─────────────────────────────────────────────────── */}
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : error ? (
         <View style={styles.center}>
-          <Ionicons name="cloud-offline-outline" size={48} color="#374151" />
+          <Ionicons name="cloud-offline-outline" size={48} color="rgba(255,255,255,0.3)" />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : (
         <FlatList
           ref={listRef}
           data={messages}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={renderMessage}
           contentContainerStyle={styles.messageList}
+          showsVerticalScrollIndicator={false}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
-          ListEmptyComponent={
-            <View style={styles.center}>
-              <Text style={styles.emptyText}>No messages yet. Say hello!</Text>
-            </View>
-          }
         />
       )}
 
-      {/* Quick replies */}
-      <View style={styles.quickReplies}>
+      {/* ── Quick replies ─────────────────────────────────────────────────── */}
+      {!loading && !error && messages.length === 0 && (
         <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
           data={QUICK_REPLIES}
-          keyExtractor={(q) => q}
+          horizontal
+          keyExtractor={(item) => item}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickReplies}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.quickReply}
-              onPress={() => handleSend(item)}
-            >
+            <TouchableOpacity style={styles.quickReply} onPress={() => handleSend(item)}>
               <Text style={styles.quickReplyText}>{item}</Text>
             </TouchableOpacity>
           )}
-          contentContainerStyle={{ paddingHorizontal: spacing.md, gap: 8 }}
         />
-      </View>
+      )}
 
-      {/* Input bar */}
+      {/* ── Input bar ─────────────────────────────────────────────────────── */}
       <View style={[styles.inputBar, { paddingBottom: insets.bottom + 8 }]}>
         <TouchableOpacity style={styles.attachBtn}>
-          <Ionicons name="attach" size={22} color="#9CA3AF" />
+          <Ionicons name="attach-outline" size={22} color="rgba(255,255,255,0.5)" />
         </TouchableOpacity>
+
         <TextInput
           style={styles.textInput}
-          placeholder="Type a message..."
-          placeholderTextColor="#6B7280"
           value={input}
           onChangeText={setInput}
+          placeholder="Message..."
+          placeholderTextColor="rgba(255,255,255,0.35)"
           multiline
-          maxLength={4096}
+          returnKeyType="default"
         />
+
         <TouchableOpacity
           style={[styles.sendBtn, (!input.trim() || sending) && styles.sendBtnDisabled]}
           onPress={() => handleSend()}
@@ -225,7 +303,8 @@ export default function ChatConversationScreen() {
         >
           {sending
             ? <ActivityIndicator size="small" color="#fff" />
-            : <Ionicons name="send" size={18} color="#fff" />}
+            : <Ionicons name="send" size={16} color="#fff" />
+          }
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -233,50 +312,63 @@ export default function ChatConversationScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0D0F12' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  errorText: { color: '#9CA3AF', fontSize: 14, fontFamily: fonts.regular, textAlign: 'center' },
-  emptyText: { color: '#6B7280', fontSize: 14, fontFamily: fonts.regular },
+  container:   { flex: 1, backgroundColor: '#0D0F12' },
+  center:      { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  errorText:   { color: 'rgba(255,255,255,0.5)', marginTop: 12, fontSize: 14, fontFamily: fonts.regular },
 
+  // ── Header ──────────────────────────────────────────────────────────────
   header: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.md, paddingBottom: 12,
-    backgroundColor: '#111827', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#111827',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
   },
-  backBtn: { padding: 4 },
-  headerInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 15, fontFamily: fonts.bold, color: '#fff' },
-  headerText: { flex: 1 },
-  headerName: { fontSize: 15, fontFamily: fonts.semiBold, color: '#fff' },
-  headerProduct: { fontSize: 11, fontFamily: fonts.regular, color: '#9CA3AF' },
-  headerActions: { flexDirection: 'row', gap: 4 },
-  headerBtn: { padding: 8 },
+  backBtn:     { padding: 4, marginRight: 4 },
+  headerInfo:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  avatar: {
+    width: 38, height: 38, borderRadius: 19,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarText:     { color: '#fff', fontSize: 15, fontFamily: fonts.bold },
+  headerText:     { flex: 1 },
+  headerNameRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  headerName:     { fontSize: 15, fontFamily: fonts.semiBold, color: '#fff', flexShrink: 1 },
+  headerProduct:  { fontSize: 12, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.5)', marginTop: 1 },
+  headerActions:  { flexDirection: 'row', gap: 4 },
+  headerBtn:      { padding: 6 },
 
-  productStrip: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: spacing.md, paddingVertical: 8,
-    backgroundColor: `${colors.primary}12`,
-    borderBottomWidth: 1, borderBottomColor: `${colors.primary}20`,
+  // Live indicator dot (green pulse when WS is open)
+  liveDot: {
+    width: 7, height: 7, borderRadius: 4,
+    backgroundColor: '#22c55e',
   },
-  productStripText: { flex: 1, fontSize: 12, fontFamily: fonts.medium, color: '#9CA3AF' },
+
+  // ── Product strip ────────────────────────────────────────────────────────
+  productStrip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: spacing.md, paddingVertical: 8,
+    backgroundColor: 'rgba(0,168,89,0.08)',
+    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  productStripText: { flex: 1, fontSize: 12, fontFamily: fonts.medium, color: 'rgba(255,255,255,0.7)' },
   productStripLink: { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },
 
-  messageList: { paddingHorizontal: spacing.md, paddingVertical: 12, gap: 8 },
-
+  // ── Messages ─────────────────────────────────────────────────────────────
+  messageList:      { paddingHorizontal: spacing.md, paddingTop: 16, paddingBottom: 8 },
   bubble: {
-    maxWidth: '78%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 9,
-    marginVertical: 2,
+    maxWidth: '78%', borderRadius: radii.lg,
+    paddingHorizontal: 14, paddingVertical: 9, marginBottom: 6,
   },
-  bubbleMine: { backgroundColor: colors.primary, alignSelf: 'flex-end', borderBottomRightRadius: 4 },
-  bubbleTheirs: { backgroundColor: '#1F2937', alignSelf: 'flex-start', borderBottomLeftRadius: 4 },
-  bubbleText: { fontSize: 14, fontFamily: fonts.regular, lineHeight: 20 },
-  bubbleTextMine: { color: '#fff' },
-  bubbleTextTheirs: { color: '#E5E7EB' },
-  bubbleTime: { fontSize: 10, fontFamily: fonts.regular, marginTop: 4 },
-  bubbleTimeMine: { color: 'rgba(255,255,255,0.6)', textAlign: 'right' },
-  bubbleTimeTheirs: { color: '#6B7280' },
+  bubbleMine:   { alignSelf: 'flex-end', backgroundColor: colors.primary },
+  bubbleTheirs: { alignSelf: 'flex-start', backgroundColor: '#1F2937' },
+  bubbleText:         { fontSize: 14, fontFamily: fonts.regular, lineHeight: 20 },
+  bubbleTextMine:     { color: '#fff' },
+  bubbleTextTheirs:   { color: '#E5E7EB' },
+  bubbleTime:         { fontSize: 10, fontFamily: fonts.regular, marginTop: 4 },
+  bubbleTimeMine:     { color: 'rgba(255,255,255,0.6)', textAlign: 'right' },
+  bubbleTimeTheirs:   { color: '#6B7280' },
 
+  // ── Quick replies ─────────────────────────────────────────────────────────
   quickReplies: { paddingVertical: 8, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
   quickReply: {
     paddingHorizontal: 14, paddingVertical: 7,
@@ -285,12 +377,13 @@ const styles = StyleSheet.create({
   },
   quickReplyText: { fontSize: 12, fontFamily: fonts.medium, color: '#D1D5DB' },
 
+  // ── Input bar ─────────────────────────────────────────────────────────────
   inputBar: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 8,
     paddingHorizontal: spacing.md, paddingTop: 10,
     backgroundColor: '#111827', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)',
   },
-  attachBtn: { padding: 6, marginBottom: 4 },
+  attachBtn:  { padding: 6, marginBottom: 4 },
   textInput: {
     flex: 1, backgroundColor: '#1F2937', borderRadius: 22,
     paddingHorizontal: 16, paddingVertical: 10,

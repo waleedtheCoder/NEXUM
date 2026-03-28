@@ -14,7 +14,7 @@ import { getOrders } from '../services/marketplaceApi';
 const MENU_ITEMS = [
   {
     title: 'Saved Listings',
-    description: 'Products you\'ve hearted for later',
+    description: "Products you've hearted for later",
     hasNew: false,
     screen: 'SavedListings',
   },
@@ -25,10 +25,11 @@ const MENU_ITEMS = [
     screen: 'MarketplaceBrowsing',
   },
   {
+    // FIX: was 'AppNavigation' then null — RestockRemindersScreen now exists
     title: 'Restock Reminders',
     description: 'Set alerts for your frequently ordered products',
     hasNew: true,
-    screen: 'AppNavigation',
+    screen: 'RestockReminders',
   },
   {
     title: 'Bulk Deals & Offers',
@@ -44,7 +45,6 @@ const MENU_ITEMS = [
   },
 ];
 
-// Status badge colour map — matches backend Order.STATUS_CHOICES
 const STATUS_COLORS = {
   pending:   '#F59E0B',
   confirmed: '#3B82F6',
@@ -64,13 +64,10 @@ export default function AccountSettingsScreen() {
   const [ordersError, setOrdersError]     = useState(null);
 
   const authArgs = {
-    idToken,
-    sessionId,
-    refreshToken,
+    idToken, sessionId, refreshToken,
     onTokenRefreshed: (t) => updateUser({ idToken: t }),
   };
 
-  // ── Fetch orders every time the screen comes into focus ───────────────────
   useFocusEffect(
     useCallback(() => {
       if (!isShopkeeper) return;
@@ -146,9 +143,7 @@ export default function AccountSettingsScreen() {
             styles.orderStatusBadge,
             { backgroundColor: `${statusColor}20`, borderColor: `${statusColor}50` },
           ]}>
-            <Text style={[styles.orderStatusText, { color: statusColor }]}>
-              {statusLabel}
-            </Text>
+            <Text style={[styles.orderStatusText, { color: statusColor }]}>{statusLabel}</Text>
           </View>
         </View>
       </View>
@@ -171,18 +166,21 @@ export default function AccountSettingsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 100 }]} showsVerticalScrollIndicator={false}>
-
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: 100 }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Greeting */}
         <View style={styles.greetSection}>
           <Text style={styles.greetText}>Hello, {user?.name || 'Retailer'} 👋</Text>
           <Text style={styles.greetSub}>{user?.email || 'Manage your account'}</Text>
         </View>
 
-        {/* Profile card */}
+        {/* Profile card — FIX: now navigates to real EditProfileScreen */}
         <TouchableOpacity
           style={styles.profileCard}
           onPress={() => navigation.navigate('EditProfile')}
+          activeOpacity={0.75}
         >
           <View style={styles.profileAvatar}>
             <Text style={styles.profileInitials}>
@@ -201,7 +199,12 @@ export default function AccountSettingsScreen() {
         {/* Stats row */}
         <View style={styles.statsRow}>
           {[
-            { label: 'Orders', value: ordersLoading ? '…' : String(orders.length), icon: 'receipt-outline' },
+            {
+              label: 'Orders',
+              value: ordersLoading ? '…' : String(orders.length),
+              icon: 'receipt-outline',
+              onPress: () => navigation.navigate('OrderHistory'),
+            },
             { label: 'Suppliers', value: '—', icon: 'business-outline' },
             {
               label: 'Saved',
@@ -224,7 +227,7 @@ export default function AccountSettingsScreen() {
           ))}
         </View>
 
-        {/* ── Recent Orders (shopkeeper only) ── */}
+        {/* Recent Orders (shopkeeper only) */}
         {isShopkeeper && (
           <View style={styles.ordersSection}>
             <View style={styles.ordersSectionHeader}>
@@ -233,20 +236,17 @@ export default function AccountSettingsScreen() {
                 <Text style={styles.viewAllText}>View All</Text>
               </TouchableOpacity>
             </View>
-
             {ordersLoading && (
               <View style={styles.ordersCenter}>
                 <ActivityIndicator size="small" color={colors.primary} />
               </View>
             )}
-
             {!ordersLoading && ordersError && (
               <View style={styles.ordersCenter}>
                 <Ionicons name="alert-circle-outline" size={18} color={colors.accent} />
                 <Text style={styles.ordersErrorText}>{ordersError}</Text>
               </View>
             )}
-
             {!ordersLoading && !ordersError && orders.length === 0 && (
               <View style={styles.ordersCenter}>
                 <Ionicons name="receipt-outline" size={28} color={colors.textLight} />
@@ -256,7 +256,6 @@ export default function AccountSettingsScreen() {
                 </Text>
               </View>
             )}
-
             {!ordersLoading && !ordersError && orders.map((order, i, arr) =>
               renderOrder(order, i, arr)
             )}
@@ -299,7 +298,6 @@ export default function AccountSettingsScreen() {
           <Ionicons name="log-out-outline" size={18} color="#EF4444" />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
-
       </ScrollView>
 
       <BottomNav activeTab="account" />
@@ -308,159 +306,55 @@ export default function AccountSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-
-  topBar: {
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingBottom: 14,
-  },
+  container:       { flex: 1, backgroundColor: colors.background },
+  topBar:          { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingBottom: 14 },
   topBarIconLeft:  { width: 36 },
   topBarIconRight: { padding: 4, width: 36, alignItems: 'flex-end' },
-  topBarTitle: {
-    flex: 1,
-    textAlign: 'center',
-    color: '#fff',
-    fontSize: 18,
-    fontFamily: fonts.semiBold,
-  },
-
-  scroll: { padding: spacing.md, paddingBottom: 24 },
-
-  greetSection: { marginBottom: spacing.md },
-  greetText: { fontSize: 22, fontFamily: fonts.bold, color: colors.text },
-  greetSub:  { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 2 },
-
-  profileCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radii.xl,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    ...shadows.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  profileAvatar: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-    marginRight: 14,
-  },
-  profileInitials: { color: '#fff', fontSize: 22, fontFamily: fonts.bold },
+  topBarTitle:     { flex: 1, textAlign: 'center', color: '#fff', fontSize: 18, fontFamily: fonts.semiBold },
+  scroll:          { padding: spacing.md },
+  greetSection:    { marginBottom: spacing.md },
+  greetText:       { fontSize: 20, fontFamily: fonts.bold, color: colors.text },
+  greetSub:        { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 2 },
+  profileCard:     { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radii.xl, padding: spacing.md, marginBottom: spacing.md, ...shadows.sm },
+  profileAvatar:   { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  profileInitials: { color: '#fff', fontSize: 18, fontFamily: fonts.bold },
   profileInfo:     { flex: 1 },
   profileName:     { fontSize: 16, fontFamily: fonts.semiBold, color: colors.text },
   profileRole:     { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 2 },
-
-  statsRow: { flexDirection: 'row', gap: 10, marginBottom: spacing.md },
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: 14,
-    alignItems: 'center',
-    gap: 4,
-    ...shadows.sm,
-  },
-  statValue: { fontSize: 18, fontFamily: fonts.bold, color: colors.text },
-  statLabel: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
-
-  // Orders section
-  ordersSection: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.xl,
-    marginBottom: spacing.md,
-    overflow: 'hidden',
-    ...shadows.sm,
-  },
-  ordersSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontFamily: fonts.semiBold,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 8,
-  },
-  viewAllText: { fontSize: 13, fontFamily: fonts.medium, color: colors.primary },
-  ordersCenter: { alignItems: 'center', padding: spacing.md, gap: 8 },
-  ordersErrorText: { fontSize: 12, fontFamily: fonts.regular, color: colors.accent, textAlign: 'center' },
-  ordersEmptyText: { fontSize: 14, fontFamily: fonts.medium, color: colors.text },
-  ordersEmptySubText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
-
-  orderCard: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: 12 },
-  orderCardBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  orderLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  orderIconWrap: {
-    width: 36, height: 36, borderRadius: radii.md,
-    backgroundColor: `${colors.primary}15`,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  orderInfo: { flex: 1 },
-  orderProduct: { fontSize: 13, fontFamily: fonts.medium, color: colors.text, marginBottom: 2 },
-  orderSupplier: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
-  orderDate: { fontSize: 11, fontFamily: fonts.regular, color: colors.textLight, marginTop: 2 },
-  orderRight: { alignItems: 'flex-end', gap: 6 },
-  orderAmount: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.text },
-  orderStatusBadge: {
-    borderRadius: radii.full, borderWidth: 1,
-    paddingHorizontal: 8, paddingVertical: 2,
-  },
-  orderStatusText: { fontSize: 10, fontFamily: fonts.semiBold },
-
-  // Menu
-  menuList: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.xl,
-    marginBottom: spacing.md,
-    ...shadows.sm,
-    overflow: 'hidden',
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-  },
-  menuItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  menuItemLeft:   { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  newDot:         { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.green },
-  noNewOffset:    { marginLeft: 18 },
-  menuItemTitle:  { fontSize: 14, fontFamily: fonts.medium, color: colors.text },
-  menuItemDesc:   { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 1 },
-
-  navCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.surface,
-    borderRadius: radii.xl,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    ...shadows.sm,
-  },
-  navCardText: { flex: 1, fontSize: 14, fontFamily: fonts.medium, color: colors.text },
-
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    borderRadius: radii.xl,
-    paddingVertical: 14,
-  },
-  logoutText: { fontSize: 14, fontFamily: fonts.semiBold, color: '#EF4444' },
+  statsRow:        { flexDirection: 'row', gap: 10, marginBottom: spacing.md },
+  statCard:        { flex: 1, backgroundColor: colors.surface, borderRadius: radii.xl, padding: 12, alignItems: 'center', gap: 4, ...shadows.sm },
+  statValue:       { fontSize: 16, fontFamily: fonts.bold, color: colors.text },
+  statLabel:       { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
+  sectionLabel:    { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+  ordersSection:       { marginBottom: spacing.md },
+  ordersSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  viewAllText:         { fontSize: 13, fontFamily: fonts.medium, color: colors.primary },
+  ordersCenter:        { alignItems: 'center', gap: 6, paddingVertical: 16 },
+  ordersErrorText:     { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
+  ordersEmptyText:     { fontSize: 14, fontFamily: fonts.medium, color: colors.text },
+  ordersEmptySubText:  { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
+  orderCard:           { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radii.lg, paddingHorizontal: spacing.md, paddingVertical: 12 },
+  orderCardBorder:     { borderBottomWidth: 1, borderBottomColor: colors.border },
+  orderLeft:           { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 10 },
+  orderIconWrap:       { width: 36, height: 36, borderRadius: 18, backgroundColor: `${colors.primary}15`, alignItems: 'center', justifyContent: 'center' },
+  orderInfo:           { flex: 1 },
+  orderProduct:        { fontSize: 13, fontFamily: fonts.semiBold, color: colors.text },
+  orderSupplier:       { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 1 },
+  orderDate:           { fontSize: 11, fontFamily: fonts.regular, color: colors.textLight, marginTop: 1 },
+  orderRight:          { alignItems: 'flex-end', gap: 4 },
+  orderAmount:         { fontSize: 13, fontFamily: fonts.semiBold, color: colors.text },
+  orderStatusBadge:    { borderRadius: radii.full, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
+  orderStatusText:     { fontSize: 10, fontFamily: fonts.semiBold },
+  menuList:        { backgroundColor: colors.surface, borderRadius: radii.xl, marginBottom: spacing.md, ...shadows.sm, overflow: 'hidden' },
+  menuItem:        { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: 14 },
+  menuItemBorder:  { borderBottomWidth: 1, borderBottomColor: colors.border },
+  menuItemLeft:    { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  newDot:          { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.green },
+  noNewOffset:     { marginLeft: 18 },
+  menuItemTitle:   { fontSize: 14, fontFamily: fonts.medium, color: colors.text },
+  menuItemDesc:    { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 1 },
+  navCard:         { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: radii.xl, padding: spacing.md, marginBottom: spacing.md, ...shadows.sm },
+  navCardText:     { flex: 1, fontSize: 14, fontFamily: fonts.medium, color: colors.text },
+  logoutBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA', borderRadius: radii.xl, paddingVertical: 14 },
+  logoutText:      { fontSize: 14, fontFamily: fonts.semiBold, color: '#EF4444' },
 });

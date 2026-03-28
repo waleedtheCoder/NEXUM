@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, StatusBar, ActivityIndicator, Image,
@@ -21,11 +21,14 @@ const STATUS_CONFIG = {
 
 function OrderCard({ order, onPress }) {
   const statusKey = (order.status || '').toLowerCase();
-  const s         = STATUS_CONFIG[statusKey] || { color: colors.textSecondary, bg: colors.border, label: order.statusLabel || order.status };
+  const s = STATUS_CONFIG[statusKey] || {
+    color: colors.textSecondary,
+    bg: colors.border,
+    label: order.statusLabel || order.status,
+  };
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
-      {/* Product image */}
       <View style={styles.cardImageWrap}>
         {order.imageUrl ? (
           <Image source={{ uri: order.imageUrl }} style={styles.cardImage} resizeMode="cover" />
@@ -36,7 +39,6 @@ function OrderCard({ order, onPress }) {
         )}
       </View>
 
-      {/* Info */}
       <View style={styles.cardBody}>
         <View style={styles.cardTop}>
           <Text style={styles.productName} numberOfLines={1}>{order.productName}</Text>
@@ -73,29 +75,25 @@ export default function OrderHistoryScreen() {
     onTokenRefreshed: (t) => updateUser({ idToken: t }),
   };
 
+  // ── Named fetch function — used by both useFocusEffect and the Retry button
+  const loadOrders = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getOrders(authArgs);
+      const list = Array.isArray(data) ? data : (data.results || []);
+      setOrders(list);
+    } catch (err) {
+      setError(err.message || 'Failed to load orders.');
+    } finally {
+      setLoading(false);
+    }
+  }, [idToken, sessionId]);
+
   useFocusEffect(
     useCallback(() => {
-      let cancelled = false;
-
-      const fetch = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          const data = await getOrders(authArgs);
-          if (!cancelled) {
-            const list = Array.isArray(data) ? data : (data.results || []);
-            setOrders(list);
-          }
-        } catch (err) {
-          if (!cancelled) setError(err.message || 'Failed to load orders.');
-        } finally {
-          if (!cancelled) setLoading(false);
-        }
-      };
-
-      fetch();
-      return () => { cancelled = true; };
-    }, [idToken, sessionId])
+      loadOrders();
+    }, [loadOrders])
   );
 
   const renderItem = ({ item }) => (
@@ -134,10 +132,8 @@ export default function OrderHistoryScreen() {
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={40} color={colors.accent} />
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryBtn}
-            onPress={() => useFocusEffect(useCallback(() => {}, []))}
-          >
+          {/* FIX: was calling useFocusEffect inside onPress (hooks violation) */}
+          <TouchableOpacity style={styles.retryBtn} onPress={loadOrders}>
             <Text style={styles.retryText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -164,7 +160,6 @@ const styles = StyleSheet.create({
   flatListEmpty: { flex: 1, padding: spacing.md },
   separator:     { height: 10 },
 
-  // ── Order card ────────────────────────────────────────────────────────────
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -187,54 +182,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 8,
   },
-  productName: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: fonts.semiBold,
-    color: colors.text,
-  },
-  statusBadge: {
-    borderRadius: radii.full,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    flexShrink: 0,
-  },
-  statusText: { fontSize: 10, fontFamily: fonts.semiBold },
-
+  productName: { flex: 1, fontSize: 14, fontFamily: fonts.semiBold, color: colors.text },
+  statusBadge: { borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 3, flexShrink: 0 },
+  statusText:  { fontSize: 10, fontFamily: fonts.semiBold },
   supplierName: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
+  cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 2 },
+  orderMeta:  { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
+  orderDate:  { flex: 1, fontSize: 11, fontFamily: fonts.regular, color: colors.textLight },
+  totalPrice: { fontSize: 13, fontFamily: fonts.bold, color: colors.primary },
+  chevron:    { paddingRight: 12 },
 
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 2,
-  },
-  orderMeta:   { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
-  orderDate:   { flex: 1, fontSize: 11, fontFamily: fonts.regular, color: colors.textLight },
-  totalPrice:  { fontSize: 13, fontFamily: fonts.bold, color: colors.primary },
-
-  chevron: { paddingRight: 12 },
-
-  // ── Empty state ───────────────────────────────────────────────────────────
   emptyWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingHorizontal: spacing.xl,
+    flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: spacing.xl,
   },
   emptyTitle: { fontSize: 18, fontFamily: fonts.semiBold, color: colors.text },
   emptySub:   { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
   browseBtn: {
-    marginTop: 8,
-    backgroundColor: colors.primary,
-    borderRadius: radii.xl,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    marginTop: 8, backgroundColor: colors.primary,
+    borderRadius: radii.xl, paddingHorizontal: 24, paddingVertical: 12,
   },
   browseBtnText: { color: '#fff', fontFamily: fonts.semiBold, fontSize: 14 },
 
-  // ── Error state ───────────────────────────────────────────────────────────
   errorText: { fontSize: 14, fontFamily: fonts.medium, color: colors.accent, textAlign: 'center' },
   retryBtn:  { paddingHorizontal: 24, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: radii.xl },
   retryText: { color: '#fff', fontFamily: fonts.semiBold, fontSize: 14 },
