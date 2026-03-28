@@ -13,6 +13,12 @@ import { getOrders } from '../services/marketplaceApi';
 
 const MENU_ITEMS = [
   {
+    title: 'Saved Listings',
+    description: 'Products you\'ve hearted for later',
+    hasNew: false,
+    screen: 'SavedListings',
+  },
+  {
     title: 'Supplier Network',
     description: 'Find and connect with verified suppliers',
     hasNew: false,
@@ -76,9 +82,8 @@ export default function AccountSettingsScreen() {
         try {
           const data = await getOrders(authArgs);
           if (!cancelled) {
-            // API returns paginated { results: [...] } or plain array
             const list = Array.isArray(data) ? data : (data.results || []);
-            setOrders(list.slice(0, 3)); // show 3 most recent on this screen
+            setOrders(list.slice(0, 3));
           }
         } catch (err) {
           if (!cancelled) setOrdersError(err.message || 'Failed to load orders.');
@@ -95,7 +100,7 @@ export default function AccountSettingsScreen() {
   const handleLogout = async () => {
     await logout();
     navigation.reset({ index: 0, routes: [{ name: 'LoginSelection' }] });
-    };
+  };
 
   const handleMenuPress = (item) => {
     if (item.screen) {
@@ -105,7 +110,6 @@ export default function AccountSettingsScreen() {
     }
   };
 
-  // Render a single order card row
   const renderOrder = (order, i, arr) => {
     const statusKey   = (order.status || '').toLowerCase();
     const statusColor = STATUS_COLORS[statusKey] || colors.textSecondary;
@@ -134,7 +138,9 @@ export default function AccountSettingsScreen() {
         </View>
         <View style={styles.orderRight}>
           <Text style={styles.orderAmount}>
-            {order.total_price ? `Rs ${Number(order.total_price).toLocaleString()}` : order.amount || '—'}
+            {order.total_price
+              ? `Rs ${Number(order.total_price).toLocaleString()}`
+              : order.amount || '—'}
           </Text>
           <View style={[
             styles.orderStatusBadge,
@@ -192,18 +198,29 @@ export default function AccountSettingsScreen() {
           <Ionicons name="chevron-forward" size={18} color={colors.primary} />
         </TouchableOpacity>
 
-        {/* Stats row — orders count driven by real data */}
+        {/* Stats row */}
         <View style={styles.statsRow}>
           {[
-            { label: 'Orders',    value: ordersLoading ? '…' : String(orders.length), icon: 'receipt-outline' },
-            { label: 'Suppliers', value: '—',  icon: 'business-outline' },
-            { label: 'Saved',     value: '—',  icon: 'bookmark-outline' },
+            { label: 'Orders', value: ordersLoading ? '…' : String(orders.length), icon: 'receipt-outline' },
+            { label: 'Suppliers', value: '—', icon: 'business-outline' },
+            {
+              label: 'Saved',
+              value: '—',
+              icon: 'bookmark-outline',
+              onPress: () => navigation.navigate('SavedListings'),
+            },
           ].map((s, i) => (
-            <View key={i} style={styles.statCard}>
+            <TouchableOpacity
+              key={i}
+              style={styles.statCard}
+              onPress={s.onPress}
+              disabled={!s.onPress}
+              activeOpacity={s.onPress ? 0.7 : 1}
+            >
               <Ionicons name={s.icon} size={20} color={colors.primary} />
               <Text style={styles.statValue}>{s.value}</Text>
               <Text style={styles.statLabel}>{s.label}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 
@@ -217,14 +234,12 @@ export default function AccountSettingsScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Loading */}
             {ordersLoading && (
               <View style={styles.ordersCenter}>
                 <ActivityIndicator size="small" color={colors.primary} />
               </View>
             )}
 
-            {/* Error */}
             {!ordersLoading && ordersError && (
               <View style={styles.ordersCenter}>
                 <Ionicons name="alert-circle-outline" size={18} color={colors.accent} />
@@ -232,7 +247,6 @@ export default function AccountSettingsScreen() {
               </View>
             )}
 
-            {/* Empty state */}
             {!ordersLoading && !ordersError && orders.length === 0 && (
               <View style={styles.ordersCenter}>
                 <Ionicons name="receipt-outline" size={28} color={colors.textLight} />
@@ -243,7 +257,6 @@ export default function AccountSettingsScreen() {
               </View>
             )}
 
-            {/* Order list */}
             {!ordersLoading && !ordersError && orders.map((order, i, arr) =>
               renderOrder(order, i, arr)
             )}
@@ -355,7 +368,7 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 18, fontFamily: fonts.bold, color: colors.text },
   statLabel: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
 
-  // ── Orders section ────────────────────────────────────────────────────────
+  // Orders section
   ordersSection: {
     backgroundColor: colors.surface,
     borderRadius: radii.xl,
@@ -371,44 +384,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  viewAllText: { fontSize: 12, fontFamily: fonts.medium, color: colors.primary },
-
-  ordersCenter: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
-    gap: 6,
-  },
-  ordersErrorText:    { fontSize: 13, fontFamily: fonts.medium, color: colors.accent, textAlign: 'center' },
-  ordersEmptyText:    { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textSecondary },
-  ordersEmptySubText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textLight, textAlign: 'center', paddingHorizontal: spacing.lg },
-
-  orderCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.md,
-    gap: 10,
-  },
-  orderCardBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
-  orderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  orderIconWrap: {
-    width: 38, height: 38,
-    borderRadius: radii.md,
-    backgroundColor: colors.primaryLight,
-    alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
-  },
-  orderInfo:     { flex: 1 },
-  orderProduct:  { fontSize: 13, fontFamily: fonts.semiBold, color: colors.text },
-  orderSupplier: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 1 },
-  orderDate:     { fontSize: 10, fontFamily: fonts.regular, color: colors.textLight, marginTop: 1 },
-  orderRight:    { alignItems: 'flex-end', gap: 5, flexShrink: 0 },
-  orderAmount:   { fontSize: 13, fontFamily: fonts.bold, color: colors.primary },
-  orderStatusBadge: { borderWidth: 1, borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 3 },
-  orderStatusText:  { fontSize: 10, fontFamily: fonts.semiBold },
-
-  // ── Menu ──────────────────────────────────────────────────────────────────
   sectionLabel: {
     fontSize: 12,
     fontFamily: fonts.semiBold,
@@ -417,6 +392,33 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: 8,
   },
+  viewAllText: { fontSize: 13, fontFamily: fonts.medium, color: colors.primary },
+  ordersCenter: { alignItems: 'center', padding: spacing.md, gap: 8 },
+  ordersErrorText: { fontSize: 12, fontFamily: fonts.regular, color: colors.accent, textAlign: 'center' },
+  ordersEmptyText: { fontSize: 14, fontFamily: fonts.medium, color: colors.text },
+  ordersEmptySubText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
+
+  orderCard: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: 12 },
+  orderCardBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  orderLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  orderIconWrap: {
+    width: 36, height: 36, borderRadius: radii.md,
+    backgroundColor: `${colors.primary}15`,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  orderInfo: { flex: 1 },
+  orderProduct: { fontSize: 13, fontFamily: fonts.medium, color: colors.text, marginBottom: 2 },
+  orderSupplier: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
+  orderDate: { fontSize: 11, fontFamily: fonts.regular, color: colors.textLight, marginTop: 2 },
+  orderRight: { alignItems: 'flex-end', gap: 6 },
+  orderAmount: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.text },
+  orderStatusBadge: {
+    borderRadius: radii.full, borderWidth: 1,
+    paddingHorizontal: 8, paddingVertical: 2,
+  },
+  orderStatusText: { fontSize: 10, fontFamily: fonts.semiBold },
+
+  // Menu
   menuList: {
     backgroundColor: colors.surface,
     borderRadius: radii.xl,

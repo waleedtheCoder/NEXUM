@@ -21,7 +21,7 @@ export default function ProductDetailScreen() {
   // route.params.product can be a full detail object (from deep-link) OR just a card stub
   const stub = route.params?.product;
   const [product, setProduct] = useState(stub || null);
-  const [loading, setLoading] = useState(!stub?.details); // fetch only when detail fields missing
+  const [loading, setLoading] = useState(!stub?.details);
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
   const [savingInFlight, setSavingInFlight] = useState(false);
@@ -31,7 +31,6 @@ export default function ProductDetailScreen() {
   // ── Fetch full detail ──────────────────────────────────────────────────
   useEffect(() => {
     if (!stub?.id) return;
-    // If we already have all detail fields skip the fetch
     if (stub?.details && stub?.seller && stub?.images) {
       setLoading(false);
       return;
@@ -104,7 +103,6 @@ export default function ProductDetailScreen() {
         idToken, sessionId, refreshToken,
         onTokenRefreshed: (t) => updateUser({ idToken: t }),
       });
-
       navigation.navigate('ChatConversation', { chat: result.conversation });
     } catch (err) {
       if (err.status === 400 && err.payload?.detail?.includes('own listing')) {
@@ -115,6 +113,12 @@ export default function ProductDetailScreen() {
     } finally {
       setChatLoading(false);
     }
+  };
+
+  // ── View Supplier Profile ────────────────────────────────────────────────
+  const handleViewSupplier = () => {
+    if (!product?.seller?.id) return;
+    navigation.navigate('SupplierProfile', { supplierId: product.seller.id });
   };
 
   // ── Render ──────────────────────────────────────────────────────────────
@@ -131,126 +135,136 @@ export default function ProductDetailScreen() {
       <View style={[styles.container, styles.center]}>
         <Ionicons name="cloud-offline-outline" size={52} color="#374151" />
         <Text style={styles.errorText}>{error || 'Product not found.'}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.retryText}>Go Back</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.retryBtn}>
+          <Text style={styles.retryText}>Go back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const images = product.images?.length
-    ? product.images
-    : [product.imageUrl].filter(Boolean);
-
-  const price = parseFloat(product.price || 0).toLocaleString();
+  const images = product.images?.length ? product.images : [product.imageUrl].filter(Boolean);
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#0D0F12" />
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Image carousel */}
-        <View style={styles.carouselWrap}>
+      {/* Image carousel */}
+      <View style={styles.imageContainer}>
+        {images.length > 0 ? (
           <ScrollView
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            onScroll={(e) =>
-              setCurrentImage(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH))
-            }
-            scrollEventThrottle={16}
+            onMomentumScrollEnd={(e) => {
+              const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+              setCurrentImage(idx);
+            }}
           >
-            {images.map((img, i) => (
-              <Image key={i} source={{ uri: img }} style={styles.carouselImage} resizeMode="cover" />
+            {images.map((uri, i) => (
+              <Image key={i} source={{ uri }} style={styles.productImage} resizeMode="cover" />
             ))}
           </ScrollView>
-
-          <View style={styles.counter}>
-            <Text style={styles.counterText}>{currentImage + 1}/{images.length}</Text>
+        ) : (
+          <View style={[styles.productImage, styles.noImage]}>
+            <Ionicons name="image-outline" size={64} color={colors.textLight} />
           </View>
+        )}
 
-          <View style={styles.floatingBtns}>
-            <TouchableOpacity style={styles.floatBtn} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={20} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.floatBtn} onPress={handleSaveToggle} disabled={savingInFlight}>
-              <Ionicons
-                name={saved ? 'heart' : 'heart-outline'}
-                size={20}
-                color={saved ? colors.accent : '#fff'}
-              />
-            </TouchableOpacity>
+        {/* Back + save buttons */}
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={22} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSaveToggle}>
+          <Ionicons name={saved ? 'heart' : 'heart-outline'} size={22} color={saved ? colors.accent : '#fff'} />
+        </TouchableOpacity>
+
+        {/* Dot indicators */}
+        {images.length > 1 && (
+          <View style={styles.dots}>
+            {images.map((_, i) => (
+              <View key={i} style={[styles.dot, i === currentImage && styles.dotActive]} />
+            ))}
           </View>
-        </View>
+        )}
+      </View>
 
-        <View style={styles.content}>
-          {/* Price & badge */}
-          <View style={styles.priceRow}>
-            <Text style={styles.price}>Rs {price}</Text>
-            {product.isFeatured && (
-              <View style={styles.featBadge}><Text style={styles.featText}>Featured</Text></View>
-            )}
-          </View>
-
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Price + title */}
+        <View style={styles.card}>
+          {product.isFeatured && (
+            <View style={styles.featuredBadge}>
+              <Text style={styles.featuredText}>Featured</Text>
+            </View>
+          )}
+          <Text style={styles.price}>Rs {product.price}</Text>
           <Text style={styles.title}>{product.title}</Text>
           <View style={styles.metaRow}>
-            <Ionicons name="location-sharp" size={14} color={colors.primary} />
-            <Text style={styles.metaText}>
-              {product.location}  •  {product.timePosted || '—'}
-            </Text>
+            <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.metaText}>{product.location}</Text>
+            <Text style={styles.metaDot}>·</Text>
+            <Text style={styles.metaText}>{product.timePosted || product.time}</Text>
           </View>
-
-          {/* Details table */}
-          {product.details?.length > 0 && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Details</Text>
-              {product.details.map((d, i) => (
-                <View key={i}>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>{d.label}</Text>
-                    <Text style={styles.detailValue}>{d.value}</Text>
-                  </View>
-                  {i < product.details.length - 1 && <View style={styles.hairline} />}
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* Description */}
-          {!!product.description && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Description</Text>
-              <Text style={styles.descText}>{product.description}</Text>
-            </View>
-          )}
-
-          {/* Seller info */}
-          {product.seller && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Seller Information</Text>
-              <View style={styles.sellerRow}>
-                <View style={styles.sellerAvatar}>
-                  <Text style={styles.sellerInitials}>{product.seller.initials || 'S'}</Text>
-                </View>
-                <View style={styles.sellerInfo}>
-                  <Text style={styles.sellerName}>{product.seller.name}</Text>
-                  <View style={styles.sellerMeta}>
-                    <Ionicons name="star" size={14} color={colors.accent} />
-                    <Text style={styles.sellerMetaText}>
-                      {product.seller.rating}  •  {product.seller.sales} sales
-                    </Text>
-                  </View>
-                </View>
-              </View>
-              <View style={styles.badgeRow}>
-                <View style={styles.verifiedBadge}><Text style={styles.verifiedText}>Verified</Text></View>
-                <View style={styles.fastBadge}><Text style={styles.fastText}>Fast Response</Text></View>
-              </View>
-            </View>
-          )}
-
-          <View style={{ height: 90 }} />
         </View>
+
+        {/* Details table */}
+        {product.details?.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Product Details</Text>
+            {product.details.map((d, i) => (
+              <View key={i} style={[styles.detailRow, i < product.details.length - 1 && styles.detailRowBorder]}>
+                <Text style={styles.detailLabel}>{d.label}</Text>
+                <Text style={styles.detailValue}>{d.value}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Description */}
+        {!!product.description && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Description</Text>
+            <Text style={styles.descText}>{product.description}</Text>
+          </View>
+        )}
+
+        {/* Seller info — tappable → SupplierProfile */}
+        {product.seller && (
+          <TouchableOpacity
+            style={styles.card}
+            onPress={handleViewSupplier}
+            activeOpacity={product.seller.id ? 0.75 : 1}
+          >
+            <View style={styles.sellerHeader}>
+              <Text style={styles.cardTitle}>Seller Information</Text>
+              {product.seller.id && (
+                <View style={styles.viewProfileBtn}>
+                  <Text style={styles.viewProfileText}>View Profile</Text>
+                  <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+                </View>
+              )}
+            </View>
+            <View style={styles.sellerRow}>
+              <View style={styles.sellerAvatar}>
+                <Text style={styles.sellerInitials}>{product.seller.initials || 'S'}</Text>
+              </View>
+              <View style={styles.sellerInfo}>
+                <Text style={styles.sellerName}>{product.seller.name}</Text>
+                <View style={styles.sellerMeta}>
+                  <Ionicons name="star" size={14} color={colors.accent} />
+                  <Text style={styles.sellerMetaText}>
+                    {product.seller.rating}  ·  {product.seller.sales} sales
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.badgeRow}>
+              <View style={styles.verifiedBadge}><Text style={styles.verifiedText}>Verified</Text></View>
+              <View style={styles.fastBadge}><Text style={styles.fastText}>Fast Response</Text></View>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        <View style={{ height: 90 }} />
       </ScrollView>
 
       {/* Action buttons */}
@@ -262,8 +276,10 @@ export default function ProductDetailScreen() {
         <TouchableOpacity style={styles.chatBtn} onPress={handleChat} disabled={chatLoading}>
           {chatLoading
             ? <ActivityIndicator size="small" color="#fff" />
-            : <Ionicons name="chatbubble-ellipses" size={18} color="#fff" />}
-          <Text style={styles.actionBtnText}>Chat</Text>
+            : <>
+                <Ionicons name="chatbubble-outline" size={18} color="#fff" />
+                <Text style={styles.actionBtnText}>Chat</Text>
+              </>}
         </TouchableOpacity>
       </View>
     </View>
@@ -271,83 +287,94 @@ export default function ProductDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0D0F12' },
-  center: { alignItems: 'center', justifyContent: 'center', gap: 12, paddingTop: 60 },
-  errorText: { color: '#9CA3AF', fontSize: 14, fontFamily: fonts.regular, textAlign: 'center' },
-  retryBtn: { paddingHorizontal: 24, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: radii.full },
-  retryText: { color: '#fff', fontSize: 14, fontFamily: fonts.semiBold },
+  container: { flex: 1, backgroundColor: colors.background },
+  center: { alignItems: 'center', justifyContent: 'center', gap: 12 },
 
-  carouselWrap: { position: 'relative' },
-  carouselImage: { width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.75 },
-  counter: {
-    position: 'absolute', bottom: 12, right: 12,
-    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4,
-  },
-  counterText: { color: '#fff', fontSize: 12, fontFamily: fonts.medium },
-  floatingBtns: {
-    position: 'absolute', top: 0, left: 0, right: 0,
-    flexDirection: 'row', justifyContent: 'space-between', padding: 16,
-  },
-  floatBtn: {
-    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 20, padding: 10, ...shadows.sm,
-  },
+  imageContainer: { width: SCREEN_WIDTH, height: 280, backgroundColor: '#1a1a1a' },
+  productImage: { width: SCREEN_WIDTH, height: 280 },
+  noImage: { alignItems: 'center', justifyContent: 'center' },
 
-  content: { padding: spacing.md },
-  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
-  price: { fontSize: 24, fontFamily: fonts.bold, color: colors.accent },
-  featBadge: {
-    backgroundColor: colors.accent, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3,
+  backBtn: {
+    position: 'absolute', top: 16, left: 16,
+    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 20, padding: 8,
   },
-  featText: { color: '#fff', fontSize: 11, fontFamily: fonts.semiBold },
-  title: { fontSize: 18, fontFamily: fonts.semiBold, color: '#fff', marginBottom: 8 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
-  metaText: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
+  saveBtn: {
+    position: 'absolute', top: 16, right: 16,
+    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 20, padding: 8,
+  },
+  dots: { position: 'absolute', bottom: 10, width: '100%', flexDirection: 'row', justifyContent: 'center', gap: 6 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.4)' },
+  dotActive: { backgroundColor: '#fff', width: 16 },
 
+  scroll: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
   card: {
     backgroundColor: colors.surface, borderRadius: radii.xl,
-    padding: spacing.md, marginBottom: spacing.md, ...shadows.sm,
+    padding: spacing.md, marginBottom: 12, ...shadows.sm,
   },
+
+  featuredBadge: {
+    alignSelf: 'flex-start', backgroundColor: colors.accent,
+    borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 8,
+  },
+  featuredText: { color: '#fff', fontSize: 10, fontFamily: fonts.semiBold },
+
+  price: { fontSize: 22, fontFamily: fonts.bold, color: colors.accent, marginBottom: 4 },
+  title: { fontSize: 16, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 8 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
+  metaDot: { fontSize: 12, color: colors.textSecondary },
+
   cardTitle: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 12 },
+
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
+  detailRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   detailLabel: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
   detailValue: { fontSize: 13, fontFamily: fonts.medium, color: colors.text },
-  hairline: { height: 1, backgroundColor: colors.border },
-  descText: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 22 },
 
+  descText: { fontSize: 13, fontFamily: fonts.regular, color: colors.text, lineHeight: 20 },
+
+  // Seller card — tappable
+  sellerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  viewProfileBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  viewProfileText: { fontSize: 12, fontFamily: fonts.medium, color: colors.primary },
   sellerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   sellerAvatar: {
-    width: 46, height: 46, borderRadius: 23,
-    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center',
   },
-  sellerInitials: { fontSize: 18, fontFamily: fonts.bold, color: '#fff' },
+  sellerInitials: { fontSize: 16, fontFamily: fonts.bold, color: colors.primary },
   sellerInfo: { flex: 1 },
   sellerName: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 4 },
   sellerMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   sellerMetaText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
   badgeRow: { flexDirection: 'row', gap: 8 },
   verifiedBadge: {
-    backgroundColor: `${colors.primary}20`, borderRadius: 4,
-    paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: colors.primary,
+    backgroundColor: `${colors.primary}18`, borderRadius: radii.full,
+    paddingHorizontal: 10, paddingVertical: 4,
   },
   verifiedText: { fontSize: 11, fontFamily: fonts.medium, color: colors.primary },
   fastBadge: {
-    backgroundColor: `${colors.accent}20`, borderRadius: 4,
-    paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: colors.accent,
+    backgroundColor: `${colors.accent}18`, borderRadius: radii.full,
+    paddingHorizontal: 10, paddingVertical: 4,
   },
   fastText: { fontSize: 11, fontFamily: fonts.medium, color: colors.accent },
 
   actionBar: {
-    flexDirection: 'row', gap: 12, paddingHorizontal: spacing.md,
-    paddingTop: 12, backgroundColor: colors.surface,
-    borderTopWidth: 1, borderTopColor: colors.border,
+    flexDirection: 'row', gap: 12,
+    paddingHorizontal: spacing.md, paddingTop: 12,
+    backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
   },
   callBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: '#374151', borderRadius: radii.lg, paddingVertical: 14,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: colors.primary, borderRadius: radii.xl, paddingVertical: 14,
   },
   chatBtn: {
-    flex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: colors.primary, borderRadius: radii.lg, paddingVertical: 14,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: colors.accent, borderRadius: radii.xl, paddingVertical: 14,
   },
   actionBtnText: { color: '#fff', fontSize: 14, fontFamily: fonts.semiBold },
+
+  errorText: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
+  retryBtn: { backgroundColor: colors.primary, borderRadius: radii.lg, paddingHorizontal: 20, paddingVertical: 10 },
+  retryText: { color: '#fff', fontFamily: fonts.medium, fontSize: 14 },
 });

@@ -9,9 +9,9 @@ import { useNavigation } from '@react-navigation/native';
 import BottomNav from '../components/BottomNav';
 import HomeTopBar from '../components/HomeTopBar';
 import { colors, fonts, spacing, radii, shadows } from '../constants/theme';
-import { getListings, getCategories } from '../services/marketplaceApi';
+import { getListings, getCategories, getPromotions } from '../services/marketplaceApi';
 
-// ── Static / navigation-only data (no API equivalent in v2.0) ─────────────────
+// ── Static / navigation-only data (no API equivalent) ────────────────────────
 const QUICK_CATEGORIES = [
   { icon: 'pricetag', label: 'Offers' },
   { icon: 'people', label: 'New Suppliers' },
@@ -20,10 +20,32 @@ const QUICK_CATEGORIES = [
   { icon: 'location', label: 'Local Favorites' },
 ];
 
-const PROMOS = [
-  { title: 'Up to 25% off on staples', sub: 'Rice, wheat, pulses & more', uri: 'https://images.unsplash.com/photo-1720206995413-94eac3307514?w=400&h=160&fit=crop' },
-  { title: 'Buy 1 get 1 on hygiene', sub: 'Stock up on essentials', uri: 'https://images.unsplash.com/photo-1584744982491-665216d95f8b?w=400&h=160&fit=crop' },
-  { title: 'Exclusive deals for verified retailers', sub: 'Join 10,000+ retailers', uri: 'https://images.unsplash.com/photo-1685119166946-d4050647b0e3?w=400&h=160&fit=crop' },
+// Static fallback — shown if the API returns an empty array or fails
+const PROMO_FALLBACK = [
+  {
+    id: 'fallback-1',
+    title: 'Up to 25% off on staples',
+    subtitle: 'Rice, wheat, pulses & more',
+    imageUrl: 'https://images.unsplash.com/photo-1720206995413-94eac3307514?w=400&h=160&fit=crop',
+    actionUrl: null,
+    badge: null,
+  },
+  {
+    id: 'fallback-2',
+    title: 'Buy 1 get 1 on hygiene',
+    subtitle: 'Stock up on essentials',
+    imageUrl: 'https://images.unsplash.com/photo-1584744982491-665216d95f8b?w=400&h=160&fit=crop',
+    actionUrl: null,
+    badge: null,
+  },
+  {
+    id: 'fallback-3',
+    title: 'Exclusive deals for verified retailers',
+    subtitle: 'Join 10,000+ retailers',
+    imageUrl: 'https://images.unsplash.com/photo-1685119166946-d4050647b0e3?w=400&h=160&fit=crop',
+    actionUrl: null,
+    badge: null,
+  },
 ];
 
 // Fallback icon map for categories returned by the API
@@ -34,36 +56,55 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const [categories, setCategories] = useState([]);
-  const [featuredListings, setFeaturedListings] = useState([]);
-  const [loadingCats, setLoadingCats] = useState(true);
+  const [featured, setFeatured] = useState([]);
+  const [promos, setPromos] = useState(PROMO_FALLBACK);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
-  // ── Fetch categories ─────────────────────────────────────────────────────
+  // ── Fetch promotions ────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const data = await getCategories();
-        // Show at most 5 for the horizontal scroll strip
-        if (!cancelled) setCategories(data.slice(0, 5));
+        const data = await getPromotions();
+        if (!cancelled && Array.isArray(data) && data.length > 0) {
+          setPromos(data);
+        }
+        // If empty array: keep fallback — no visible change to user
       } catch {
-        // Silently fall through — section simply won't render
-      } finally {
-        if (!cancelled) setLoadingCats(false);
+        // Network error: keep fallback silently
       }
     })();
     return () => { cancelled = true; };
   }, []);
 
-  // ── Fetch featured listings ───────────────────────────────────────────────
+  // ── Fetch categories ────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      setLoadingCategories(true);
+      try {
+        const data = await getCategories();
+        if (!cancelled) setCategories(Array.isArray(data) ? data : data.results || []);
+      } catch {
+        if (!cancelled) setCategories([]);
+      } finally {
+        if (!cancelled) setLoadingCategories(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ── Fetch featured listings ─────────────────────────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoadingFeatured(true);
       try {
         const data = await getListings({ featured: true });
-        if (!cancelled) setFeaturedListings(data);
+        if (!cancelled) setFeatured(Array.isArray(data) ? data : data.results || []);
       } catch {
-        // Silently fall through
+        if (!cancelled) setFeatured([]);
       } finally {
         if (!cancelled) setLoadingFeatured(false);
       }
@@ -72,168 +113,171 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <HomeTopBar />
+      <HomeTopBar onSearchPress={() => navigation.navigate('Search')} />
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* ── Promo hero banner (static) ─────────────────────────────────── */}
-        <View style={styles.promoBanner}>
-          <View style={styles.promoText}>
-            <View style={styles.promoTag}>
-              <Text style={styles.promoTagText}>First Order Special</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+
+        {/* ── Hero promo banner (first promo item) ──────────────────────── */}
+        {promos.length > 0 && (
+          <TouchableOpacity
+            style={styles.promoBanner}
+            onPress={() => navigation.navigate('MarketplaceBrowsing')}
+            activeOpacity={0.9}
+          >
+            {promos[0].badge && (
+              <View style={styles.promoTag}>
+                <Text style={styles.promoTagText}>{promos[0].badge}</Text>
+              </View>
+            )}
+            <View style={styles.promoText}>
+              <Text style={styles.promoHeadline}>{promos[0].title}</Text>
+              <Text style={styles.promoSub}>{promos[0].subtitle}</Text>
+              <TouchableOpacity
+                style={styles.shopNowBtn}
+                onPress={() => navigation.navigate('MarketplaceBrowsing')}
+              >
+                <Text style={styles.shopNowText}>Shop Now</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.promoHeadline}>Get 20% off your first restock order</Text>
-            <Text style={styles.promoSub}>Stock up and save on bulk essentials</Text>
-            <TouchableOpacity
-              style={styles.shopNowBtn}
-              onPress={() => navigation.navigate('MarketplaceBrowsing')}
-            >
-              <Text style={styles.shopNowText}>Shop Now</Text>
-            </TouchableOpacity>
-          </View>
-          <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1685119166946-d4050647b0e3?w=200&h=200&fit=crop' }}
-            style={styles.promoImage}
-          />
-        </View>
+            {promos[0].imageUrl ? (
+              <Image source={{ uri: promos[0].imageUrl }} style={styles.promoImage} />
+            ) : null}
+          </TouchableOpacity>
+        )}
 
-        {/* ── Quick categories (static navigation shortcuts) ───────────── */}
+        {/* ── Quick navigation icons ────────────────────────────────────── */}
         <View style={styles.sectionPad}>
           <View style={styles.quickRow}>
-            {QUICK_CATEGORIES.map((cat, i) => (
+            {QUICK_CATEGORIES.map((item, i) => (
               <TouchableOpacity
                 key={i}
                 style={styles.quickItem}
-                onPress={() => navigation.navigate('CategoryNavigation')}
+                onPress={() => navigation.navigate('MarketplaceBrowsing')}
               >
                 <View style={styles.quickIcon}>
-                  <Ionicons name={cat.icon} size={26} color={colors.green} />
+                  <Ionicons name={`${item.icon}-outline`} size={22} color={colors.primary} />
                 </View>
-                <Text style={styles.quickLabel}>{cat.label}</Text>
+                <Text style={styles.quickLabel}>{item.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* ── Shop by Category (API-backed) ─────────────────────────────── */}
-        <View style={{ paddingVertical: spacing.md }}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Shop by Category</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('CategoryNavigation')}>
-              <Text style={styles.viewAll}>View All</Text>
-            </TouchableOpacity>
-          </View>
-
-          {loadingCats ? (
-            <ActivityIndicator
-              size="small"
-              color={colors.primary}
-              style={{ marginVertical: 16 }}
-            />
-          ) : (
+        {/* ── Categories (API-backed) ───────────────────────────────────── */}
+        {!loadingCategories && categories.length > 0 && (
+          <View>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Browse Categories</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('MarketplaceBrowsing')}>
+                <Text style={styles.viewAll}>View all</Text>
+              </TouchableOpacity>
+            </View>
             <FlatList
               horizontal
               showsHorizontalScrollIndicator={false}
               data={categories}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => String(item.id || item.name)}
               contentContainerStyle={{ paddingHorizontal: spacing.md, gap: 12 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.catCard}
-                  onPress={() => navigation.navigate('MobileListing', { category: item.name })}
+                  onPress={() => navigation.navigate('MarketplaceBrowsing', { category: item.name })}
                 >
                   <View style={styles.catIconWrap}>
                     <Ionicons
                       name={item.icon || CATEGORY_ICON_FALLBACK}
-                      size={32}
+                      size={28}
                       color={colors.primary}
                     />
                   </View>
-                  <View style={{ padding: 10 }}>
-                    <Text style={styles.catName} numberOfLines={2}>{item.name}</Text>
-                    <Text style={styles.catSub}>Bulk deals</Text>
+                  <View style={{ padding: 8 }}>
+                    <Text style={styles.catName} numberOfLines={1}>{item.name}</Text>
+                    {item.count != null && (
+                      <Text style={styles.catSub}>{item.count} listings</Text>
+                    )}
                   </View>
                 </TouchableOpacity>
               )}
             />
-          )}
-        </View>
-
-        {/* ── Featured Listings (API-backed) ────────────────────────────── */}
-        {(loadingFeatured || featuredListings.length > 0) && (
-          <View style={{ paddingVertical: spacing.md }}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Featured Products</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('MarketplaceBrowsing')}>
-                <Text style={styles.viewAll}>View All</Text>
-              </TouchableOpacity>
-            </View>
-
-            {loadingFeatured ? (
-              <ActivityIndicator
-                size="small"
-                color={colors.primary}
-                style={{ marginVertical: 16 }}
-              />
-            ) : (
-              <FlatList
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                data={featuredListings}
-                keyExtractor={(item) => String(item.id)}
-                contentContainerStyle={{ paddingHorizontal: spacing.md, gap: 12 }}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.featCard}
-                    onPress={() => navigation.navigate('ProductDetail', { product: item })}
-                  >
-                    <Image
-                      source={{ uri: item.imageUrl }}
-                      style={styles.featImage}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.featBadge}>
-                      <Text style={styles.featBadgeText}>Featured</Text>
-                    </View>
-                    <View style={{ padding: 10 }}>
-                      <Text style={styles.featPrice}>
-                        Rs {parseFloat(item.price).toLocaleString()}
-                      </Text>
-                      <Text style={styles.featTitle} numberOfLines={2}>{item.title}</Text>
-                      <View style={styles.metaRow}>
-                        <Ionicons name="location-outline" size={11} color={colors.textSecondary} />
-                        <Text style={styles.metaText}>{item.location}</Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                )}
-              />
-            )}
           </View>
         )}
 
-        {/* ── Special Offers (static promo tiles) ───────────────────────── */}
+        {/* ── Featured listings ─────────────────────────────────────────── */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Featured Products</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('MarketplaceBrowsing')}>
+            <Text style={styles.viewAll}>View all</Text>
+          </TouchableOpacity>
+        </View>
+
+        {loadingFeatured ? (
+          <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} />
+        ) : (
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={featured}
+            keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={{ paddingHorizontal: spacing.md, gap: 12 }}
+            ListEmptyComponent={
+              <Text style={{ color: colors.textSecondary, paddingHorizontal: spacing.md, fontSize: 13 }}>
+                No featured products right now.
+              </Text>
+            }
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.featCard}
+                onPress={() => navigation.navigate('ProductDetail', { product: item })}
+              >
+                {item.imageUrl ? (
+                  <Image source={{ uri: item.imageUrl }} style={styles.featImage} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.featImage, { backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }]}>
+                    <Ionicons name="image-outline" size={28} color={colors.textLight} />
+                  </View>
+                )}
+                {item.isFeatured && (
+                  <View style={styles.featBadge}>
+                    <Text style={styles.featBadgeText}>Featured</Text>
+                  </View>
+                )}
+                <View style={{ padding: 8 }}>
+                  <Text style={styles.featPrice}>Rs {item.price}</Text>
+                  <Text style={styles.featTitle} numberOfLines={2}>{item.title}</Text>
+                  <View style={styles.metaRow}>
+                    <Ionicons name="location-outline" size={10} color={colors.textSecondary} />
+                    <Text style={styles.metaText}>{item.location}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        )}
+
+        {/* ── Special Offers (live promo tiles, fallback if API empty) ──── */}
         <View style={styles.sectionPad}>
           <Text style={styles.sectionTitle}>Special Offers</Text>
-          {PROMOS.map((p, i) => (
+          {promos.map((p) => (
             <TouchableOpacity
-              key={i}
+              key={p.id}
               style={styles.promoTile}
               onPress={() => navigation.navigate('MarketplaceBrowsing')}
             >
               <Image
-                source={{ uri: p.uri }}
+                source={{ uri: p.imageUrl }}
                 style={StyleSheet.absoluteFill}
                 resizeMode="cover"
               />
               <View style={styles.promoTileOverlay}>
                 <Text style={styles.promoTileTitle}>{p.title}</Text>
-                <Text style={styles.promoTileSub}>{p.sub}</Text>
+                <Text style={styles.promoTileSub}>{p.subtitle}</Text>
               </View>
             </TouchableOpacity>
           ))}
         </View>
+
       </ScrollView>
 
       <BottomNav activeTab="home" />
@@ -244,7 +288,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
-  // Hero
+  // Hero banner
   promoBanner: {
     margin: spacing.md, backgroundColor: colors.accent,
     borderRadius: radii.xl, flexDirection: 'row', overflow: 'hidden', padding: spacing.md,
@@ -283,7 +327,7 @@ const styles = StyleSheet.create({
   },
   quickLabel: { fontSize: 10, fontFamily: fonts.medium, color: colors.textSecondary },
 
-  // Category cards (API-backed, icon-only — no image needed)
+  // Category cards
   catCard: {
     width: 110, backgroundColor: colors.surface,
     borderRadius: radii.xl, overflow: 'hidden', ...shadows.sm,

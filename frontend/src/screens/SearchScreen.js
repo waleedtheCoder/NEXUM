@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, StatusBar, Image, ActivityIndicator,
@@ -8,13 +8,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import BottomNav from '../components/BottomNav';
 import { colors, fonts, spacing, radii, shadows } from '../constants/theme';
-import { searchListings } from '../services/marketplaceApi';
+import { searchListings, getTrendingSearch } from '../services/marketplaceApi';
 
-// These are static suggestion chips — no API equivalent in v2.0
-const POPULAR_SUPPLIERS = ['Rice Mills', 'Flour Suppliers', 'Cooking Oil', 'Spice Traders', 'Dairy Farms'];
-const POPULAR_PRODUCTS = ['Basmati Rice 25kg', 'Wheat Flour', 'Sugar 50kg', 'Cooking Oil', 'Tea Bags', 'Salt'];
-
-const INITIAL_RECENTS = [];
+// Static fallbacks — shown while the API loads or if it fails
+const POPULAR_PRODUCTS_FALLBACK = [
+  'Basmati Rice 25kg', 'Wheat Flour', 'Sugar 50kg', 'Cooking Oil', 'Tea Bags', 'Salt',
+];
+const POPULAR_SUPPLIERS_FALLBACK = [
+  'Rice Mills', 'Flour Suppliers', 'Cooking Oil', 'Spice Traders', 'Dairy Farms',
+];
 
 export default function SearchScreen() {
   const navigation = useNavigation();
@@ -23,14 +25,45 @@ export default function SearchScreen() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [recents, setRecents] = useState(INITIAL_RECENTS);
+  const [recents, setRecents] = useState([]);
   const searchTimer = useRef(null);
+
+  // ── Trending chips (live) ───────────────────────────────────────────────────
+  const [popularProducts, setPopularProducts] = useState(POPULAR_PRODUCTS_FALLBACK);
+  const [popularSuppliers, setPopularSuppliers] = useState(POPULAR_SUPPLIERS_FALLBACK);
+  const [trendingLoading, setTrendingLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setTrendingLoading(true);
+      try {
+        const data = await getTrendingSearch();
+        if (!cancelled) {
+          if (Array.isArray(data.popularProducts) && data.popularProducts.length > 0) {
+            setPopularProducts(data.popularProducts);
+          }
+          if (Array.isArray(data.popularSuppliers) && data.popularSuppliers.length > 0) {
+            setPopularSuppliers(data.popularSuppliers);
+          }
+        }
+      } catch {
+        // Keep fallback values — fail silently
+      } finally {
+        if (!cancelled) setTrendingLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const addRecent = (text) => {
     const trimmed = text.trim();
     if (!trimmed) return;
     setRecents((prev) =>
-      [{ id: Date.now().toString(), text: trimmed }, ...prev.filter((r) => r.text.toLowerCase() !== trimmed.toLowerCase())].slice(0, 5)
+      [
+        { id: Date.now().toString(), text: trimmed },
+        ...prev.filter((r) => r.text.toLowerCase() !== trimmed.toLowerCase()),
+      ].slice(0, 5)
     );
   };
 
@@ -71,31 +104,31 @@ export default function SearchScreen() {
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
 
       {/* Search bar */}
-      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={styles.searchRow}>
-          <Ionicons name="search" size={18} color={colors.textSecondary} />
+          <Ionicons name="search-outline" size={16} color="rgba(255,255,255,0.7)" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search products or suppliers..."
-            placeholderTextColor={colors.textSecondary}
+            placeholder="Search products or suppliers…"
+            placeholderTextColor="rgba(255,255,255,0.6)"
             value={query}
-            onChangeText={(t) => { setQuery(t); if (!t) clearSearch(); }}
+            onChangeText={setQuery}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
             autoFocus
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={clearSearch}>
-              <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+            <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close-circle" size={18} color="rgba(255,255,255,0.7)" />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* Results */}
+      {/* Results or suggestion chips */}
       {submitted ? (
         loading ? (
           <View style={styles.center}>
@@ -108,14 +141,15 @@ export default function SearchScreen() {
             contentContainerStyle={styles.resultsList}
             ListHeaderComponent={
               <Text style={styles.resultsHeader}>
-                {results.length} result{results.length !== 1 ? 's' : ''} for "{query}"
+                {results.length} result{results.length !== 1 ? 's' : ''}
               </Text>
             }
             ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <Ionicons name="search-outline" size={52} color={colors.border} />
-                <Text style={styles.emptyText}>No products found for "{query}"</Text>
-                <Text style={styles.emptySubText}>Try a different keyword</Text>
+              <View style={styles.center}>
+                <Ionicons name="search-outline" size={48} color={colors.textLight} />
+                <Text style={{ color: colors.textSecondary, fontSize: 14, fontFamily: fonts.regular, marginTop: 8 }}>
+                  No results found
+                </Text>
               </View>
             }
             renderItem={({ item }) => (
@@ -123,30 +157,33 @@ export default function SearchScreen() {
                 style={styles.resultCard}
                 onPress={() => navigation.navigate('ProductDetail', { product: item })}
               >
-                <Image source={{ uri: item.imageUrl }} style={styles.resultImg} />
+                {item.imageUrl ? (
+                  <Image source={{ uri: item.imageUrl }} style={styles.resultImage} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.resultImage, { backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }]}>
+                    <Ionicons name="image-outline" size={22} color={colors.textLight} />
+                  </View>
+                )}
                 <View style={styles.resultInfo}>
                   <Text style={styles.resultTitle} numberOfLines={2}>{item.title}</Text>
-                  <Text style={styles.resultPrice}>
-                    Rs {parseFloat(item.price).toLocaleString()}
-                  </Text>
+                  <Text style={styles.resultPrice}>Rs {item.price}</Text>
                   <View style={styles.resultMeta}>
                     <Ionicons name="location-outline" size={12} color={colors.textSecondary} />
-                    <Text style={styles.resultLocation}>{item.location}</Text>
+                    <Text style={styles.resultMetaText}>{item.location}</Text>
+                    <Text style={styles.resultMetaDot}>·</Text>
+                    <Text style={styles.resultMetaText}>{item.time}</Text>
                   </View>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
               </TouchableOpacity>
             )}
           />
         )
       ) : (
-        /* Discovery view — static chips + recent searches */
         <FlatList
           data={[]}
-          keyExtractor={() => ''}
-          renderItem={null}
+          keyExtractor={() => 'suggestions'}
           ListHeaderComponent={
-            <View style={styles.scroll}>
+            <View>
               {/* Recent searches */}
               {recents.length > 0 && (
                 <View style={styles.section}>
@@ -165,7 +202,10 @@ export default function SearchScreen() {
                       >
                         <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
                         <Text style={styles.chipText}>{r.text}</Text>
-                        <TouchableOpacity onPress={() => removeRecent(r.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <TouchableOpacity
+                          onPress={() => removeRecent(r.id)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
                           <Ionicons name="close" size={14} color={colors.textSecondary} />
                         </TouchableOpacity>
                       </TouchableOpacity>
@@ -177,30 +217,39 @@ export default function SearchScreen() {
               {/* Popular products */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Popular Products</Text>
-                <View style={styles.chips}>
-                  {POPULAR_PRODUCTS.map((p) => (
-                    <TouchableOpacity key={p} style={styles.chip} onPress={() => handleChipPress(p)}>
-                      <Ionicons name="cube-outline" size={14} color={colors.primary} />
-                      <Text style={styles.chipText}>{p}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                {trendingLoading ? (
+                  <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
+                ) : (
+                  <View style={styles.chips}>
+                    {popularProducts.map((p) => (
+                      <TouchableOpacity key={p} style={styles.chip} onPress={() => handleChipPress(p)}>
+                        <Ionicons name="cube-outline" size={14} color={colors.primary} />
+                        <Text style={styles.chipText}>{p}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
 
               {/* Popular suppliers */}
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Popular Suppliers</Text>
-                <View style={styles.chips}>
-                  {POPULAR_SUPPLIERS.map((s) => (
-                    <TouchableOpacity key={s} style={styles.chip} onPress={() => handleChipPress(s)}>
-                      <Ionicons name="business-outline" size={14} color={colors.accent} />
-                      <Text style={styles.chipText}>{s}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                {trendingLoading ? (
+                  <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
+                ) : (
+                  <View style={styles.chips}>
+                    {popularSuppliers.map((s) => (
+                      <TouchableOpacity key={s} style={styles.chip} onPress={() => handleChipPress(s)}>
+                        <Ionicons name="business-outline" size={14} color={colors.accent} />
+                        <Text style={styles.chipText}>{s}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
             </View>
           }
+          renderItem={null}
         />
       )}
 
@@ -227,24 +276,22 @@ const styles = StyleSheet.create({
   resultsList: { padding: spacing.md, paddingBottom: 80 },
   resultsHeader: { fontSize: 13, fontFamily: fonts.medium, color: colors.textSecondary, marginBottom: 12 },
   resultCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: colors.surface, borderRadius: radii.xl, padding: spacing.sm, marginBottom: 10,
+    flexDirection: 'row', gap: 12, marginBottom: 12,
+    backgroundColor: colors.surface, borderRadius: radii.xl, overflow: 'hidden',
     ...shadows.sm,
   },
-  resultImg: { width: 64, height: 64, borderRadius: radii.md },
-  resultInfo: { flex: 1, gap: 3 },
-  resultTitle: { fontSize: 13, fontFamily: fonts.medium, color: colors.text },
-  resultPrice: { fontSize: 14, fontFamily: fonts.bold, color: colors.accent },
-  resultMeta: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  resultLocation: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
-  emptyState: { alignItems: 'center', paddingTop: 60, gap: 8 },
-  emptyText: { fontSize: 14, fontFamily: fonts.medium, color: colors.textSecondary },
-  emptySubText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textLight },
-  scroll: { padding: spacing.md },
-  section: { marginBottom: spacing.lg },
+  resultImage: { width: 90, height: 90 },
+  resultInfo: { flex: 1, paddingVertical: 10, paddingRight: 12 },
+  resultTitle: { fontSize: 13, fontFamily: fonts.medium, color: colors.text, marginBottom: 4 },
+  resultPrice: { fontSize: 14, fontFamily: fonts.bold, color: colors.accent, marginBottom: 4 },
+  resultMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  resultMetaText: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
+  resultMetaDot: { fontSize: 11, color: colors.textSecondary },
+
+  section: { padding: spacing.md },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  sectionTitle: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.text },
-  clearAll: { fontSize: 12, fontFamily: fonts.medium, color: colors.primary },
+  sectionTitle: { fontSize: 15, fontFamily: fonts.semiBold, color: colors.text },
+  clearAll: { fontSize: 13, fontFamily: fonts.medium, color: colors.primary },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,

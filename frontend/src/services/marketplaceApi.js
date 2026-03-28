@@ -61,6 +61,53 @@ async function _fetch(path, { method = 'GET', body, idToken, sessionId } = {}) {
   return payload;
 }
 
+// ─── Multipart fetch (no Content-Type — browser sets boundary automatically) ─
+
+async function _fetchMultipart(path, { formData, idToken, sessionId } = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  const headers = {};
+  if (idToken)   headers['Authorization'] = `Bearer ${idToken}`;
+  if (sessionId) headers['X-Session-ID']  = sessionId;
+
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timeout);
+    const message =
+      err?.name === 'AbortError'
+        ? 'Upload timed out. Check your connection.'
+        : 'Network error during upload.';
+    throw new Error(message);
+  }
+
+  clearTimeout(timeout);
+
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch {
+    payload = {};
+  }
+
+  if (!response.ok) {
+    const message = payload?.detail || payload?.message || 'Upload failed.';
+    const error = new Error(message);
+    error.status  = response.status;
+    error.payload = payload;
+    throw error;
+  }
+
+  return payload;
+}
+
 // ─── Token-refresh + retry wrapper ───────────────────────────────────────────
 
 async function _fetchWithRefresh(path, options = {}) {
@@ -98,7 +145,8 @@ async function _fetchWithRefresh(path, options = {}) {
 
 /**
  * GET /api/listings/
- * Returns active listing cards. Public.
+ * Returns active listing cards.
+ * Public.
  */
 export async function getListings({ category, q, sort, featured } = {}) {
   const params = new URLSearchParams();
@@ -198,6 +246,97 @@ export async function toggleSaveListing(id, shouldSave, { idToken, sessionId, re
  */
 export async function getSupplierDashboard({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
   return _fetchWithRefresh('/api/listings/supplier/dashboard/', {
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+// ─── Promotions ───────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/promotions/
+ * Returns active promotional banners for HomeScreen.
+ * Response: [{ id, title, subtitle, imageUrl, actionUrl, badge }]
+ * Public — no auth required.
+ */
+export async function getPromotions() {
+  return _fetch('/api/promotions/');
+}
+
+// ─── Trending Search ──────────────────────────────────────────────────────────
+
+/**
+ * GET /api/listings/search/trending/
+ * Returns trending product titles and supplier names for SearchScreen chips.
+ * Response: { popularProducts: [...], popularSuppliers: [...] }
+ * Public — no auth required.
+ */
+export async function getTrendingSearch() {
+  return _fetch('/api/listings/search/trending/');
+}
+
+// ─── Image Upload ─────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/listings/upload-image/
+ * Uploads an image file and returns its public URL.
+ *
+ * @param {{ uri: string, name: string, type: string }} file
+ *   The file object from expo-image-picker (assets[0]).
+ *   uri  — local file URI (e.g. file:///...)
+ *   name — filename with extension
+ *   type — MIME type (e.g. 'image/jpeg')
+ *
+ * Response: { imageUrl: "https://..." }
+ * Protected.
+ */
+export async function uploadListingImage(file, { idToken, sessionId } = {}) {
+  const formData = new FormData();
+  formData.append('image', {
+    uri:  file.uri,
+    name: file.name || 'photo.jpg',
+    type: file.type || 'image/jpeg',
+  });
+  return _fetchMultipart('/api/listings/upload-image/', { formData, idToken, sessionId });
+}
+
+// ─── Saved Listings ───────────────────────────────────────────────────────────
+
+/**
+ * GET /api/listings/saved/
+ * Returns all listings the current user has saved (hearted).
+ * Response: [...listing card objects]
+ * Protected.
+ */
+export async function getSavedListings({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/listings/saved/', {
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+// ─── Supplier Profile ─────────────────────────────────────────────────────────
+
+/**
+ * GET /api/users/supplier/<id>/
+ * Returns a supplier's public profile plus their active listings.
+ * Response: { id, name, initials, rating, totalListings, joinedDate, listings: [...] }
+ * Public — no auth required.
+ */
+export async function getSupplierProfile(supplierId) {
+  return _fetch(`/api/users/supplier/${supplierId}/`);
+}
+
+// ─── FCM Token ────────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/users/fcm-token/
+ * Registers the device's Expo push token so the backend can send push notifications.
+ * Body: { token: <expo_push_token> }
+ * Protected.
+ */
+export async function registerFCMToken(token, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/users/fcm-token/', {
+    method: 'POST',
+    body: { token },
     idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
@@ -319,6 +458,35 @@ export async function placeOrder(data, { idToken, sessionId, refreshToken, onTok
  */
 export async function getOrderDetail(orderId, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
   return _fetchWithRefresh(`/api/orders/${orderId}/`, {
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+// ─── Incoming Orders (supplier) ───────────────────────────────────────────────
+
+/**
+ * GET /api/orders/incoming/
+ * Returns all orders placed on the supplier's listings.
+ * Response: [...orders] — newest first on the backend.
+ * Protected.
+ */
+export async function getIncomingOrders({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/orders/incoming/', {
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+/**
+ * PATCH /api/orders/<id>/
+ * Supplier updates order status.
+ * @param {number} orderId
+ * @param {'confirmed'|'shipped'|'delivered'|'cancelled'} newStatus
+ * Protected (supplier only).
+ */
+export async function updateOrderStatus(orderId, newStatus, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/orders/${orderId}/`, {
+    method: 'PATCH',
+    body: { status: newStatus },
     idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
