@@ -63,19 +63,10 @@ export default function SupplierAccountScreen() {
 
   const unreadCount = inquiries.filter((i) => !i.read).length;
 
-  const handleLogout = () => {
-    Alert.alert('Log Out', 'Are you sure you want to log out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Log Out',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          navigation.reset({ index: 0, routes: [{ name: 'LoginSignupOption' }] });
-        },
-      },
-    ]);
-  };
+   const handleLogout = async () => {
+    await logout();
+    navigation.reset({ index: 0, routes: [{ name: 'LoginSelection' }] });
+    };
 
   const displayName = user?.name || user?.email?.split('@')[0] || 'Supplier';
   const initials = displayName.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
@@ -84,7 +75,7 @@ export default function SupplierAccountScreen() {
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor="#0D0F12" />
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Profile header */}
         <View style={[styles.profileHeader, { paddingTop: insets.top + 16 }]}>
           <View style={styles.avatar}>

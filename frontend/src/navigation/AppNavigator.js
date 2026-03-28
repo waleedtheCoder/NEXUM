@@ -166,6 +166,8 @@ import SupplierAccountScreen from '../screens/SupplierAccountScreen';
 import AccountLoggedOutScreen from '../screens/AccountLoggedOutScreen';
 import AppNavigationScreen from '../screens/AppNavigationScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
+import OrderHistoryScreen from '../screens/OrderHistoryScreen';
+import OrderDetailScreen  from '../screens/OrderDetailScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -193,7 +195,6 @@ function AuthStack() {
       <Stack.Screen name="ShopkeeperSupplier" component={ShopkeeperSupplierScreen} />
       <Stack.Screen name="Locations" component={LocationsScreen} />
       <Stack.Screen name="LoginSignupOption" component={LoginSignupOptionScreen} />
-      <Stack.Screen name="LoginSelection" component={LoginSelectionScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="EmailLogin" component={EmailLoginScreen} />
       <Stack.Screen name="SignUp" component={SignUpScreen} />
@@ -239,6 +240,10 @@ function RootStack() {
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+      <Stack.Screen name="LoginSelection" component={LoginSelectionScreen} />
+
+      <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
+      <Stack.Screen name="OrderDetail"  component={OrderDetailScreen} />
     </Stack.Navigator>
   );
 }

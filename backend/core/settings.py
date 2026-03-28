@@ -1,13 +1,3 @@
-"""
-Drop-in replacement for backend/core/settings.py.
-
-Changes vs. the original:
-  1. Added 'listings', 'chat', 'notifications' to INSTALLED_APPS.
-  2. Fixed OTP generator — uses `secrets` instead of `random` (security fix).
-     (The fix is actually in users/views.py but noted here for awareness.)
-  3. No other changes — auth, DB, email, CORS config are untouched.
-"""
-
 import os
 from pathlib import Path
 
@@ -50,6 +40,7 @@ ALLOWED_HOSTS = [
 
 # ── Application definition ────────────────────────────────────────────────────
 INSTALLED_APPS = [
+    'daphne',              # MUST be first — replaces runserver with ASGI server
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -58,12 +49,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
-    # ── Existing app ──────────────────────────────────────────────────────
+    'channels',
+    # ── Project apps ─────────────────────────────────────────────────────
     'users',
-    # ── NEW apps (marketplace core) ───────────────────────────────────────
     'listings',
     'chat',
     'notifications',
+    'orders',
+    'promotions',
 ]
 
 MIDDLEWARE = [
@@ -94,7 +87,20 @@ TEMPLATES = [
     },
 ]
 
+# ── ASGI (required for Django Channels / WebSocket) ───────────────────────────
+ASGI_APPLICATION = 'core.asgi.application'
 WSGI_APPLICATION = 'core.wsgi.application'
+
+# ── Django Channels layer ─────────────────────────────────────────────────────
+CHANNEL_LAYERS = {
+    'default': {
+        # Development: in-memory, single process only
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        # Production: swap to Redis
+        # 'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        # 'CONFIG': {'hosts': [os.getenv('REDIS_URL', 'redis://localhost:6379')]},
+    }
+}
 
 # ── Database ─────────────────────────────────────────────────────────────────
 DB_ENGINE = os.getenv('DB_ENGINE', 'sqlite3').strip().lower()
@@ -130,7 +136,19 @@ TIME_ZONE     = 'UTC'
 USE_I18N      = True
 USE_TZ        = True
 
-CORS_ALLOW_ALL_ORIGINS = True   # Lock down in production
+# ── CORS ──────────────────────────────────────────────────────────────────────
+# Replaces the old CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:8081',
+    'http://127.0.0.1:8081',
+    f"http://{os.getenv('LAN_IP', '192.168.1.100')}:8081",
+]
+
+# In production (DJANGO_DEBUG=False), restrict to your real domain
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        'https://nexum.app',   # replace with real domain before go-live
+    ]
 
 CORS_ALLOW_HEADERS = [
     'accept',
@@ -142,11 +160,17 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
-    'x-session-id',   # ← this is the one that was missing
+    'x-session-id',
 ]
 
+# ── Static & Media files ──────────────────────────────────────────────────────
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Media (uploaded images) — local dev only
+# Production: set DEFAULT_FILE_STORAGE to S3/Cloudinary instead
+MEDIA_URL  = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # ── Django REST Framework ─────────────────────────────────────────────────────
 REST_FRAMEWORK = {
@@ -157,21 +181,33 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    # Pagination — all list endpoints now return { count, next, previous, results }
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    # Rate limiting
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '60/minute',
+        'user': '200/minute',
+        'auth': '10/minute',   # used by AuthRateThrottle on login/signup/forgot-password
+    },
 }
 
 # ── Email ─────────────────────────────────────────────────────────────────────
-EMAIL_BACKEND       = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST          = os.getenv('EMAIL_HOST', 'localhost')
-EMAIL_PORT          = int(os.getenv('EMAIL_PORT', '25'))
-EMAIL_USE_TLS       = _env_to_bool(os.getenv('EMAIL_USE_TLS'), default=False)
-EMAIL_HOST_USER     = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_BACKEND        = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST           = os.getenv('EMAIL_HOST', 'localhost')
+EMAIL_PORT           = int(os.getenv('EMAIL_PORT', '25'))
+EMAIL_USE_TLS        = _env_to_bool(os.getenv('EMAIL_USE_TLS'), default=False)
+EMAIL_HOST_USER      = os.getenv('EMAIL_HOST_USER', '')
 _email_host_password = os.getenv('EMAIL_HOST_PASSWORD', '')
-# Gmail app passwords are copied with spaces — strip them
 EMAIL_HOST_PASSWORD  = _email_host_password.replace(' ', '')
 DEFAULT_FROM_EMAIL   = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
 # ── Firebase Admin SDK ────────────────────────────────────────────────────────
-_creds_path = os.getenv('FIREBASE_CREDENTIALS_PATH', '')
+_creds_path        = os.getenv('FIREBASE_CREDENTIALS_PATH', '')
 _default_creds_file = os.path.join(BASE_DIR, 'firebase-adminsdk.json')
 
 try:
@@ -184,6 +220,6 @@ except ValueError:
         cred = credentials.Certificate(_default_creds_file)
         firebase_admin.initialize_app(cred)
     else:
-        firebase_admin.initialize_app()   # Application Default Credentials
+        firebase_admin.initialize_app()
 
 FIREBASE_WEB_API_KEY = os.getenv('FIREBASE_WEB_API_KEY', '')

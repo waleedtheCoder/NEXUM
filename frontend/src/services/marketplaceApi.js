@@ -6,10 +6,6 @@
  *   - 15-second AbortController timeout on every request
  *   - Automatic 401/403 token-refresh + one-retry via the token-refresh endpoint
  *   - Errors are enriched with .status and .payload for fine-grained handling
- *
- * Usage (in any screen):
- *   import { getListings, saveListingToggle } from '../services/marketplaceApi';
- *   const data = await getListings({ idToken });
  */
 
 import config from '../../config';
@@ -25,8 +21,8 @@ async function _fetch(path, { method = 'GET', body, idToken, sessionId } = {}) {
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   const headers = { 'Content-Type': 'application/json' };
-  if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
-  if (sessionId) headers['X-Session-ID'] = sessionId;
+  if (idToken)   headers['Authorization'] = `Bearer ${idToken}`;
+  if (sessionId) headers['X-Session-ID']  = sessionId;
 
   let response;
   try {
@@ -57,7 +53,7 @@ async function _fetch(path, { method = 'GET', body, idToken, sessionId } = {}) {
   if (!response.ok) {
     const message = payload?.detail || payload?.message || 'Request failed.';
     const error = new Error(message);
-    error.status = response.status;
+    error.status  = response.status;
     error.payload = payload;
     throw error;
   }
@@ -66,25 +62,16 @@ async function _fetch(path, { method = 'GET', body, idToken, sessionId } = {}) {
 }
 
 // ─── Token-refresh + retry wrapper ───────────────────────────────────────────
-//
-// If a protected call returns 401/403:
-//   1. Call POST /api/users/auth/token-refresh/ with the stored refresh_token
-//   2. Persist the new id_token to AsyncStorage
-//   3. Retry the original request once with the new token
-//
-// The callers pass { idToken, refreshToken, onTokenRefreshed } so the wrapper
-// can update the context without importing it directly here.
 
 async function _fetchWithRefresh(path, options = {}) {
   try {
     return await _fetch(path, options);
   } catch (err) {
     const isAuthError = err.status === 401 || err.status === 403;
-    const canRefresh = isAuthError && options.refreshToken && options.onTokenRefreshed;
+    const canRefresh  = isAuthError && options.refreshToken && options.onTokenRefreshed;
 
     if (!canRefresh) throw err;
 
-    // Attempt token refresh
     let newIdToken;
     try {
       const refreshed = await _fetch('/api/users/auth/token-refresh/', {
@@ -93,20 +80,16 @@ async function _fetchWithRefresh(path, options = {}) {
       });
       newIdToken = refreshed.id_token;
 
-      // Persist the new token
       await AsyncStorage.setItem('id_token', newIdToken);
       if (refreshed.refresh_token) {
         await AsyncStorage.setItem('refresh_token', refreshed.refresh_token);
       }
 
-      // Notify the caller (UserContext.updateUser / setIdToken equivalent)
       options.onTokenRefreshed(newIdToken, refreshed.refresh_token);
     } catch {
-      // Refresh itself failed — original error is more informative
       throw err;
     }
 
-    // Retry with new token
     return await _fetch(path, { ...options, idToken: newIdToken });
   }
 }
@@ -115,14 +98,13 @@ async function _fetchWithRefresh(path, options = {}) {
 
 /**
  * GET /api/listings/
- * Returns active listing cards. Pass category, q, sort, featured as needed.
- * Public — no auth required.
+ * Returns active listing cards. Public.
  */
 export async function getListings({ category, q, sort, featured } = {}) {
   const params = new URLSearchParams();
   if (category) params.set('category', category);
-  if (q) params.set('q', q);
-  if (sort) params.set('sort', sort);
+  if (q)        params.set('q', q);
+  if (sort)     params.set('sort', sort);
   if (featured) params.set('featured', 'true');
   const qs = params.toString();
   return _fetch(`/api/listings/${qs ? `?${qs}` : ''}`);
@@ -154,16 +136,12 @@ export async function searchListings(q) {
 
 /**
  * GET /api/listings/my/
- * Returns the authenticated supplier's own listings.
- * Protected — requires idToken or sessionId.
+ * Returns the authenticated supplier's own listings. Protected.
  */
 export async function getMyListings({ idToken, sessionId, refreshToken, onTokenRefreshed, status } = {}) {
   const qs = status ? `?status=${status}` : '';
   return _fetchWithRefresh(`/api/listings/my/${qs}`, {
-    idToken,
-    sessionId,
-    refreshToken,
-    onTokenRefreshed,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
 
@@ -175,10 +153,7 @@ export async function createListing(data, { idToken, sessionId, refreshToken, on
   return _fetchWithRefresh('/api/listings/create/', {
     method: 'POST',
     body: data,
-    idToken,
-    sessionId,
-    refreshToken,
-    onTokenRefreshed,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
 
@@ -190,10 +165,7 @@ export async function updateListing(id, data, { idToken, sessionId, refreshToken
   return _fetchWithRefresh(`/api/listings/${id}/manage/`, {
     method: 'PATCH',
     body: data,
-    idToken,
-    sessionId,
-    refreshToken,
-    onTokenRefreshed,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
 
@@ -204,10 +176,7 @@ export async function updateListing(id, data, { idToken, sessionId, refreshToken
 export async function deleteListing(id, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
   return _fetchWithRefresh(`/api/listings/${id}/manage/`, {
     method: 'DELETE',
-    idToken,
-    sessionId,
-    refreshToken,
-    onTokenRefreshed,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
 
@@ -219,10 +188,7 @@ export async function deleteListing(id, { idToken, sessionId, refreshToken, onTo
 export async function toggleSaveListing(id, shouldSave, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
   return _fetchWithRefresh(`/api/listings/${id}/save/`, {
     method: shouldSave ? 'POST' : 'DELETE',
-    idToken,
-    sessionId,
-    refreshToken,
-    onTokenRefreshed,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
 
@@ -232,10 +198,7 @@ export async function toggleSaveListing(id, shouldSave, { idToken, sessionId, re
  */
 export async function getSupplierDashboard({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
   return _fetchWithRefresh('/api/listings/supplier/dashboard/', {
-    idToken,
-    sessionId,
-    refreshToken,
-    onTokenRefreshed,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
 
@@ -244,64 +207,47 @@ export async function getSupplierDashboard({ idToken, sessionId, refreshToken, o
 /**
  * GET /api/chat/
  * Returns conversations for the authenticated user.
- * Optional type filter: 'buying' | 'selling' | 'favourites'
- * Protected.
+ * Optional type filter: 'buying' | 'selling' | 'favourites'. Protected.
  */
 export async function getConversations({ type, idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
   const qs = type && type !== 'All' ? `?type=${type.toLowerCase()}` : '';
   return _fetchWithRefresh(`/api/chat/${qs}`, {
-    idToken,
-    sessionId,
-    refreshToken,
-    onTokenRefreshed,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
 
 /**
  * POST /api/chat/start/
  * Creates or retrieves a conversation about a listing.
- * Body: { listing_id, message }
- * Protected.
+ * Body: { listing_id, message }. Protected.
  */
 export async function startConversation({ listingId, message, idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
   return _fetchWithRefresh('/api/chat/start/', {
     method: 'POST',
     body: { listing_id: listingId, message },
-    idToken,
-    sessionId,
-    refreshToken,
-    onTokenRefreshed,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
 
 /**
  * GET /api/chat/<conv_id>/messages/
- * Returns all messages in a conversation. Also marks incoming messages as read.
- * Protected.
+ * Returns all messages in a conversation. Protected.
  */
 export async function getMessages(convId, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
   return _fetchWithRefresh(`/api/chat/${convId}/messages/`, {
-    idToken,
-    sessionId,
-    refreshToken,
-    onTokenRefreshed,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
 
 /**
  * POST /api/chat/<conv_id>/messages/send/
- * Sends a new message in a conversation.
- * Body: { text }
- * Protected.
+ * Sends a new message in a conversation. Protected.
  */
 export async function sendMessage(convId, text, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
   return _fetchWithRefresh(`/api/chat/${convId}/messages/send/`, {
     method: 'POST',
     body: { text },
-    idToken,
-    sessionId,
-    refreshToken,
-    onTokenRefreshed,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
 
@@ -309,15 +255,11 @@ export async function sendMessage(convId, text, { idToken, sessionId, refreshTok
 
 /**
  * GET /api/notifications/
- * Returns notifications for the authenticated user.
- * Protected.
+ * Returns notifications for the authenticated user. Protected.
  */
 export async function getNotifications({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
   return _fetchWithRefresh('/api/notifications/', {
-    idToken,
-    sessionId,
-    refreshToken,
-    onTokenRefreshed,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
 
@@ -328,10 +270,7 @@ export async function getNotifications({ idToken, sessionId, refreshToken, onTok
 export async function markNotificationRead(id, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
   return _fetchWithRefresh(`/api/notifications/${id}/read/`, {
     method: 'PATCH',
-    idToken,
-    sessionId,
-    refreshToken,
-    onTokenRefreshed,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }
 
@@ -342,9 +281,44 @@ export async function markNotificationRead(id, { idToken, sessionId, refreshToke
 export async function markAllNotificationsRead({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
   return _fetchWithRefresh('/api/notifications/mark-all-read/', {
     method: 'POST',
-    idToken,
-    sessionId,
-    refreshToken,
-    onTokenRefreshed,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+// ─── Orders ───────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/orders/
+ * Returns the shopkeeper's order history, newest first.
+ * Response is paginated: { count, next, previous, results: [...orders] }
+ * Protected.
+ */
+export async function getOrders({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/orders/', {
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+/**
+ * POST /api/orders/place/
+ * Shopkeeper places an order on a listing.
+ * Body: { listing_id, quantity, notes? }
+ * Protected.
+ */
+export async function placeOrder(data, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/orders/place/', {
+    method: 'POST',
+    body: data,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+/**
+ * GET /api/orders/<id>/
+ * Returns a single order's full detail. Protected.
+ */
+export async function getOrderDetail(orderId, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/orders/${orderId}/`, {
+    idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }

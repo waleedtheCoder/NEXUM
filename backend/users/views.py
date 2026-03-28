@@ -1,6 +1,6 @@
 import json
 import os
-import secrets                  # FIX: replaces `random` for cryptographically secure OTP
+import secrets
 import urllib.error
 import urllib.request
 
@@ -13,12 +13,20 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+from rest_framework.throttling import UserRateThrottle
 
 from .models import UserProfile
 from .serializers import ProfileResponseSerializer, ProfileUpdateSerializer
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# ── Throttle ──────────────────────────────────────────────────────────────────
+
+class AuthRateThrottle(UserRateThrottle):
+    """Limits login / signup / forgot-password to 10 requests/minute per user."""
+    scope = 'auth'
+
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _build_profile_payload(user, profile):
     return {
@@ -53,7 +61,7 @@ def _signup_pending_cache_key(email):
 
 
 def _generate_otp():
-    # FIX: use secrets module — random.randint is NOT cryptographically secure
+    # secrets module — cryptographically secure
     return f'{secrets.randbelow(10000):04d}'
 
 
@@ -87,51 +95,60 @@ def _firebase_sign_in(email, password):
     api_key = os.getenv('FIREBASE_WEB_API_KEY', '')
     if not api_key:
         raise RuntimeError('FIREBASE_WEB_API_KEY is not configured.')
-    url     = f'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}'
-    payload = json.dumps({'email': email, 'password': password, 'returnSecureToken': True}).encode()
-    req     = urllib.request.Request(url, data=payload, headers={'Content-Type': 'application/json'})
+
+    url  = f'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}'
+    body = json.dumps({
+        'email': email, 'password': password, 'returnSecureToken': True,
+    }).encode()
+
+    req = urllib.request.Request(url, data=body, headers={'Content-Type': 'application/json'})
     try:
         with urllib.request.urlopen(req) as resp:
             data = json.loads(resp.read())
     except urllib.error.HTTPError as exc:
-        err_body = json.loads(exc.read())
-        message  = err_body.get('error', {}).get('message', 'Unknown Firebase error')
-        raise RuntimeError(_map_firebase_error(message))
+        error_body = json.loads(exc.read())
+        message    = error_body.get('error', {}).get('message', '')
+        raise RuntimeError(_firebase_error_message(message))
+
     return {
-        'id_token':      data.get('idToken', ''),
-        'refresh_token': data.get('refreshToken', ''),
-        'uid':           data.get('localId', ''),
+        'id_token':      data.get('idToken'),
+        'refresh_token': data.get('refreshToken'),
+        'uid':           data.get('localId'),
     }
 
 
 def _firebase_refresh_token(refresh_token):
-    """Exchange a Firebase refresh token for a new id_token."""
     api_key = os.getenv('FIREBASE_WEB_API_KEY', '')
     if not api_key:
         raise RuntimeError('FIREBASE_WEB_API_KEY is not configured.')
-    url     = f'https://securetoken.googleapis.com/v1/token?key={api_key}'
-    payload = json.dumps({'grant_type': 'refresh_token', 'refresh_token': refresh_token}).encode()
-    req     = urllib.request.Request(url, data=payload, headers={'Content-Type': 'application/json'})
+
+    url  = f'https://securetoken.googleapis.com/v1/token?key={api_key}'
+    body = json.dumps({
+        'grant_type': 'refresh_token', 'refresh_token': refresh_token,
+    }).encode()
+
+    req = urllib.request.Request(url, data=body, headers={'Content-Type': 'application/json'})
     try:
         with urllib.request.urlopen(req) as resp:
             data = json.loads(resp.read())
     except urllib.error.HTTPError as exc:
-        err_body = json.loads(exc.read())
-        message  = err_body.get('error', {}).get('message', 'Token refresh failed')
-        raise RuntimeError(message)
+        error_body = json.loads(exc.read())
+        message    = error_body.get('error', {}).get('message', '')
+        raise RuntimeError(f'Token refresh failed: {message}')
+
     return {
-        'id_token':      data.get('id_token', ''),
-        'refresh_token': data.get('refresh_token', refresh_token),
+        'id_token':      data.get('id_token'),
+        'refresh_token': data.get('refresh_token'),
     }
 
 
-def _map_firebase_error(message):
+def _firebase_error_message(message):
     return {
-        'EMAIL_NOT_FOUND':     'No account found with this email.',
-        'INVALID_PASSWORD':    'Incorrect password.',
-        'USER_DISABLED':       'This account has been disabled.',
-        'INVALID_LOGIN_CREDENTIALS': 'Invalid email or password.',
-        'TOO_MANY_ATTEMPTS_TRY_LATER': 'Too many failed attempts. Please try again later.',
+        'EMAIL_NOT_FOUND':   'No account found with this email.',
+        'INVALID_PASSWORD':  'Incorrect password.',
+        'USER_DISABLED':     'This account has been disabled.',
+        'INVALID_LOGIN_CREDENTIALS':       'Invalid email or password.',
+        'TOO_MANY_ATTEMPTS_TRY_LATER':     'Too many failed attempts. Please try again later.',
     }.get(message, f'Authentication failed: {message}')
 
 
@@ -165,11 +182,12 @@ def _sync_local_user_from_firebase(uid, email, name='', role='CUSTOMER', email_v
     return user, profile
 
 
-# ── Views ────────────────────────────────────────────────────────────────────
+# ── Views ─────────────────────────────────────────────────────────────────────
 
 class LoginView(APIView):
     authentication_classes = []
-    permission_classes = [AllowAny]
+    permission_classes     = [AllowAny]
+    throttle_classes       = [AuthRateThrottle]
 
     def post(self, request):
         email    = str(request.data.get('email', '')).strip().lower()
@@ -220,7 +238,8 @@ class LoginView(APIView):
 
 class SignupView(APIView):
     authentication_classes = []
-    permission_classes = [AllowAny]
+    permission_classes     = [AllowAny]
+    throttle_classes       = [AuthRateThrottle]
 
     def post(self, request):
         name     = str(request.data.get('name', '')).strip()
@@ -269,7 +288,7 @@ class SignupView(APIView):
 
 class VerifyOtpView(APIView):
     authentication_classes = []
-    permission_classes = [AllowAny]
+    permission_classes     = [AllowAny]
 
     def post(self, request):
         email = str(request.data.get('email', '')).strip().lower()
@@ -277,11 +296,17 @@ class VerifyOtpView(APIView):
         otp   = str(request.data.get('otp', '')).strip()
 
         if flow not in {'signup', 'reset'}:
-            return Response({'detail': 'Flow must be signup or reset.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Flow must be signup or reset.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         expected = cache.get(_otp_cache_key(email, flow))
         if not expected or otp != expected:
-            return Response({'detail': 'Invalid or expired OTP.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Invalid or expired OTP.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if flow == 'signup':
             pending = cache.get(_signup_pending_cache_key(email))
@@ -298,7 +323,10 @@ class VerifyOtpView(APIView):
                     email_verified=True,
                 )
             except auth.EmailAlreadyExistsError:
-                return Response({'detail': 'Email already registered.'}, status=status.HTTP_409_CONFLICT)
+                return Response(
+                    {'detail': 'Email already registered.'},
+                    status=status.HTTP_409_CONFLICT,
+                )
             except Exception as exc:
                 return Response(
                     {'detail': f'Failed to create Firebase user: {str(exc)}'},
@@ -331,18 +359,23 @@ class VerifyOtpView(APIView):
                 status=status.HTTP_200_OK,
             )
 
+        # flow == 'reset'
         cache.delete(_otp_cache_key(email, 'reset'))
         return Response({'message': 'OTP verified for password reset.'}, status=status.HTTP_200_OK)
 
 
 class ForgotPasswordView(APIView):
     authentication_classes = []
-    permission_classes = [AllowAny]
+    permission_classes     = [AllowAny]
+    throttle_classes       = [AuthRateThrottle]
 
     def post(self, request):
         email = str(request.data.get('email', '')).strip().lower()
         if not email:
-            return Response({'detail': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Email is required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         user_exists = True
         try:
@@ -363,7 +396,7 @@ class ForgotPasswordView(APIView):
         else:
             otp = None
 
-        # Intentional generic response to avoid account enumeration
+        # Generic response to avoid account enumeration
         return Response(
             _build_otp_response(
                 {'message': 'If that email is registered, you will receive an OTP shortly.'},
@@ -375,7 +408,7 @@ class ForgotPasswordView(APIView):
 
 class ResetPasswordView(APIView):
     authentication_classes = []
-    permission_classes = [AllowAny]
+    permission_classes     = [AllowAny]
 
     def post(self, request):
         email        = str(request.data.get('email', '')).strip().lower()
@@ -395,12 +428,18 @@ class ResetPasswordView(APIView):
 
         expected = cache.get(_otp_cache_key(email, 'reset'))
         if not expected or otp != expected:
-            return Response({'detail': 'Invalid or expired OTP.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Invalid or expired OTP.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             firebase_user = auth.get_user_by_email(email)
         except auth.UserNotFoundError:
-            return Response({'detail': 'No account found with this email.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'detail': 'No account found with this email.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         try:
             auth.update_user(firebase_user.uid, password=new_password)
@@ -445,28 +484,24 @@ class UserOnboardingView(APIView):
 
         profile.save()
 
-        payload           = _build_profile_payload(request.user, profile)
+        payload             = _build_profile_payload(request.user, profile)
         response_serializer = ProfileResponseSerializer(payload)
         return Response(response_serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        # Keep POST for compatibility with existing frontend assumptions
+        # Keep POST for compatibility with existing frontend
         return self.patch(request)
 
 
 class TokenRefreshView(APIView):
     """
     POST /api/users/auth/token-refresh/
-
     Exchanges a Firebase refresh_token for a fresh id_token.
-    The frontend should call this whenever it gets a 401/403 and has a
-    stored refresh_token, then retry the original request with the new token.
-
-    Body: { refresh_token: "<firebase_refresh_token>" }
-    Response: { id_token, refresh_token }
+    Body:     { "refresh_token": "<firebase_refresh_token>" }
+    Response: { "id_token": "...", "refresh_token": "..." }
     """
     authentication_classes = []
-    permission_classes = [AllowAny]
+    permission_classes     = [AllowAny]
 
     def post(self, request):
         refresh_token = str(request.data.get('refresh_token', '')).strip()

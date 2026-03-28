@@ -4,12 +4,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const UserContext = createContext(null);
 
 export function UserProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [role, setRole] = useState(null);
-  const [sessionId, setSessionId] = useState(null);
-  const [idToken, setIdToken] = useState(null);
+  const [user, setUser]               = useState(null);
+  const [role, setRole]               = useState(null);
+  const [sessionId, setSessionId]     = useState(null);
+  const [idToken, setIdToken]         = useState(null);
   const [refreshToken, setRefreshToken] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading]     = useState(true);
 
   const isLoggedIn = !!sessionId;
 
@@ -25,32 +25,37 @@ export function UserProvider({ children }) {
           AsyncStorage.getItem('refresh_token'),
         ]);
 
-        if (sid) setSessionId(sid);
+        if (sid)      setSessionId(sid);
         if (userData) setUser(JSON.parse(userData));
         if (userRole) setRole(userRole);
-        if (idTok) setIdToken(idTok);
+        if (idTok)    setIdToken(idTok);
         if (refreshTok) setRefreshToken(refreshTok);
       } catch (e) {
         console.error('Failed to load session:', e);
       } finally {
-        setIsLoading(false); // Always run
+        setIsLoading(false);
       }
     };
 
     loadSession();
   }, []);
 
-  // Login function
+  // Login — also persists saved_email/saved_name so they survive logout
   const login = async (sid, userData, userRole, tokens = {}) => {
     try {
       const pairs = [
-        ['session_id', sid],
-        ['user_data', JSON.stringify(userData)],
-        ['user_role', userRole || 'shopkeeper'],
+        ['session_id',  sid],
+        ['user_data',   JSON.stringify(userData)],
+        ['user_role',   userRole || 'shopkeeper'],
       ];
 
-      if (tokens.idToken) pairs.push(['id_token', tokens.idToken]);
+      if (tokens.idToken)     pairs.push(['id_token',      tokens.idToken]);
       if (tokens.refreshToken) pairs.push(['refresh_token', tokens.refreshToken]);
+
+      // Persist email/name separately — these survive logout so
+      // LoginSelectionScreen can show the last signed-in account
+      if (userData?.email) pairs.push(['saved_email', userData.email]);
+      if (userData?.name)  pairs.push(['saved_name',  userData.name]);
 
       await AsyncStorage.multiSet(pairs);
 
@@ -64,7 +69,7 @@ export function UserProvider({ children }) {
     }
   };
 
-  // Logout function
+  // Logout — clears session but intentionally keeps saved_email and saved_name
   const logout = async () => {
     try {
       await AsyncStorage.multiRemove([
@@ -74,6 +79,7 @@ export function UserProvider({ children }) {
         'id_token',
         'refresh_token',
       ]);
+      // saved_email and saved_name are NOT removed here on purpose
 
       setSessionId(null);
       setUser(null);
@@ -127,7 +133,6 @@ export function UserProvider({ children }) {
   );
 }
 
-// Hook to use user context
 export function useUser() {
   const context = useContext(UserContext);
   if (!context) throw new Error('useUser must be used inside UserProvider');
