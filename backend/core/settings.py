@@ -132,6 +132,19 @@ USE_TZ        = True
 
 CORS_ALLOW_ALL_ORIGINS = True   # Lock down in production
 
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'x-session-id',   # ← this is the one that was missing
+]
+
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
