@@ -5,20 +5,15 @@
  * Route name: IncomingOrders
  * Accessible from: SupplierAccountScreen → Incoming Orders menu item
  * APIs:
- *   GET  /api/orders/incoming/      — fetch all incoming orders
- *   PATCH /api/orders/<id>/         — update order status
+ *   GET   /api/orders/incoming/  — fetch all incoming orders
+ *   PATCH /api/orders/<id>/      — update order status
  *
- * Features:
- *   - FlatList of orders, newest first
- *   - Each card shows: buyer name, product, quantity, total, status badge
- *   - Action buttons per status:
- *       pending   → Confirm | Cancel
- *       confirmed → Mark Shipped | Cancel
- *       shipped   → Mark Delivered
- *       delivered / cancelled → no actions (terminal states)
- *   - Optimistic status updates — card updates instantly, reverts on error
- *   - Pull-to-refresh
- *   - Empty state when no orders yet
+ * FIX: corrected all field references to match OrderSerializer camelCase output:
+ *   order.productName   (was: order.listing_title / order.product_name)
+ *   order.buyerName     (was: order.buyer_name / order.buyer?.name — field didn't exist)
+ *   order.totalPrice    (was: order.total_price)
+ *   order.orderDate     (was: order.created_at_display)
+ *   order.unit          (was: order.unit — now returned by updated serializer)
  */
 
 import React, { useState, useCallback } from 'react';
@@ -45,8 +40,8 @@ const STATUS_CONFIG = {
 // Which action buttons appear for each status
 const STATUS_ACTIONS = {
   pending:   [
-    { label: 'Confirm',    next: 'confirmed', style: 'primary' },
-    { label: 'Cancel',     next: 'cancelled', style: 'danger'  },
+    { label: 'Confirm',      next: 'confirmed', style: 'primary' },
+    { label: 'Cancel',       next: 'cancelled', style: 'danger'  },
   ],
   confirmed: [
     { label: 'Mark Shipped', next: 'shipped',   style: 'primary' },
@@ -69,7 +64,7 @@ function StatusBadge({ status }) {
 }
 
 function OrderCard({ order, onStatusUpdate, updatingId }) {
-  const actions = STATUS_ACTIONS[order.status] || [];
+  const actions    = STATUS_ACTIONS[order.status] || [];
   const isUpdating = updatingId === order.id;
 
   return (
@@ -80,11 +75,13 @@ function OrderCard({ order, onStatusUpdate, updatingId }) {
           <Ionicons name="receipt-outline" size={20} color={colors.primary} />
         </View>
         <View style={styles.cardTopInfo}>
+          {/* FIX: was order.listing_title || order.product_name */}
           <Text style={styles.productName} numberOfLines={1}>
-            {order.listing_title || order.product_name || '—'}
+            {order.productName || '—'}
           </Text>
+          {/* FIX: was order.buyer_name || order.buyer?.name — buyerName now in serializer */}
           <Text style={styles.buyerName}>
-            from {order.buyer_name || order.buyer?.name || 'Buyer'}
+            from {order.buyerName || 'Buyer'}
           </Text>
         </View>
         <StatusBadge status={order.status} />
@@ -94,21 +91,24 @@ function OrderCard({ order, onStatusUpdate, updatingId }) {
       <View style={styles.detailsRow}>
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>Quantity</Text>
+          {/* FIX: order.unit now returned by updated serializer */}
           <Text style={styles.detailValue}>{order.quantity} {order.unit || 'units'}</Text>
         </View>
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>Total</Text>
+          {/* FIX: was order.total_price */}
           <Text style={styles.detailValue}>
-            Rs {order.total_price ? Number(order.total_price).toLocaleString() : '—'}
+            Rs {order.totalPrice ? Number(order.totalPrice).toLocaleString() : '—'}
           </Text>
         </View>
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>Ordered</Text>
-          <Text style={styles.detailValue}>{order.created_at_display || '—'}</Text>
+          {/* FIX: was order.created_at_display */}
+          <Text style={styles.detailValue}>{order.orderDate || '—'}</Text>
         </View>
       </View>
 
-      {/* Notes if any */}
+      {/* Notes */}
       {!!order.notes && (
         <Text style={styles.notes} numberOfLines={2}>"{order.notes}"</Text>
       )}
@@ -145,13 +145,13 @@ function OrderCard({ order, onStatusUpdate, updatingId }) {
 
 export default function IncomingOrdersScreen() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
+  const insets     = useSafeAreaInsets();
   const { idToken, sessionId, refreshToken, updateUser } = useUser();
 
-  const [orders, setOrders]       = useState([]);
-  const [loading, setLoading]     = useState(true);
+  const [orders, setOrders]         = useState([]);
+  const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError]         = useState(null);
+  const [error, setError]           = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
 
   const authArgs = {
@@ -165,9 +165,9 @@ export default function IncomingOrdersScreen() {
     setError(null);
     try {
       const data = await getIncomingOrders(authArgs);
-      const list = Array.isArray(data) ? data : data.results || [];
-      // Newest first
-      setOrders([...list].sort((a, b) => b.id - a.id));
+      const list = Array.isArray(data) ? data : (data.results || []);
+      // Newest first — backend orders by -created_at but sort defensively
+      setOrders([...list].sort((a, b) => Number(b.id) - Number(a.id)));
     } catch (err) {
       setError(err.message || 'Failed to load orders.');
     } finally {
@@ -190,9 +190,9 @@ export default function IncomingOrdersScreen() {
   // ── Status update (optimistic) ────────────────────────────────────────────
   const handleStatusUpdate = async (order, newStatus) => {
     setUpdatingId(order.id);
+    const prevStatus = order.status;
 
     // Optimistic update
-    const prevStatus = order.status;
     setOrders((prev) =>
       prev.map((o) => (o.id === order.id ? { ...o, status: newStatus } : o))
     );
@@ -200,7 +200,7 @@ export default function IncomingOrdersScreen() {
     try {
       await updateOrderStatus(order.id, newStatus, authArgs);
     } catch (err) {
-      // Revert
+      // Revert on failure
       setOrders((prev) =>
         prev.map((o) => (o.id === order.id ? { ...o, status: prevStatus } : o))
       );
@@ -210,9 +210,8 @@ export default function IncomingOrdersScreen() {
     }
   };
 
-  // ── Counts for summary header ─────────────────────────────────────────────
-  const pendingCount   = orders.filter((o) => o.status === 'pending').length;
-  const activeCount    = orders.filter((o) => ['confirmed', 'shipped'].includes(o.status)).length;
+  const pendingCount = orders.filter((o) => o.status === 'pending').length;
+  const activeCount  = orders.filter((o) => ['confirmed', 'shipped'].includes(o.status)).length;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -228,7 +227,9 @@ export default function IncomingOrdersScreen() {
           <Text style={styles.headerTitle}>Incoming Orders</Text>
           {!loading && orders.length > 0 && (
             <Text style={styles.headerSub}>
-              {pendingCount > 0 ? `${pendingCount} pending action` : `${activeCount} in progress`}
+              {pendingCount > 0
+                ? `${pendingCount} pending action`
+                : `${activeCount} in progress`}
             </Text>
           )}
         </View>
@@ -290,7 +291,7 @@ export default function IncomingOrdersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: spacing.md },
+  center:    { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: spacing.md },
 
   // Header
   header: {
@@ -301,10 +302,10 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     gap: 12,
   },
-  backBtn: { padding: 4 },
-  headerText: { flex: 1 },
+  backBtn:     { padding: 4 },
+  headerText:  { flex: 1 },
   headerTitle: { fontSize: 18, fontFamily: fonts.semiBold, color: '#fff' },
-  headerSub: { fontSize: 12, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  headerSub:   { fontSize: 12, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
 
   // List
   listContent: { padding: spacing.md, paddingBottom: 32, gap: 12 },
@@ -316,18 +317,18 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     ...shadows.sm,
   },
-  cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
+  cardTop:      { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
   orderIconWrap: {
     width: 38, height: 38, borderRadius: radii.md,
     backgroundColor: `${colors.primary}15`,
     alignItems: 'center', justifyContent: 'center',
   },
-  cardTopInfo: { flex: 1 },
-  productName: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 2 },
-  buyerName: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
+  cardTopInfo:  { flex: 1 },
+  productName:  { fontSize: 14, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 2 },
+  buyerName:    { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
 
   // Status badge
-  badge: { borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 4 },
+  badge:     { borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 4 },
   badgeText: { fontSize: 11, fontFamily: fonts.semiBold },
 
   // Details
@@ -338,7 +339,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
   },
-  detailItem: { flex: 1, alignItems: 'center' },
+  detailItem:  { flex: 1, alignItems: 'center' },
   detailLabel: { fontSize: 10, fontFamily: fonts.regular, color: colors.textSecondary, marginBottom: 2 },
   detailValue: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.text },
 
@@ -352,36 +353,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
 
-  // Actions
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: 10,
-  },
-  actionBtn: {
+  // Action buttons
+  actionsRow: { flexDirection: 'row', gap: 8 },
+  actionBtn:  {
     flex: 1,
     borderRadius: radii.lg,
-    paddingVertical: 10,
+    paddingVertical: 9,
     alignItems: 'center',
   },
   actionBtnPrimary: { backgroundColor: colors.primary },
-  actionBtnDanger: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  actionBtnText: { fontSize: 13, fontFamily: fonts.semiBold, color: '#fff' },
+  actionBtnDanger:  { backgroundColor: colors.surface, borderWidth: 1, borderColor: '#EF4444' },
+  actionBtnText:     { fontSize: 13, fontFamily: fonts.semiBold, color: '#fff' },
   actionBtnTextDanger: { color: '#EF4444' },
 
-  // Empty
-  emptyState: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32, gap: 12 },
-  emptyTitle: { fontSize: 18, fontFamily: fonts.semiBold, color: colors.text },
-  emptySubtitle: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+  // Empty state
+  emptyState: {
+    alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 60, gap: 12,
+  },
+  emptyTitle:    { fontSize: 16, fontFamily: fonts.semiBold, color: colors.text },
+  emptySubtitle: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center', paddingHorizontal: 24 },
 
-  // Error
+  // Error state
   errorText: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
-  retryBtn: { backgroundColor: colors.primary, borderRadius: radii.lg, paddingHorizontal: 20, paddingVertical: 10 },
+  retryBtn:  { backgroundColor: colors.primary, borderRadius: radii.lg, paddingHorizontal: 20, paddingVertical: 10 },
   retryText: { color: '#fff', fontFamily: fonts.medium, fontSize: 14 },
 });

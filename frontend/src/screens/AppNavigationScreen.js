@@ -16,7 +16,7 @@ const FEATURE_CARDS = [
   { icon: 'cube',          title: 'Saved Products',            screen: 'SavedListings'       },
   // FIX: was null (coming soon) — OrderHistory is fully built and registered
   { icon: 'receipt',       title: 'Purchase History',          screen: 'OrderHistory'        },
-  { icon: 'notifications', title: 'Restock Reminders',         screen: null                  },
+  { icon: 'notifications', title: 'Restock Reminders',         screen: 'RestockReminders'                  },
   { icon: 'card',          title: 'Credits & Limits',          screen: null                  },
 ];
 
