@@ -30,30 +30,17 @@ export default function MyListingsManagementScreen() {
   };
 
   // ── Publish (pending → active) ────────────────────────────────────────
-  const handlePublish = () => {
-    Alert.alert(
-      'Publish Listing',
-      'This will make your listing visible to all shopkeepers in the marketplace.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Publish',
-          onPress: async () => {
-            setPublishing(true);
-            try {
-              await updateListing(listing.id, { status: 'active' }, authArgs);
-              setStatus('active');
-              Alert.alert('Published!', 'Your listing is now live in the marketplace.');
-            } catch (err) {
-              Alert.alert('Error', err.message || 'Could not publish listing. Please try again.');
-            } finally {
-              setPublishing(false);
-            }
-          },
-        },
-      ]
-    );
-  };
+  const handlePublish = async () => {
+  setPublishing(true);
+  try {
+    await updateListing(listing.id, { status: 'active' }, authArgs);
+    setStatus('active');
+  } catch (err) {
+    Alert.alert('Error', err.message || 'Could not publish listing. Please try again.');
+  } finally {
+    setPublishing(false);
+  }
+};
 
   // ── Edit ─────────────────────────────────────────────────────────────────
   const handleEdit = () => {
