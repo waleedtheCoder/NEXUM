@@ -7,7 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
-import { colors, fonts, spacing, radii, shadows } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { getOrders } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
@@ -62,6 +63,8 @@ function OrderCard({ order, onPress }) {
 }
 
 export default function OrderHistoryScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets     = useSafeAreaInsets();
   const { idToken, sessionId, refreshToken, updateUser } = useUser();
@@ -152,7 +155,7 @@ export default function OrderHistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center:    { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: spacing.lg },
 

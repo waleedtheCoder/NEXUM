@@ -7,7 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import BottomNav from '../components/BottomNav';
 import WarehouseIllustration from '../components/WarehouseIllustration';
-import { colors, fonts, spacing, radii, shadows } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 const EXPLORE_ITEMS = [
   { label: 'View Supplier Network', icon: 'business-outline', screen: 'MarketplaceBrowsing' },
@@ -19,6 +20,8 @@ const EXPLORE_ITEMS = [
 export default function AccountLoggedOutScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
@@ -72,7 +75,7 @@ export default function AccountLoggedOutScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   topBar: {
     backgroundColor: colors.primary, alignItems: 'center',

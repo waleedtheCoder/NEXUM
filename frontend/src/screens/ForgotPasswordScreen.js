@@ -4,9 +4,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import { forgotPasswordWithBackend } from '../services/authApi';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 export default function ForgotPasswordScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
@@ -47,7 +50,7 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   body: { flex: 1, padding: spacing.lg },
   message: { textAlign: 'center', color: colors.primary, fontSize: 14, fontFamily: fonts.regular, lineHeight: 22, marginBottom: spacing.xl, marginTop: spacing.md },

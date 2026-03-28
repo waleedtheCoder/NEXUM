@@ -8,7 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import ScreenHeader from '../components/ScreenHeader';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { createListing, updateListing, uploadListingImage } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
@@ -16,6 +17,8 @@ const UNITS = ['kg', 'liters', 'pieces', 'boxes', 'cartons', 'bags', 'bottles'];
 const CONDITIONS = ['New', 'Bulk Wholesale', 'Clearance Stock'];
 
 export default function CreateListingScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
@@ -343,7 +346,7 @@ export default function CreateListingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: spacing.md, paddingBottom: 40 },
 

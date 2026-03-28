@@ -7,13 +7,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { colors, fonts, spacing, radii, shadows } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { getListingDetail, toggleSaveListing, startConversation, placeOrder } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function ProductDetailScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const route      = useRoute();
   const insets     = useSafeAreaInsets();
@@ -468,7 +471,7 @@ export default function ProductDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center:    { alignItems: 'center', justifyContent: 'center', gap: 12 },
 

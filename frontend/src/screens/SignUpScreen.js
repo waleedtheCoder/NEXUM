@@ -6,7 +6,8 @@ import { useNavigation } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import { useUser } from '../context/UserContext';
 import { signupWithBackend } from '../services/authApi';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 function PasswordRule({ valid, text }) {
   return (
@@ -20,6 +21,8 @@ function PasswordRule({ valid, text }) {
 }
 
 export default function SignUpScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { role } = useUser();
@@ -108,7 +111,7 @@ export default function SignUpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: spacing.lg, paddingBottom: 32 },
   label: { color: colors.primary, fontSize: 13, fontFamily: fonts.medium, marginBottom: 6, marginTop: 14 },

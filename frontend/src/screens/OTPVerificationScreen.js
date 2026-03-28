@@ -5,9 +5,12 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import { useUser } from '../context/UserContext';
 import { forgotPasswordWithBackend, normalizeRoleFromApi, verifyOtpWithBackend } from '../services/authApi';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 export default function OTPVerificationScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
@@ -126,7 +129,7 @@ export default function OTPVerificationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   body: { flex: 1, padding: spacing.lg, alignItems: 'center' },
   message: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: spacing.xl, marginTop: spacing.md },

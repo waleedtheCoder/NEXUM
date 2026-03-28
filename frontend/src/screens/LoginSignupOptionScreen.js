@@ -3,9 +3,12 @@ import { View, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-nativ
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 export default function LoginSignupOptionScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [lang, setLang] = useState('en');
@@ -58,8 +61,8 @@ export default function LoginSignupOptionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0fdf9', paddingHorizontal: spacing.lg },
+const makeStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: spacing.lg },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xxl },
   langToggle: { fontSize: 14 },
   langActive: { color: colors.primary, fontFamily: fonts.semiBold },

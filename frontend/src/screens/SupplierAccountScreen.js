@@ -8,7 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import BottomNav from '../components/BottomNav';
 import { useUser } from '../context/UserContext';
-import { colors, fonts, spacing, radii, shadows } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { getSupplierDashboard } from '../services/marketplaceApi';
 
 const MENU_ITEMS = [
@@ -59,6 +60,8 @@ const MENU_ITEMS = [
 ];
 
 export default function SupplierAccountScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { user, logout, idToken, sessionId, refreshToken, updateUser } = useUser();
@@ -243,7 +246,7 @@ export default function SupplierAccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container:    { flex: 1, backgroundColor: colors.background },
   header:       { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingBottom: 20 },
   headerLeft:   { flexDirection: 'row', alignItems: 'center', gap: 14 },

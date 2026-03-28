@@ -6,13 +6,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { getCategories } from '../services/marketplaceApi';
 
 // IDs of the 6 "popular" categories — matches the original POPULAR list
 const POPULAR_IDS = new Set(['1', '2', '3', '4', '5', '6']);
 
 export default function CategorySelectionScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [sections, setSections] = useState([]);
@@ -105,8 +108,8 @@ export default function CategorySelectionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0D0F12' },
+const makeStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.md, paddingBottom: 16, paddingTop: 8,

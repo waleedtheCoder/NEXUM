@@ -4,9 +4,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import ProgressIndicator from '../components/ProgressIndicator';
 import { useUser } from '../context/UserContext';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 export default function ShopkeeperSupplierScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { setUserRole } = useUser();
@@ -49,8 +52,8 @@ export default function ShopkeeperSupplierScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: spacing.lg },
+const makeStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background, paddingHorizontal: spacing.lg },
   body: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.lg },
   heading: { fontSize: 20, fontFamily: fonts.semiBold, color: colors.text, textAlign: 'center' },
   options: { flexDirection: 'row', gap: 16, width: '100%' },

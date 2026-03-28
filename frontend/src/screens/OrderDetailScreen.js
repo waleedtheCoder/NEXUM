@@ -7,7 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
-import { colors, fonts, spacing, radii, shadows } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { getOrderDetail } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
@@ -91,6 +92,8 @@ function StatusTimeline({ currentStatus }) {
 }
 
 export default function OrderDetailScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const insets  = useSafeAreaInsets();
   const route   = useRoute();
   const { idToken, sessionId, refreshToken, updateUser } = useUser();
@@ -214,7 +217,7 @@ export default function OrderDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center:    { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: spacing.lg },
   scroll:    { padding: spacing.md, paddingBottom: 32, gap: 16 },

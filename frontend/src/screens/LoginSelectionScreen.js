@@ -9,9 +9,12 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '../context/UserContext';
 import { loginWithBackend, normalizeRoleFromApi } from '../services/authApi';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 export default function LoginSelectionScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation  = useNavigation();
   const insets      = useSafeAreaInsets();
   const { login }   = useUser();
@@ -213,8 +216,8 @@ export default function LoginSelectionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.primary },
+const makeStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
 
   topRow: {
     flexDirection: 'row',

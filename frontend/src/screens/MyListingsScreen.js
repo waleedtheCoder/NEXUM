@@ -8,13 +8,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import BottomNav from '../components/BottomNav';
 import ListingCard from '../components/ListingCard';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { getMyListings } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
 const TABS = ['active', 'pending', 'removed'];
 
 export default function MyListingsScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { idToken, sessionId, refreshToken, updateUser } = useUser();
@@ -154,8 +157,8 @@ export default function MyListingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0D0F12' },
+const makeStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   header: { backgroundColor: '#0D0F12', paddingHorizontal: spacing.md },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   headerTitle: { fontSize: 20, fontFamily: fonts.bold, color: '#fff' },

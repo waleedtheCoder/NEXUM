@@ -4,9 +4,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CityIllustration from '../components/CityIllustration';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 export default function WelcomeScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [lang, setLang] = useState('en');
@@ -67,8 +70,8 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+const makeStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   langBtn: { position: 'absolute', right: 16, zIndex: 10, backgroundColor: colors.primaryLight, borderRadius: radii.full, paddingHorizontal: 14, paddingVertical: 6 },
   langText: { fontSize: 13, fontFamily: fonts.medium, color: colors.primary },
   scroll: { padding: spacing.lg, paddingTop: 60, alignItems: 'center' },

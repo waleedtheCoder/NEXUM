@@ -10,13 +10,16 @@ import ScreenHeader from '../components/ScreenHeader';
 import FilterChip from '../components/FilterChip';
 import ProductCard from '../components/ProductCard';
 import BottomNav from '../components/BottomNav';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { getListings } from '../services/marketplaceApi';
 
 const SORT_FILTERS = ['Newest', 'Price ↑', 'Price ↓'];
 const SORT_MAP = { 'Newest': 'newest', 'Price ↑': 'price_asc', 'Price ↓': 'price_desc' };
 
 export default function MobileListingScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const route = useRoute();
@@ -117,7 +120,7 @@ export default function MobileListingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   filterWrap: { borderBottomWidth: 1, borderBottomColor: colors.border },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingTop: 60 },

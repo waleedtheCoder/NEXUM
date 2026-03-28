@@ -7,7 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import BottomNav from '../components/BottomNav';
-import { colors, fonts, spacing, radii, shadows } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { searchListings, getTrendingSearch } from '../services/marketplaceApi';
 
 // Static fallbacks — shown while the API loads or if it fails
@@ -19,6 +20,8 @@ const POPULAR_SUPPLIERS_FALLBACK = [
 ];
 
 export default function SearchScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
@@ -258,7 +261,7 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   topBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10,

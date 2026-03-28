@@ -8,7 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import BottomNav from '../components/BottomNav';
 import HomeTopBar from '../components/HomeTopBar';
-import { colors, fonts, spacing, radii, shadows } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { getListings, getCategories, getPromotions } from '../services/marketplaceApi';
 
 // ── Static / navigation-only data (no API equivalent) ────────────────────────
@@ -52,6 +53,8 @@ const PROMO_FALLBACK = [
 const CATEGORY_ICON_FALLBACK = 'pricetag-outline';
 
 export default function HomeScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
@@ -285,7 +288,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
   // Hero banner

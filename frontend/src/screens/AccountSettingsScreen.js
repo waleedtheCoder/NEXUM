@@ -8,7 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import BottomNav from '../components/BottomNav';
 import { useUser } from '../context/UserContext';
-import { colors, fonts, spacing, radii, shadows } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { getOrders } from '../services/marketplaceApi';
 
 const MENU_ITEMS = [
@@ -49,11 +50,13 @@ const STATUS_COLORS = {
   pending:   '#F59E0B',
   confirmed: '#3B82F6',
   shipped:   '#8B5CF6',
-  delivered: colors.green,
+  delivered: '#10B981',
   cancelled: '#EF4444',
 };
 
 export default function AccountSettingsScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { user, logout, role, idToken, sessionId, refreshToken, updateUser } = useUser();
@@ -305,7 +308,7 @@ export default function AccountSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container:       { flex: 1, backgroundColor: colors.background },
   topBar:          { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingBottom: 14 },
   topBarIconLeft:  { width: 36 },

@@ -8,15 +8,10 @@ import { registerFCMToken } from '../services/marketplaceApi';
 const UserContext = createContext(null);
 
 // ─── FCM token registration helper ───────────────────────────────────────────
-// Called after a successful login. Asks for notification permission, gets the
-// Expo push token, and registers it on the backend.
-// Failures are swallowed — a failed token registration must never break login.
 async function _registerPushToken(idToken, sessionId) {
   try {
-    // Push notifications only work on a physical device
     if (!Device.isDevice) return;
 
-    // Ask for permission (iOS prompts; Android grants automatically on API < 33)
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
@@ -25,12 +20,8 @@ async function _registerPushToken(idToken, sessionId) {
       finalStatus = status;
     }
 
-    if (finalStatus !== 'granted') {
-      // User denied — skip silently. We never block login for this.
-      return;
-    }
+    if (finalStatus !== 'granted') return;
 
-    // Android requires a notification channel
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'default',
@@ -39,11 +30,8 @@ async function _registerPushToken(idToken, sessionId) {
     }
 
     const tokenData = await Notifications.getExpoPushTokenAsync();
-    const expoPushToken = tokenData.data;
-
-    await registerFCMToken(expoPushToken, { idToken, sessionId });
+    await registerFCMToken(tokenData.data, { idToken, sessionId });
   } catch (err) {
-    // Never let push-token failures surface to the user
     console.warn('[FCM] Failed to register push token:', err?.message || err);
   }
 }
@@ -51,32 +39,40 @@ async function _registerPushToken(idToken, sessionId) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function UserProvider({ children }) {
-  const [user, setUser]                     = useState(null);
-  const [role, setRole]                     = useState(null);
-  const [sessionId, setSessionId]           = useState(null);
-  const [idToken, setIdToken]               = useState(null);
-  const [refreshToken, setRefreshToken]     = useState(null);
-  const [isLoading, setIsLoading]           = useState(true);
+  const [user, setUser]                 = useState(null);
+  const [role, setRole]                 = useState(null);
+  const [sessionId, setSessionId]       = useState(null);
+  const [idToken, setIdToken]           = useState(null);
+  const [refreshToken, setRefreshToken] = useState(null);
+  const [isLoading, setIsLoading]       = useState(true);
+
+  // ── Theme state ─────────────────────────────────────────────────────────────
+  // Stored under 'nexum_theme' — a separate key that is intentionally NOT
+  // cleared on logout. The user's theme preference should survive across
+  // account switches and logouts.
+  const [isDark, setIsDark] = useState(false);
 
   const isLoggedIn = !!sessionId;
 
-  // Load session data from AsyncStorage on mount
+  // ── Restore session + theme on mount ────────────────────────────────────────
   useEffect(() => {
     const loadSession = async () => {
       try {
-        const [sid, userData, userRole, idTok, refreshTok] = await Promise.all([
+        const [sid, userData, userRole, idTok, refreshTok, themeVal] = await Promise.all([
           AsyncStorage.getItem('session_id'),
           AsyncStorage.getItem('user_data'),
           AsyncStorage.getItem('user_role'),
           AsyncStorage.getItem('id_token'),
           AsyncStorage.getItem('refresh_token'),
+          AsyncStorage.getItem('nexum_theme'),   // ← theme key
         ]);
 
-        if (sid)        setSessionId(sid);
-        if (userData)   setUser(JSON.parse(userData));
-        if (userRole)   setRole(userRole);
-        if (idTok)      setIdToken(idTok);
+        if (sid)       setSessionId(sid);
+        if (userData)  setUser(JSON.parse(userData));
+        if (userRole)  setRole(userRole);
+        if (idTok)     setIdToken(idTok);
         if (refreshTok) setRefreshToken(refreshTok);
+        if (themeVal === 'dark') setIsDark(true);   // default is light
       } catch (e) {
         console.error('Failed to load session:', e);
       } finally {
@@ -87,8 +83,18 @@ export function UserProvider({ children }) {
     loadSession();
   }, []);
 
-  // Login — persists session + saves email/name for LoginSelectionScreen,
-  // then registers the FCM token in the background.
+  // ── Toggle theme ─────────────────────────────────────────────────────────────
+  const toggleTheme = async () => {
+    const next = !isDark;
+    setIsDark(next);
+    try {
+      await AsyncStorage.setItem('nexum_theme', next ? 'dark' : 'light');
+    } catch (e) {
+      console.warn('Failed to persist theme preference:', e);
+    }
+  };
+
+  // ── Login ─────────────────────────────────────────────────────────────────
   const login = async (sid, userData, userRole, tokens = {}) => {
     try {
       const pairs = [
@@ -100,8 +106,6 @@ export function UserProvider({ children }) {
       if (tokens.idToken)      pairs.push(['id_token',      tokens.idToken]);
       if (tokens.refreshToken) pairs.push(['refresh_token', tokens.refreshToken]);
 
-      // Persist email/name separately — these survive logout so
-      // LoginSelectionScreen can show the last signed-in account
       if (userData?.email) pairs.push(['saved_email', userData.email]);
       if (userData?.name)  pairs.push(['saved_name',  userData.name]);
 
@@ -113,14 +117,13 @@ export function UserProvider({ children }) {
       setIdToken(tokens.idToken || null);
       setRefreshToken(tokens.refreshToken || null);
 
-      // Register FCM token after login — fire-and-forget, never blocks login
       _registerPushToken(tokens.idToken, sid);
     } catch (e) {
       console.error('Failed to save session:', e);
     }
   };
 
-  // Logout — clears session but intentionally keeps saved_email and saved_name
+  // ── Logout — clears auth but intentionally keeps theme + saved account ──────
   const logout = async () => {
     try {
       await AsyncStorage.multiRemove([
@@ -129,8 +132,9 @@ export function UserProvider({ children }) {
         'user_role',
         'id_token',
         'refresh_token',
+        // 'nexum_theme' is NOT removed — theme persists through logout
+        // 'saved_email' and 'saved_name' are also kept for LoginSelectionScreen
       ]);
-      // saved_email and saved_name are NOT removed here on purpose
 
       setSessionId(null);
       setUser(null);
@@ -142,7 +146,7 @@ export function UserProvider({ children }) {
     }
   };
 
-  // Update user data
+  // ── Update user data ──────────────────────────────────────────────────────
   const updateUser = async (updatedData) => {
     const merged = { ...user, ...updatedData };
     try {
@@ -153,7 +157,7 @@ export function UserProvider({ children }) {
     }
   };
 
-  // Set user role
+  // ── Set user role ─────────────────────────────────────────────────────────
   const setUserRole = async (newRole) => {
     try {
       await AsyncStorage.setItem('user_role', newRole);
@@ -166,6 +170,7 @@ export function UserProvider({ children }) {
   return (
     <UserContext.Provider
       value={{
+        // Auth
         user,
         role,
         sessionId,
@@ -177,6 +182,9 @@ export function UserProvider({ children }) {
         logout,
         updateUser,
         setUserRole,
+        // Theme
+        isDark,
+        toggleTheme,
       }}
     >
       {children}

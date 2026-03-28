@@ -77,7 +77,6 @@ function AuthStack() {
       <Stack.Screen name="ShopkeeperSupplier" component={ShopkeeperSupplierScreen} />
       <Stack.Screen name="Locations"          component={LocationsScreen} />
       <Stack.Screen name="LoginSignupOption"  component={LoginSignupOptionScreen} />
-      <Stack.Screen name="LoginSelection"     component={LoginSelectionScreen} />
       <Stack.Screen name="Login"              component={LoginScreen} />
       <Stack.Screen name="EmailLogin"         component={EmailLoginScreen} />
       <Stack.Screen name="SignUp"             component={SignUpScreen} />
@@ -98,6 +97,7 @@ function RootStack() {
 
       {/* Auth / onboarding flow */}
       <Stack.Screen name="Auth"    component={AuthStack} />
+      <Stack.Screen name="LoginSelection"     component={LoginSelectionScreen} />
 
       {/* Main tabbed app */}
       <Stack.Screen name="MainApp" component={MainTabNavigator} />

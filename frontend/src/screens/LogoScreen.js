@@ -4,8 +4,11 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../hooks/useTheme';
 
 export default function LogoScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { isLoggedIn, isLoading } = useUser();
@@ -36,10 +39,10 @@ export default function LogoScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#00A859',
+    backgroundColor: colors.splash,
     justifyContent: 'space-between',
     alignItems: 'center',
   },

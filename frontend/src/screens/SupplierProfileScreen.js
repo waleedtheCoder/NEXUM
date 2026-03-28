@@ -21,7 +21,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { colors, fonts, spacing, radii, shadows } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 import { getSupplierProfile } from '../services/marketplaceApi';
 
 function StarRating({ rating = 0 }) {
@@ -69,6 +70,8 @@ function ListingCard({ item, onPress }) {
 }
 
 export default function SupplierProfileScreen() {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
@@ -227,7 +230,7 @@ export default function SupplierProfileScreen() {
 
 const CARD_WIDTH = '48%';
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center: { alignItems: 'center', justifyContent: 'center', gap: 12 },
 
