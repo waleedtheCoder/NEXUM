@@ -116,29 +116,28 @@ import { fonts } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 
 const TAB_MAP = {
-  Home: 'home',
-  MyListings: 'listings',
-  CategorySelection: 'sell',
+  Home:     'home',
+  Browse:   'browse',
+  Sell:     'sell',
   ChatList: 'chat',
-  AccountSettings: 'account',
-  Search: 'search',
+  Account:  'account',
 };
 
-// Supplier — full 5 tabs including Sell FAB
+// Supplier — 5 tabs: Listings tab + Create FAB
 const SUPPLIER_TABS = [
-  { key: 'home',     label: 'Home',     icon: 'home-outline',       screen: 'Home' },
-  { key: 'listings', label: 'Listings', icon: 'cube-outline',       screen: 'MyListings' },
-  { key: 'sell',     label: 'Sell',     icon: 'add-circle',         screen: 'CategorySelection', isFAB: true },
-  { key: 'chat',     label: 'Chat',     icon: 'chatbubble-outline', screen: 'ChatList' },
-  { key: 'account',  label: 'Account',  icon: 'person-outline',     screen: 'SupplierAccountScreen' },
+  { key: 'home',    label: 'Home',     icon: 'home-outline',       screen: 'Home' },
+  { key: 'sell',    label: 'Listings', icon: 'cube-outline',       screen: 'Sell' },
+  { key: 'create',  label: 'Create',   icon: 'add-circle',         screen: 'CategorySelection', isFAB: true },
+  { key: 'chat',    label: 'Chat',     icon: 'chatbubble-outline', screen: 'ChatList' },
+  { key: 'account', label: 'Account',  icon: 'person-outline',     screen: 'Account' },
 ];
 
-// Shopkeeper — 4 tabs, no Sell, Search tab instead
+// Shopkeeper & Guest — 4 tabs, Browse instead of Sell
 const SHOPKEEPER_TABS = [
   { key: 'home',    label: 'Home',    icon: 'home-outline',       screen: 'Home' },
-  { key: 'search',  label: 'Search',  icon: 'search-outline',     screen: 'Search' },
+  { key: 'browse',  label: 'Browse',  icon: 'storefront-outline', screen: 'Browse' },
   { key: 'chat',    label: 'Chat',    icon: 'chatbubble-outline', screen: 'ChatList' },
-  { key: 'account', label: 'Account', icon: 'person-outline',     screen: 'AccountSettings' },
+  { key: 'account', label: 'Account', icon: 'person-outline',     screen: 'Account' },
 ];
 
 export default function BottomNav({ activeTab }) {

@@ -92,6 +92,7 @@ export default function CategoryListingsScreen() {
         </View>
       ) : (
         <FlatList
+          style={{ flex: 1 }}
           data={products}
           numColumns={2}
           keyExtractor={(item) => String(item.id)}
@@ -115,7 +116,7 @@ export default function CategoryListingsScreen() {
         />
       )}
 
-      <BottomNav activeTab="listings" />
+      <BottomNav activeTab="browse" />
     </View>
   );
 }

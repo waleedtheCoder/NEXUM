@@ -46,11 +46,11 @@ function ChatItem({ chat, onPress, styles, colors }) {
 }
 
 export default function ChatListScreen() {
-  
+
   const navigation = useNavigation();
   const insets     = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { idToken, sessionId, refreshToken, updateUser } = useUser();
+  const { idToken, sessionId, refreshToken, updateUser, isLoggedIn } = useUser();
 
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading]             = useState(true);
@@ -58,29 +58,32 @@ export default function ChatListScreen() {
   const [activeChip, setActiveChip]       = useState('All');
   const [search, setSearch]               = useState('');
 
-  const authArgs = {
-    idToken, sessionId, refreshToken,
-    onTokenRefreshed: (t) => updateUser({ idToken: t }),
-  };
-
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
+    if (!isLoggedIn) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await getConversations(authArgs);
+      const data = await getConversations({
+        idToken, sessionId, refreshToken,
+        onTokenRefreshed: (t) => updateUser({ idToken: t }),
+      });
       setConversations(data);
     } catch (err) {
       setError(err.message || 'Failed to load conversations.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [isLoggedIn, idToken, sessionId]);
 
   useFocusEffect(
     useCallback(() => {
       fetchConversations();
-    }, [idToken, sessionId])
+    }, [fetchConversations])
   );
+
+  if (!isLoggedIn) {
+    return <ChatGuestPrompt insets={insets} colors={colors} navigation={navigation} />;
+  }
 
   const chipFilter = activeChip.toLowerCase();
   const filtered = conversations.filter((c) => {
@@ -150,6 +153,7 @@ export default function ChatListScreen() {
         </View>
       ) : (
         <FlatList
+          style={{ flex: 1 }}
           data={filtered}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
@@ -235,4 +239,91 @@ const makeStyles = (colors) => StyleSheet.create({
   unreadDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
   productTitle:   { fontSize: 12, fontFamily: fonts.medium, color: colors.textSecondary, marginBottom: 2 },
   secondary:      { fontSize: 12, fontFamily: fonts.regular, color: colors.textLight },
+
+  // Guest prompt
+  guestContainer: { flex: 1, backgroundColor: colors.background },
+  guestTopBar: {
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    paddingBottom: 14,
+  },
+  guestTopBarTitle: { color: '#fff', fontSize: 18, fontFamily: fonts.semiBold },
+  guestBody: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    gap: 16,
+  },
+  guestIconCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: `${colors.primary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  guestHeading: {
+    fontSize: 20,
+    fontFamily: fonts.bold,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  guestSubheading: {
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  guestPrimaryBtn: {
+    width: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: radii.md,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  guestPrimaryBtnText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
+  guestSecondaryBtn: { paddingVertical: 8 },
+  guestSecondaryBtnText: {
+    fontSize: 13,
+    fontFamily: fonts.medium,
+    color: colors.primary,
+    textDecorationLine: 'underline',
+  },
 });
+
+function ChatGuestPrompt({ insets, colors, navigation }) {
+  const styles = makeStyles(colors);
+  return (
+    <View style={[styles.guestContainer, { paddingBottom: insets.bottom }]}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+      <View style={[styles.guestTopBar, { paddingTop: insets.top + 8 }]}>
+        <Text style={styles.guestTopBarTitle}>Messages</Text>
+      </View>
+      <View style={styles.guestBody}>
+        <View style={styles.guestIconCircle}>
+          <Ionicons name="chatbubbles-outline" size={44} color={colors.primary} />
+        </View>
+        <Text style={styles.guestHeading}>Sign in to view your chats</Text>
+        <Text style={styles.guestSubheading}>
+          Connect with suppliers, ask questions, and negotiate orders — all in one place.
+        </Text>
+        <TouchableOpacity
+          style={styles.guestPrimaryBtn}
+          onPress={() => navigation.navigate('SavedAccountLogin')}
+        >
+          <Text style={styles.guestPrimaryBtnText}>Sign In</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.guestSecondaryBtn}
+          onPress={() => navigation.navigate('SignUp')}
+        >
+          <Text style={styles.guestSecondaryBtnText}>Create an account</Text>
+        </TouchableOpacity>
+      </View>
+      <BottomNav activeTab="chat" />
+    </View>
+  );
+}

@@ -31,7 +31,7 @@ export default function GuestAccountScreen() {
         <Text style={styles.topBarTitle}>Account</Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.illustrationWrap}>
           <WarehouseIllustration />
         </View>
@@ -42,14 +42,14 @@ export default function GuestAccountScreen() {
 
         <TouchableOpacity
           style={styles.signInBtn}
-          onPress={() => navigation.navigate('AuthOptions')}
+          onPress={() => navigation.navigate('SavedAccountLogin')}
         >
           <Text style={styles.signInBtnText}>Sign In</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.signUpBtn}
-          onPress={() => navigation.navigate('AuthOptions')}
+          onPress={() => navigation.navigate('SignUp')}
         >
           <Text style={styles.signUpBtnText}>Create an Account</Text>
         </TouchableOpacity>

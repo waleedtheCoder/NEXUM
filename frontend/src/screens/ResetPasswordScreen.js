@@ -74,7 +74,7 @@ export default function ResetPasswordScreen() {
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <ScreenHeader title="Reset Password" showBack />
 
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.message}>
           Your security is our priority. Reset your password to continue managing your wholesale account.
         </Text>

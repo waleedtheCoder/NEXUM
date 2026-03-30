@@ -91,7 +91,7 @@ export default function HomeScreen() {
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <HomeTopBar onSearchPress={() => navigation.navigate('Search')} />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
 
         {/* ── Hero promo banner (first active promotion) ───────────────── */}
         {promos.length > 0 && (

@@ -107,7 +107,7 @@ export default function ShopkeeperDashboardScreen() {
 
   const handleLogout = async () => {
     await logout();
-    navigation.reset({ index: 0, routes: [{ name: 'SavedAccountLogin' }] });
+    navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
   };
 
   const renderOrder = (order, i, arr) => {
@@ -170,7 +170,7 @@ export default function ShopkeeperDashboardScreen() {
         {isSupplier ? (
           <TouchableOpacity
             style={styles.modeBannerSupplier}
-            onPress={() => navigation.navigate('SupplierAccount')}
+            onPress={() => navigation.navigate('Account')}
             activeOpacity={0.8}
           >
             <View style={styles.modeBannerLeft}>

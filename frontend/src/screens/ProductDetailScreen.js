@@ -64,7 +64,7 @@ export default function ProductDetailScreen() {
     if (!isLoggedIn) {
       Alert.alert('Sign In Required', 'Please sign in to save listings.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: () => navigation.navigate('AuthOptions') },
+        { text: 'Sign In', onPress: () => navigation.navigate('SavedAccountLogin') },
       ]);
       return;
     }
@@ -101,7 +101,7 @@ export default function ProductDetailScreen() {
     if (!isLoggedIn) {
       Alert.alert('Sign In Required', 'Please sign in to contact suppliers.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: () => navigation.navigate('AuthOptions') },
+        { text: 'Sign In', onPress: () => navigation.navigate('SavedAccountLogin') },
       ]);
       return;
     }
@@ -136,7 +136,7 @@ export default function ProductDetailScreen() {
     if (!isLoggedIn) {
       Alert.alert('Sign In Required', 'Please sign in to place orders.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: () => navigation.navigate('AuthOptions') },
+        { text: 'Sign In', onPress: () => navigation.navigate('SavedAccountLogin') },
       ]);
       return;
     }
@@ -248,7 +248,7 @@ export default function ProductDetailScreen() {
       </View>
 
       {/* ── Scrollable content ─────────────────────────────────────────── */}
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Price + title */}
         <View style={styles.card}>

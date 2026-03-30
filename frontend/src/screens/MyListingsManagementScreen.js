@@ -157,7 +157,7 @@ export default function MyListingsManagementScreen() {
         }
       />
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* ── Product card ────────────────────────────────────────────── */}
         <View style={styles.card}>

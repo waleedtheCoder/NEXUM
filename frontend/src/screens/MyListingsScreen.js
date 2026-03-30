@@ -152,7 +152,7 @@ export default function MyListingsScreen() {
         />
       )}
 
-      <BottomNav activeTab="listings" />
+      <BottomNav activeTab="sell" />
     </View>
   );
 }

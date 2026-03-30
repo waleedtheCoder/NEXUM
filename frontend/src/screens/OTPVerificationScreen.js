@@ -68,7 +68,8 @@ export default function OTPVerificationScreen() {
         refreshToken: response.refresh_token,
       });
       setLoading(false);
-      navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
+      // After signup: collect role + location before entering the app
+      navigation.reset({ index: 0, routes: [{ name: 'RoleSelection' }] });
     } catch (err) {
       setLoading(false);
       Alert.alert('Verification Failed', err?.message || 'Could not verify OTP.');

@@ -17,7 +17,7 @@ const MENU_ITEMS = [
     title: 'My Listings',
     desc:  'View and manage all your active listings',
     icon:  'cube-outline',
-    screen: 'MyListings',
+    screen: 'Sell',
   },
   {
     title: 'Incoming Orders',
@@ -101,7 +101,7 @@ export default function SupplierAccountScreen() {
 
   const handleLogout = async () => {
     await logout();
-    navigation.reset({ index: 0, routes: [{ name: 'SavedAccountLogin' }] });
+    navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
   };
 
   const handleMenuPress = (item) => {
@@ -146,7 +146,7 @@ export default function SupplierAccountScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
         {/* Performance stats */}
         <Text style={styles.sectionLabel}>Performance</Text>

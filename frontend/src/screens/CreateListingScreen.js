@@ -161,7 +161,7 @@ export default function CreateListingScreen() {
         Alert.alert(
           'Listing Submitted!',
           `Your listing for "${productName}" has been submitted for review. It will go live after approval.`,
-          [{ text: 'View My Listings', onPress: () => navigation.navigate('MyListings') }]
+          [{ text: 'View My Listings', onPress: () => navigation.navigate('Sell') }]
         );
       }
     } catch (err) {
@@ -177,6 +177,7 @@ export default function CreateListingScreen() {
       <ScreenHeader title={editMode ? 'Edit Listing' : 'Create Listing'} showBack />
 
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}

@@ -51,7 +51,7 @@ export default function WelcomeScreen() {
         <Text style={styles.langText}>{isUrdu ? 'English' : 'اردو'}</Text>
       </TouchableOpacity>
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.illustrationWrap}>
           <CityIllustration />
         </View>

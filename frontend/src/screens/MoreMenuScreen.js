@@ -54,7 +54,7 @@ export default function MoreMenuScreen() {
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <ScreenHeader title="NEXUM" showBack />
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Feature grid */}
         <View style={styles.grid}>

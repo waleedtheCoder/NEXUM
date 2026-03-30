@@ -99,7 +99,7 @@ export default function AccountSettingsScreen() {
 
   const handleLogout = async () => {
     await logout();
-    navigation.reset({ index: 0, routes: [{ name: 'SavedAccountLogin' }] });
+    navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
   };
 
   const handleMenuPress = (item) => {
@@ -170,6 +170,7 @@ export default function AccountSettingsScreen() {
       </View>
 
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={[styles.scroll, { paddingBottom: 100 }]}
         showsVerticalScrollIndicator={false}
       >

@@ -58,6 +58,7 @@ export default function LoginScreen() {
       <ScreenHeader title="Sign In" showBack />
 
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >

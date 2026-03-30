@@ -25,7 +25,7 @@ export default function LocationsScreen() {
 
   const handleContinue = async () => {
     if (selected.length) await AsyncStorage.setItem('selected_locations', JSON.stringify(selected));
-    navigation.navigate('AuthOptions');
+    navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
   };
 
   return (
@@ -49,7 +49,7 @@ export default function LocationsScreen() {
         />
       </View>
 
-      <ScrollView contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
         {filtered.map((city) => (
           <TouchableOpacity
             key={city}
@@ -63,7 +63,7 @@ export default function LocationsScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity style={styles.skipBtn} onPress={() => navigation.navigate('AuthOptions')}>
+        <TouchableOpacity style={styles.skipBtn} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] })}>
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.continueBtn} onPress={handleContinue}>

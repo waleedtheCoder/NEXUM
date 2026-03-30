@@ -74,7 +74,7 @@ export default function SignUpScreen() {
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <ScreenHeader title="Create Account" showBack />
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>Full Name *</Text>
         <TextInput style={styles.input} placeholder="Your name" placeholderTextColor={colors.textLight} value={name} onChangeText={setName} />
         <Text style={styles.label}>Email *</Text>

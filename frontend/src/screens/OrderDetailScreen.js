@@ -162,7 +162,7 @@ export default function OrderDetailScreen() {
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <ScreenHeader title="Order Details" showBack />
 
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Product hero */}
         <View style={styles.hero}>
