@@ -64,7 +64,7 @@ export default function ProductDetailScreen() {
     if (!isLoggedIn) {
       Alert.alert('Sign In Required', 'Please sign in to save listings.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: () => navigation.navigate('LoginSignupOption') },
+        { text: 'Sign In', onPress: () => navigation.navigate('AuthOptions') },
       ]);
       return;
     }
@@ -101,7 +101,7 @@ export default function ProductDetailScreen() {
     if (!isLoggedIn) {
       Alert.alert('Sign In Required', 'Please sign in to contact suppliers.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: () => navigation.navigate('LoginSignupOption') },
+        { text: 'Sign In', onPress: () => navigation.navigate('AuthOptions') },
       ]);
       return;
     }
@@ -136,7 +136,7 @@ export default function ProductDetailScreen() {
     if (!isLoggedIn) {
       Alert.alert('Sign In Required', 'Please sign in to place orders.', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: () => navigation.navigate('LoginSignupOption') },
+        { text: 'Sign In', onPress: () => navigation.navigate('AuthOptions') },
       ]);
       return;
     }

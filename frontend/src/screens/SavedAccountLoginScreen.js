@@ -12,7 +12,7 @@ import { loginWithBackend, normalizeRoleFromApi } from '../services/authApi';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 
-export default function LoginSelectionScreen() {
+export default function SavedAccountLoginScreen() {
   const { colors } = useTheme();
     const styles = makeStyles(colors);
   const navigation  = useNavigation();
@@ -85,7 +85,7 @@ export default function LoginSelectionScreen() {
 
         {/* Top row */}
         <View style={styles.topRow}>
-          <TouchableOpacity onPress={() => navigation.navigate('LoginSignupOption')}>
+          <TouchableOpacity onPress={() => navigation.navigate('AuthOptions')}>
             <Text style={styles.closeBtn}>✕</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setLang(isUrdu ? 'en' : 'ur')}>
@@ -191,7 +191,7 @@ export default function LoginSelectionScreen() {
           {/* Use a different account */}
           <TouchableOpacity
             style={styles.differentBtn}
-            onPress={() => navigation.navigate('LoginSignupOption')}
+            onPress={() => navigation.navigate('AuthOptions')}
           >
             <View style={styles.plusCircle}>
               <Ionicons name="add" size={22} color="#fff" />

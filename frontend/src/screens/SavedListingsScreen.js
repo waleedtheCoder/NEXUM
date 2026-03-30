@@ -50,7 +50,7 @@ export default function SavedListingsScreen() {
   // ── Auth gate ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isLoggedIn) {
-      navigation.replace('AccountLoggedOut');
+      navigation.replace('GuestAccount');
     }
   }, [isLoggedIn]);
 

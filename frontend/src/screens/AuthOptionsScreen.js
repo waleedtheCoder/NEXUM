@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 
-export default function LoginSignupOptionScreen() {
+export default function AuthOptionsScreen() {
   const { colors } = useTheme();
     const styles = makeStyles(colors);
   const navigation = useNavigation();

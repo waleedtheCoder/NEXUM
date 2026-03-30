@@ -1,13 +1,13 @@
 /**
- * SupplierShopkeeperScreen.js
+ * ShopkeeperDashboardScreen.js
  *
  * A shopkeeper-mode dashboard accessible by both:
  *   - SUPPLIER users who tap "Switch to Shopkeeper View"
  *   - SHOPKEEPER users who tap "Register as Supplier"
  *
  * Role-based CTA:
- *   SUPPLIER  → "Switch to Supplier Mode" (returns to SupplierAccountScreen)
- *   SHOPKEEPER → "Register as Supplier" (navigates to BecomeSupplierScreen)
+ *   SUPPLIER  → "Switch to Supplier Mode" (returns to SupplierAccount)
+ *   SHOPKEEPER → "Register as Supplier" (navigates to BecomeSupplier)
  */
 
 import React, { useState, useCallback } from 'react';
@@ -64,7 +64,7 @@ const MENU_ITEMS = [
   },
 ];
 
-export default function SupplierShopkeeperScreen() {
+export default function ShopkeeperDashboardScreen() {
   const { colors, isDark } = useTheme();
   const styles = makeStyles(colors, isDark);
   const navigation = useNavigation();
@@ -107,7 +107,7 @@ export default function SupplierShopkeeperScreen() {
 
   const handleLogout = async () => {
     await logout();
-    navigation.reset({ index: 0, routes: [{ name: 'LoginSelection' }] });
+    navigation.reset({ index: 0, routes: [{ name: 'SavedAccountLogin' }] });
   };
 
   const renderOrder = (order, i, arr) => {
@@ -170,7 +170,7 @@ export default function SupplierShopkeeperScreen() {
         {isSupplier ? (
           <TouchableOpacity
             style={styles.modeBannerSupplier}
-            onPress={() => navigation.navigate('SupplierAccountScreen')}
+            onPress={() => navigation.navigate('SupplierAccount')}
             activeOpacity={0.8}
           >
             <View style={styles.modeBannerLeft}>
@@ -185,7 +185,7 @@ export default function SupplierShopkeeperScreen() {
         ) : (
           <TouchableOpacity
             style={styles.modeBannerShopkeeper}
-            onPress={() => navigation.navigate('BecomeSupplierScreen')}
+            onPress={() => navigation.navigate('BecomeSupplier')}
             activeOpacity={0.8}
           >
             <View style={styles.modeBannerLeft}>

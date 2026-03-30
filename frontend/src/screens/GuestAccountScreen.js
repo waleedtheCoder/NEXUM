@@ -17,7 +17,7 @@ const EXPLORE_ITEMS = [
   { label: 'Invite Retailers', icon: 'person-add-outline', screen: null },
 ];
 
-export default function AccountLoggedOutScreen() {
+export default function GuestAccountScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
@@ -42,14 +42,14 @@ export default function AccountLoggedOutScreen() {
 
         <TouchableOpacity
           style={styles.signInBtn}
-          onPress={() => navigation.navigate('LoginSignupOption')}
+          onPress={() => navigation.navigate('AuthOptions')}
         >
           <Text style={styles.signInBtnText}>Sign In</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.signUpBtn}
-          onPress={() => navigation.navigate('LoginSignupOption')}
+          onPress={() => navigation.navigate('AuthOptions')}
         >
           <Text style={styles.signUpBtnText}>Create an Account</Text>
         </TouchableOpacity>

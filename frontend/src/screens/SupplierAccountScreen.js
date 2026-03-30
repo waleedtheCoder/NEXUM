@@ -101,7 +101,7 @@ export default function SupplierAccountScreen() {
 
   const handleLogout = async () => {
     await logout();
-    navigation.reset({ index: 0, routes: [{ name: 'LoginSelection' }] });
+    navigation.reset({ index: 0, routes: [{ name: 'SavedAccountLogin' }] });
   };
 
   const handleMenuPress = (item) => {
@@ -236,7 +236,7 @@ export default function SupplierAccountScreen() {
         {/* Switch to Shopkeeper View */}
         <TouchableOpacity
           style={styles.switchRow}
-          onPress={() => navigation.navigate('SupplierShopkeeperScreen')}
+          onPress={() => navigation.navigate('ShopkeeperDashboard')}
           activeOpacity={0.8}
         >
           <View style={styles.themeLeft}>

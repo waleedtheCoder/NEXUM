@@ -6,12 +6,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useUser } from '../context/UserContext';
 
 // ── Auth / Onboarding Screens ───────────────────────────────────────────────
-import LogoScreen               from '../screens/LogoScreen';
+import SplashScreen             from '../screens/SplashScreen';
 import WelcomeScreen            from '../screens/WelcomeScreen';
-import ShopkeeperSupplierScreen from '../screens/ShopkeeperSupplierScreen';
+import RoleSelectionScreen      from '../screens/RoleSelectionScreen';
 import LocationsScreen          from '../screens/LocationsScreen';
-import LoginSignupOptionScreen  from '../screens/LoginSignupOptionScreen';
-import LoginSelectionScreen     from '../screens/LoginSelectionScreen';
+import AuthOptionsScreen        from '../screens/AuthOptionsScreen';
+import SavedAccountLoginScreen  from '../screens/SavedAccountLoginScreen';
 import LoginScreen              from '../screens/LoginScreen';
 import EmailLoginScreen         from '../screens/EmailLoginScreen';
 import SignUpScreen             from '../screens/SignUpScreen';
@@ -22,10 +22,10 @@ import ResetPasswordScreen      from '../screens/ResetPasswordScreen';
 // ── Main App Screens ────────────────────────────────────────────────────────
 import HomeScreen                 from '../screens/HomeScreen';
 import SearchScreen               from '../screens/SearchScreen';
-import CategoryNavigationScreen   from '../screens/CategoryNavigationScreen';
+import CategoryBrowseScreen       from '../screens/CategoryBrowseScreen';
 import CategorySelectionScreen    from '../screens/CategorySelectionScreen';
 import MarketplaceBrowsingScreen  from '../screens/MarketplaceBrowsingScreen';
-import MobileListingScreen        from '../screens/MobileListingScreen';
+import CategoryListingsScreen     from '../screens/CategoryListingsScreen';
 import ProductDetailScreen        from '../screens/ProductDetailScreen';
 import MyListingsScreen           from '../screens/MyListingsScreen';
 import MyListingsManagementScreen from '../screens/MyListingsManagementScreen';
@@ -34,8 +34,8 @@ import ChatListScreen             from '../screens/ChatListScreen';
 import ChatConversationScreen     from '../screens/ChatConversationScreen';
 import AccountSettingsScreen      from '../screens/AccountSettingsScreen';
 import SupplierAccountScreen      from '../screens/SupplierAccountScreen';
-import AccountLoggedOutScreen     from '../screens/AccountLoggedOutScreen';
-import AppNavigationScreen        from '../screens/AppNavigationScreen';
+import GuestAccountScreen         from '../screens/GuestAccountScreen';
+import MoreMenuScreen             from '../screens/MoreMenuScreen';
 import NotificationsScreen        from '../screens/NotificationsScreen';
 import OrderHistoryScreen         from '../screens/OrderHistoryScreen';
 import OrderDetailScreen          from '../screens/OrderDetailScreen';
@@ -52,9 +52,9 @@ import EditProfileScreen          from '../screens/EditProfileScreen';
 import RestockRemindersScreen     from '../screens/RestockRemindersScreen';
 
 // ── Supplier Network + mode-switching screens ────────────────────────────────
-import SupplierNetworkScreen      from '../screens/SupplierNetworkScreen';
-import SupplierShopkeeperScreen   from '../screens/SupplierShopkeeperScreen';
-import BecomeSupplierScreen       from '../screens/BecomeSupplierScreen';
+import SupplierNetworkScreen         from '../screens/SupplierNetworkScreen';
+import ShopkeeperDashboardScreen     from '../screens/ShopkeeperDashboardScreen';
+import BecomeSupplierScreen          from '../screens/BecomeSupplierScreen';
 
 const Stack = createStackNavigator();
 const Tab   = createBottomTabNavigator();
@@ -79,9 +79,9 @@ function AuthStack() {
   return (
     <Stack.Navigator screenOptions={SCREEN_OPTIONS}>
       <Stack.Screen name="Welcome"            component={WelcomeScreen} />
-      <Stack.Screen name="ShopkeeperSupplier" component={ShopkeeperSupplierScreen} />
+      <Stack.Screen name="RoleSelection"      component={RoleSelectionScreen} />
       <Stack.Screen name="Locations"          component={LocationsScreen} />
-      <Stack.Screen name="LoginSignupOption"  component={LoginSignupOptionScreen} />
+      <Stack.Screen name="AuthOptions"        component={AuthOptionsScreen} />
       <Stack.Screen name="Login"              component={LoginScreen} />
       <Stack.Screen name="EmailLogin"         component={EmailLoginScreen} />
       <Stack.Screen name="SignUp"             component={SignUpScreen} />
@@ -98,21 +98,21 @@ function RootStack() {
     <Stack.Navigator screenOptions={SCREEN_OPTIONS}>
 
       {/* Splash */}
-      <Stack.Screen name="Logo"    component={LogoScreen} />
+      <Stack.Screen name="Splash"           component={SplashScreen} />
 
       {/* Auth / onboarding flow */}
-      <Stack.Screen name="Auth"    component={AuthStack} />
-      <Stack.Screen name="LoginSelection"     component={LoginSelectionScreen} />
-      <Stack.Screen name="LoginSignupOption"  component={LoginSignupOptionScreen} />
+      <Stack.Screen name="Auth"             component={AuthStack} />
+      <Stack.Screen name="SavedAccountLogin" component={SavedAccountLoginScreen} />
+      <Stack.Screen name="AuthOptions"       component={AuthOptionsScreen} />
 
       {/* Main tabbed app */}
       <Stack.Screen name="MainApp" component={MainTabNavigator} />
 
       {/* ── Marketplace ─────────────────────────────────────────────────── */}
       <Stack.Screen name="Search"              component={SearchScreen} />
-      <Stack.Screen name="CategoryNavigation"  component={CategoryNavigationScreen} />
+      <Stack.Screen name="CategoryBrowse"      component={CategoryBrowseScreen} />
       <Stack.Screen name="MarketplaceBrowsing" component={MarketplaceBrowsingScreen} />
-      <Stack.Screen name="MobileListing"       component={MobileListingScreen} />
+      <Stack.Screen name="CategoryListings"    component={CategoryListingsScreen} />
       <Stack.Screen name="ProductDetail"       component={ProductDetailScreen} />
       <Stack.Screen name="SupplierProfile"     component={SupplierProfileScreen} />
 
@@ -124,8 +124,8 @@ function RootStack() {
       <Stack.Screen name="CreateListing"        component={CreateListingScreen} />
 
       {/* ── Supplier ────────────────────────────────────────────────────── */}
-      <Stack.Screen name="SupplierAccountScreen" component={SupplierAccountScreen} />
-      <Stack.Screen name="IncomingOrders"        component={IncomingOrdersScreen} />
+      <Stack.Screen name="SupplierAccount" component={SupplierAccountScreen} />
+      <Stack.Screen name="IncomingOrders"  component={IncomingOrdersScreen} />
 
       {/* ── Chat ────────────────────────────────────────────────────────── */}
       <Stack.Screen name="ChatConversation" component={ChatConversationScreen} />
@@ -138,16 +138,15 @@ function RootStack() {
       <Stack.Screen name="OrderDetail"  component={OrderDetailScreen} />
 
       {/* ── Supplier Network + mode switching ───────────────────────────── */}
-      <Stack.Screen name="SupplierNetwork"         component={SupplierNetworkScreen} />
-      <Stack.Screen name="SupplierShopkeeperScreen" component={SupplierShopkeeperScreen} />
-      <Stack.Screen name="BecomeSupplierScreen"    component={BecomeSupplierScreen} />
+      <Stack.Screen name="SupplierNetwork"      component={SupplierNetworkScreen} />
+      <Stack.Screen name="ShopkeeperDashboard"  component={ShopkeeperDashboardScreen} />
+      <Stack.Screen name="BecomeSupplier"       component={BecomeSupplierScreen} />
 
       {/* ── Account ─────────────────────────────────────────────────────── */}
-      <Stack.Screen name="AppNavigation"       component={AppNavigationScreen} />
-      <Stack.Screen name="AccountLoggedOut"    component={AccountLoggedOutScreen} />
-      {/* FIX: was AccountSettingsScreen — now correctly points to dedicated edit form */}
-      <Stack.Screen name="EditProfile"         component={EditProfileScreen} />
-      <Stack.Screen name="RestockReminders"    component={RestockRemindersScreen} />
+      <Stack.Screen name="MoreMenu"          component={MoreMenuScreen} />
+      <Stack.Screen name="GuestAccount"      component={GuestAccountScreen} />
+      <Stack.Screen name="EditProfile"       component={EditProfileScreen} />
+      <Stack.Screen name="RestockReminders"  component={RestockRemindersScreen} />
 
     </Stack.Navigator>
   );

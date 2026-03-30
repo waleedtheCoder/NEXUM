@@ -7,7 +7,7 @@ import { useUser } from '../context/UserContext';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 
-export default function ShopkeeperSupplierScreen() {
+export default function RoleSelectionScreen() {
   const { colors } = useTheme();
   const styles = makeStyles(colors);
   const navigation = useNavigation();

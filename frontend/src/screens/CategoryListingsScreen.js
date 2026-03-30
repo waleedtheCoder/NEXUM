@@ -17,7 +17,7 @@ import { getListings } from '../services/marketplaceApi';
 const SORT_FILTERS = ['Newest', 'Price ↑', 'Price ↓'];
 const SORT_MAP = { 'Newest': 'newest', 'Price ↑': 'price_asc', 'Price ↓': 'price_desc' };
 
-export default function MobileListingScreen() {
+export default function CategoryListingsScreen() {
   const { colors } = useTheme();
     const styles = makeStyles(colors);
   const navigation = useNavigation();

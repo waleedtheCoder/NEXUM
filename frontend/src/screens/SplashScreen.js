@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../hooks/useTheme';
 
-export default function LogoScreen() {
+export default function SplashScreen() {
   const { colors } = useTheme();
     const styles = makeStyles(colors);
   const navigation = useNavigation();

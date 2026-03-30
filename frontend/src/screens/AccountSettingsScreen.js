@@ -99,7 +99,7 @@ export default function AccountSettingsScreen() {
 
   const handleLogout = async () => {
     await logout();
-    navigation.reset({ index: 0, routes: [{ name: 'LoginSelection' }] });
+    navigation.reset({ index: 0, routes: [{ name: 'SavedAccountLogin' }] });
   };
 
   const handleMenuPress = (item) => {
@@ -162,7 +162,7 @@ export default function AccountSettingsScreen() {
         <View style={styles.topBarIconLeft} />
         <Text style={styles.topBarTitle}>Account</Text>
         <TouchableOpacity
-          onPress={() => navigation.navigate('AppNavigation')}
+          onPress={() => navigation.navigate('MoreMenu')}
           style={styles.topBarIconRight}
         >
           <Ionicons name="settings-outline" size={22} color="#fff" />
@@ -289,7 +289,7 @@ export default function AccountSettingsScreen() {
         {/* Navigation extras */}
         <TouchableOpacity
           style={styles.navCard}
-          onPress={() => navigation.navigate('AppNavigation')}
+          onPress={() => navigation.navigate('MoreMenu')}
         >
           <Ionicons name="menu" size={20} color={colors.primary} />
           <Text style={styles.navCardText}>More Settings & Features</Text>
@@ -299,7 +299,7 @@ export default function AccountSettingsScreen() {
         {/* Register as Supplier */}
         <TouchableOpacity
           style={styles.supplierCTA}
-          onPress={() => navigation.navigate('SupplierShopkeeperScreen')}
+          onPress={() => navigation.navigate('ShopkeeperDashboard')}
           activeOpacity={0.8}
         >
           <View style={styles.supplierCTALeft}>

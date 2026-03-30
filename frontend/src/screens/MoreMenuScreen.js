@@ -1,4 +1,4 @@
-// frontend/src/screens/AppNavigationScreen.js
+// frontend/src/screens/MoreMenuScreen.js
 //
 // The "More" settings screen accessible from AccountSettings top-right gear icon.
 // Contains the theme toggle switch.
@@ -30,7 +30,7 @@ const LANGUAGES = [
   { key: 'urdu',    label: 'اردو (Urdu)' },
 ];
 
-export default function AppNavigationScreen() {
+export default function MoreMenuScreen() {
   
   const navigation = useNavigation();
   const insets     = useSafeAreaInsets();

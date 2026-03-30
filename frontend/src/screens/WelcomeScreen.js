@@ -38,7 +38,7 @@ export default function WelcomeScreen() {
 
   const handleContinue = async () => {
     await AsyncStorage.setItem('has_seen_onboarding', 'true');
-    navigation.navigate('ShopkeeperSupplier');
+    navigation.navigate('RoleSelection');
   };
 
   return (

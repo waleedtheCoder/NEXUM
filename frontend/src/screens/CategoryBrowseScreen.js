@@ -11,7 +11,7 @@ import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { getCategories } from '../services/marketplaceApi';
 
-export default function CategoryNavigationScreen() {
+export default function CategoryBrowseScreen() {
   const { colors } = useTheme();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
@@ -84,7 +84,7 @@ export default function CategoryNavigationScreen() {
             return (
               <TouchableOpacity
                 style={[styles.row, !isLast && styles.rowBorder]}
-                onPress={() => navigation.navigate('MobileListing', { category: item.name })}
+                onPress={() => navigation.navigate('CategoryListings', { category: item.name })}
                 activeOpacity={0.7}
               >
                 <View style={styles.iconWrap}>
