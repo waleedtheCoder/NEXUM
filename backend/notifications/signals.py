@@ -16,12 +16,12 @@ def _on_notification_created(sender, instance, created, **kwargs):
     # Build deep-link routing data so the app can navigate on tap
     data = {'screen': 'Notifications', 'notifId': str(instance.id)}
 
-    if instance.type == 'message' and instance.conversation_id:
+    if instance.type == 'inquiry' and instance.conversation_id:
         data = {
             'screen': 'ChatConversation',
             'convId': str(instance.conversation_id),
         }
-    elif instance.type in ('order', 'listing') and instance.listing_id:
+    elif instance.type == 'order' and instance.listing_id:
         data = {
             'screen':    'ProductDetail',
             'listingId': str(instance.listing_id),

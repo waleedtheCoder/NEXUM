@@ -96,7 +96,7 @@ export default function MyListingsScreen() {
 
       <TouchableOpacity
         style={styles.promoteBanner}
-        onPress={() => Alert.alert('Promote Products', 'Sponsored listing feature coming soon!')}
+        onPress={() => Alert.alert('Promote a Listing', 'Open any active listing below and tap "Put on Promotion" to set a discount.')}
       >
         <View style={styles.promoteBannerIcon}>
           <Ionicons name="pricetag" size={18} color="#fff" />

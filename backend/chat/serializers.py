@@ -19,7 +19,11 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = ['id', 'text', 'time', 'mine']
 
     def get_time(self, obj):
-        return obj.created_at.strftime('%-I:%M %p') if obj.created_at else ''
+        if not obj.created_at:
+            return ''
+        t = obj.created_at
+        hour = t.hour % 12 or 12
+        return f"{hour}:{t.strftime('%M %p')}"
 
     def get_mine(self, obj):
         request = self.context.get('request')

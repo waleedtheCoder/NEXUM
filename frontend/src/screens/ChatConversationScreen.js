@@ -11,9 +11,8 @@ import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { getMessages, sendMessage } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
-import config from '../../config';
 
-const WS_HOST = config.BACKEND_URL.replace(/^https?:\/\//, '');
+const POLL_INTERVAL_MS = 3000;
 
 const QUICK_REPLIES = [
   'What is the price?',
@@ -32,110 +31,74 @@ export default function ChatConversationScreen() {
   const chat   = route.params?.chat;
   const convId = chat?.id;
 
-  const listRef      = useRef(null);
-  const wsRef        = useRef(null);
-  const pendingTemps = useRef([]);
+  const listRef = useRef(null);
 
-  const [messages,    setMessages]    = useState([]);
-  const [input,       setInput]       = useState('');
-  const [loading,     setLoading]     = useState(true);
-  const [sending,     setSending]     = useState(false);
-  const [error,       setError]       = useState(null);
-  const [wsConnected, setWsConnected] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input,    setInput]    = useState('');
+  const [loading,  setLoading]  = useState(true);
+  const [sending,  setSending]  = useState(false);
+  const [error,    setError]    = useState(null);
 
-  const authArgs = {
-    idToken, sessionId, refreshToken,
-    onTokenRefreshed: (t) => updateUser({ idToken: t }),
-  };
-
-  // ── 1. Load message history via REST ─────────────────────────────────────
+  // Build auth args from current token values (not in deps to avoid re-creating intervals)
+  const authArgsRef = useRef({});
   useEffect(() => {
-    if (!convId) { setLoading(false); return; }
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const data = await getMessages(convId, authArgs);
-        if (!cancelled) setMessages(data);
-      } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load messages.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    authArgsRef.current = {
+      idToken, sessionId, refreshToken,
+      onTokenRefreshed: (t) => updateUser({ idToken: t }),
+    };
+  }, [idToken, sessionId, refreshToken]);
+
+  const fetchMessages = useCallback(async (isInitial = false) => {
+    if (!convId) return;
+    try {
+      const data = await getMessages(convId, authArgsRef.current);
+      setMessages(data);
+      if (isInitial) setError(null);
+    } catch (err) {
+      if (isInitial) setError(err.message || 'Failed to load messages.');
+    } finally {
+      if (isInitial) setLoading(false);
+    }
   }, [convId]);
 
-  // ── 2. Open WebSocket after REST load completes ───────────────────────────
+  // Initial load
   useEffect(() => {
-    if (loading || !convId || !idToken) return;
+    if (!convId) { setLoading(false); return; }
+    fetchMessages(true);
+  }, [convId]);
 
-    const ws = new WebSocket(`ws://${WS_HOST}/ws/chat/${convId}/?token=${idToken}`);
-    wsRef.current = ws;
+  // Polling for new messages every 3 seconds
+  useEffect(() => {
+    if (loading || !convId) return;
+    const interval = setInterval(() => fetchMessages(false), POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [loading, convId, fetchMessages]);
 
-    ws.onopen  = () => setWsConnected(true);
-    ws.onclose = () => setWsConnected(false);
-    ws.onerror = () => setWsConnected(false);
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        const tempIdx = pendingTemps.current.findIndex((t) => t === msg.id);
-
-        if (tempIdx !== -1) {
-          pendingTemps.current.splice(tempIdx, 1);
-          return;
-        }
-        setMessages((prev) => [
-          ...prev,
-          {
-            id:   msg.id,
-            text: msg.text,
-            time: msg.time,
-            mine: msg.sender_id === undefined ? false : false,
-          },
-        ]);
-      } catch {}
-    };
-
-    return () => {
-      ws.close();
-      wsRef.current = null;
-    };
-  }, [loading, convId, idToken]);
-
-  // ── 3. Send message ───────────────────────────────────────────────────────
   const handleSend = useCallback(async (overrideText) => {
     const text = (overrideText ?? input).trim();
     if (!text || sending) return;
 
-    const tempId = `temp-${Date.now()}`;
-    const optimistic = { id: tempId, text, time: 'Sending…', mine: true, pending: true };
-
-    setMessages((prev) => [...prev, optimistic]);
     if (!overrideText) setInput('');
     setSending(true);
 
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      pendingTemps.current.push(tempId);
-      wsRef.current.send(JSON.stringify({ text }));
-      setMessages((prev) =>
-        prev.map((m) => m.id === tempId ? { ...m, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), pending: false } : m)
-      );
+    // Optimistic message
+    const tempId = `temp-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      { id: tempId, text, time: 'Sending…', mine: true, pending: true },
+    ]);
+
+    try {
+      await sendMessage(convId, text, authArgsRef.current);
+      // Refresh immediately to get the server-confirmed message
+      await fetchMessages(false);
+    } catch {
+      // Remove failed optimistic message
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    } finally {
       setSending(false);
-    } else {
-      try {
-        const sent = await sendMessage(convId, text, authArgs);
-        setMessages((prev) =>
-          prev.map((m) => m.id === tempId ? { ...sent, mine: true } : m)
-        );
-      } catch {
-        setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      } finally {
-        setSending(false);
-      }
     }
-  }, [input, sending, convId, authArgs]);
+  }, [input, sending, convId, fetchMessages]);
 
   const styles = makeStyles(colors);
 
@@ -170,12 +133,9 @@ export default function ChatConversationScreen() {
             <Text style={styles.avatarText}>{chat?.avatarInitial || 'S'}</Text>
           </View>
           <View style={styles.headerText}>
-            <View style={styles.headerNameRow}>
-              <Text style={styles.headerName} numberOfLines={1}>{chat?.username || 'Seller'}</Text>
-              {wsConnected && <View style={styles.liveDot} />}
-            </View>
+            <Text style={styles.headerName} numberOfLines={1}>{chat?.username || 'Seller'}</Text>
             <Text style={styles.headerProduct} numberOfLines={1}>
-              {wsConnected ? 'Live' : (chat?.productTitle || 'Product inquiry')}
+              {chat?.productTitle || 'Product inquiry'}
             </Text>
           </View>
         </TouchableOpacity>
@@ -195,9 +155,6 @@ export default function ChatConversationScreen() {
         <View style={styles.productStrip}>
           <Ionicons name="cube-outline" size={14} color={colors.primary} />
           <Text style={styles.productStripText} numberOfLines={1}>{chat.productTitle}</Text>
-          <TouchableOpacity>
-            <Text style={styles.productStripLink}>View</Text>
-          </TouchableOpacity>
         </View>
       )}
 
@@ -210,6 +167,9 @@ export default function ChatConversationScreen() {
         <View style={styles.center}>
           <Ionicons name="cloud-offline-outline" size={48} color={colors.textLight} />
           <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => fetchMessages(true)}>
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -223,7 +183,7 @@ export default function ChatConversationScreen() {
         />
       )}
 
-      {/* Quick replies */}
+      {/* Quick replies — shown when conversation is empty */}
       {!loading && !error && messages.length === 0 && (
         <FlatList
           data={QUICK_REPLIES}
@@ -272,8 +232,10 @@ export default function ChatConversationScreen() {
 
 const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  center:    { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: colors.textSecondary, marginTop: 12, fontSize: 14, fontFamily: fonts.regular },
+  center:    { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  errorText: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.regular, textAlign: 'center' },
+  retryBtn:  { paddingHorizontal: 24, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: radii.full },
+  retryText: { color: '#fff', fontSize: 14, fontFamily: fonts.semiBold },
 
   // Header
   header: {
@@ -282,20 +244,18 @@ const makeStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  backBtn:     { padding: 4, marginRight: 4 },
-  headerInfo:  { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  backBtn:       { padding: 4, marginRight: 4 },
+  headerInfo:    { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatar: {
     width: 38, height: 38, borderRadius: 19,
     alignItems: 'center', justifyContent: 'center',
   },
   avatarText:    { color: '#fff', fontSize: 15, fontFamily: fonts.bold },
   headerText:    { flex: 1 },
-  headerNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   headerName:    { fontSize: 15, fontFamily: fonts.semiBold, color: colors.text, flexShrink: 1 },
   headerProduct: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 1 },
   headerActions: { flexDirection: 'row', gap: 4 },
   headerBtn:     { padding: 6 },
-  liveDot:       { width: 7, height: 7, borderRadius: 4, backgroundColor: '#22c55e' },
 
   // Product strip
   productStrip: {
@@ -305,7 +265,6 @@ const makeStyles = (colors) => StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   productStripText: { flex: 1, fontSize: 12, fontFamily: fonts.medium, color: colors.textSecondary },
-  productStripLink: { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },
 
   // Messages
   messageList:    { paddingHorizontal: spacing.md, paddingTop: 16, paddingBottom: 8 },
@@ -323,7 +282,7 @@ const makeStyles = (colors) => StyleSheet.create({
   bubbleTimeTheirs:    { color: colors.textSecondary },
 
   // Quick replies
-  quickReplies: { paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.border },
+  quickReplies: { paddingVertical: 8, paddingHorizontal: spacing.md, gap: 8 },
   quickReply: {
     paddingHorizontal: 14, paddingVertical: 7,
     backgroundColor: colors.surfaceAlt, borderRadius: radii.full,

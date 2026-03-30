@@ -20,7 +20,7 @@ const STATUS_CONFIG = {
   cancelled: { color: '#EF4444', bg: '#FEE2E2', label: 'Cancelled' },
 };
 
-function OrderCard({ order, onPress }) {
+function OrderCard({ order, onPress, colors, styles }) {
   const statusKey = (order.status || '').toLowerCase();
   const s = STATUS_CONFIG[statusKey] || {
     color: colors.textSecondary,
@@ -103,6 +103,8 @@ export default function OrderHistoryScreen() {
     <OrderCard
       order={item}
       onPress={() => navigation.navigate('OrderDetail', { orderId: item.id, order: item })}
+      colors={colors}
+      styles={styles}
     />
   );
 

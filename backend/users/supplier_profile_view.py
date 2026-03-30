@@ -8,14 +8,15 @@ from django.contrib.auth.models import User
 from listings.models import Listing
 from listings.serializers import ListingCardSerializer
 from listings.utils import get_initials, avatar_color_for
-from users.models import UserProfile
+from users.models import UserProfile, FavouriteSupplier
 
 
 class SupplierPublicProfileView(APIView):
     """
     GET /api/users/supplier/<supplier_id>/
-    Public. Returns a supplier's public profile and their active listings.
-    Used by ProductDetailScreen when the user taps the seller card.
+    Public (optional auth). Returns a supplier's public profile and their active listings.
+    If the requester is an authenticated shopkeeper, includes is_favourite field.
+    Used by SupplierProfileScreen.
 
     Response:
     {
@@ -25,11 +26,11 @@ class SupplierPublicProfileView(APIView):
         "avatarColor":   "#F59E0B",
         "rating":        4.5,
         "totalListings": 12,
+        "is_favourite":  false,
         "listings":      [ ...ListingCard objects (max 20)... ]
     }
     """
-    authentication_classes = []
-    permission_classes     = [AllowAny]
+    permission_classes = [AllowAny]
 
     def get(self, request, supplier_id):
         try:
@@ -41,7 +42,7 @@ class SupplierPublicProfileView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if profile.role != 'supplier':
+        if profile.role != 'SUPPLIER':
             return Response(
                 {'detail': 'User is not a supplier.'},
                 status=status.HTTP_404_NOT_FOUND,
@@ -50,6 +51,12 @@ class SupplierPublicProfileView(APIView):
         listings = Listing.objects.filter(supplier=user, status='active').order_by('-created_at')
         name     = user.get_full_name() or user.username
 
+        is_favourite = False
+        if request.user and request.user.is_authenticated:
+            is_favourite = FavouriteSupplier.objects.filter(
+                shopkeeper=request.user, supplier=user,
+            ).exists()
+
         return Response({
             'id':            str(user.id),
             'name':          name,
@@ -57,5 +64,6 @@ class SupplierPublicProfileView(APIView):
             'avatarColor':   avatar_color_for(user.id),
             'rating':        4.5,               # static until a Review model is added
             'totalListings': listings.count(),
+            'is_favourite':  is_favourite,
             'listings':      ListingCardSerializer(listings[:20], many=True).data,
         })

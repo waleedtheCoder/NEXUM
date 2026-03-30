@@ -60,6 +60,25 @@ class Listing(models.Model):
         return self.conversations.count()
 
 
+class ListingPromotion(models.Model):
+    """A supplier-created discount promotion on one of their listings."""
+    listing          = models.OneToOneField(Listing, on_delete=models.CASCADE, related_name='promotion')
+    discount_percent = models.PositiveIntegerField(help_text='1–99')
+    is_active        = models.BooleanField(default=True)
+    created_at       = models.DateTimeField(auto_now_add=True)
+    ends_at          = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.listing.product_name} — {self.discount_percent}% off"
+
+    @property
+    def discounted_price(self):
+        return round(float(self.listing.price) * (1 - self.discount_percent / 100), 2)
+
+
 class SavedListing(models.Model):
     """Tracks which listings a user has hearted/saved."""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='saved_listings')

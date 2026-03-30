@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, Image, TouchableOpacity, ScrollView,
   StyleSheet, StatusBar, Alert, ActivityIndicator,
+  Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +10,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
-import { deleteListing, updateListing } from '../services/marketplaceApi';
+import { deleteListing, updateListing, setListingPromotion, removeListingPromotion } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
 export default function MyListingsManagementScreen() {
@@ -23,6 +24,13 @@ export default function MyListingsManagementScreen() {
   const [status, setStatus]         = useState(listing?.status || 'active');
   const [deleting, setDeleting]     = useState(false);
   const [publishing, setPublishing] = useState(false);
+
+  // Promotion state — initialised from listing.promotion passed via route params
+  const [promotion, setPromotion]       = useState(listing?.promotion || null);
+  const [showPromoModal, setShowPromoModal] = useState(false);
+  const [promoInput, setPromoInput]     = useState('');
+  const [promoSaving, setPromoSaving]   = useState(false);
+  const [promoRemoving, setPromoRemoving] = useState(false);
 
   const authArgs = {
     idToken, sessionId, refreshToken,
@@ -41,6 +49,47 @@ export default function MyListingsManagementScreen() {
     setPublishing(false);
   }
 };
+
+  // ── Promotion ─────────────────────────────────────────────────────────────
+  const handleSavePromotion = async () => {
+    const pct = parseInt(promoInput, 10);
+    if (isNaN(pct) || pct < 1 || pct > 99) {
+      Alert.alert('Invalid discount', 'Enter a number between 1 and 99.');
+      return;
+    }
+    setPromoSaving(true);
+    try {
+      const result = await setListingPromotion(listing.id, pct, authArgs);
+      setPromotion({ discountPercent: result.discountPercent, discountedPrice: result.discountedPrice });
+      setShowPromoModal(false);
+      setPromoInput('');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Could not save promotion.');
+    } finally {
+      setPromoSaving(false);
+    }
+  };
+
+  const handleRemovePromotion = () => {
+    Alert.alert('Remove Promotion', 'Remove the discount from this listing?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          setPromoRemoving(true);
+          try {
+            await removeListingPromotion(listing.id, authArgs);
+            setPromotion(null);
+          } catch (err) {
+            Alert.alert('Error', err.message || 'Could not remove promotion.');
+          } finally {
+            setPromoRemoving(false);
+          }
+        },
+      },
+    ]);
+  };
 
   // ── Edit ─────────────────────────────────────────────────────────────────
   const handleEdit = () => {
@@ -186,6 +235,55 @@ export default function MyListingsManagementScreen() {
           </View>
         )}
 
+        {/* ── Promotion ───────────────────────────────────────────────── */}
+        {status === 'active' && (
+          promotion ? (
+            <View style={styles.promoCard}>
+              <View style={styles.promoCardHeader}>
+                <View style={styles.promoCardLeft}>
+                  <Ionicons name="pricetag" size={18} color={colors.accent} />
+                  <Text style={styles.promoCardTitle}>Active Promotion</Text>
+                </View>
+                <TouchableOpacity onPress={handleRemovePromotion} disabled={promoRemoving}>
+                  {promoRemoving
+                    ? <ActivityIndicator size="small" color={colors.accent} />
+                    : <Ionicons name="close-circle-outline" size={20} color={colors.accent} />
+                  }
+                </TouchableOpacity>
+              </View>
+              <View style={styles.promoRow}>
+                <View style={styles.promoStat}>
+                  <Text style={styles.promoStatValue}>{promotion.discountPercent}%</Text>
+                  <Text style={styles.promoStatLabel}>Discount</Text>
+                </View>
+                <View style={styles.promoStatDivider} />
+                <View style={styles.promoStat}>
+                  <Text style={styles.promoStatValue}>
+                    Rs {parseFloat(promotion.discountedPrice).toLocaleString()}
+                  </Text>
+                  <Text style={styles.promoStatLabel}>Promo price / {listing?.unit || 'unit'}</Text>
+                </View>
+                <View style={styles.promoStatDivider} />
+                <View style={styles.promoStat}>
+                  <Text style={[styles.promoStatValue, styles.promoOldPrice]}>
+                    Rs {parseFloat(listing?.pricePerUnit || 0).toLocaleString()}
+                  </Text>
+                  <Text style={styles.promoStatLabel}>Original</Text>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.promoAddBtn}
+              onPress={() => { setPromoInput(''); setShowPromoModal(true); }}
+            >
+              <Ionicons name="pricetag-outline" size={18} color={colors.accent} />
+              <Text style={styles.promoAddBtnText}>Put on Promotion</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+            </TouchableOpacity>
+          )
+        )}
+
         {/* ── Actions ─────────────────────────────────────────────────── */}
         <View style={styles.actions}>
 
@@ -228,6 +326,68 @@ export default function MyListingsManagementScreen() {
         </View>
 
       </ScrollView>
+
+      {/* ── Promotion modal ───────────────────────────────────────────── */}
+      <Modal
+        visible={showPromoModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPromoModal(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Set Promotion</Text>
+            <Text style={styles.modalSub}>
+              Enter the discount percentage for "{listing?.productName}".
+              Shopkeepers will see the reduced price on the home screen.
+            </Text>
+
+            <View style={styles.modalInputWrap}>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="e.g. 20"
+                placeholderTextColor={colors.textLight}
+                keyboardType="number-pad"
+                value={promoInput}
+                onChangeText={setPromoInput}
+                maxLength={2}
+                autoFocus
+              />
+              <Text style={styles.modalInputSuffix}>%</Text>
+            </View>
+
+            {promoInput !== '' && !isNaN(parseInt(promoInput, 10)) && (
+              <View style={styles.modalPreview}>
+                <Text style={styles.modalPreviewLabel}>New price</Text>
+                <Text style={styles.modalPreviewPrice}>
+                  Rs {(parseFloat(listing?.pricePerUnit || 0) * (1 - parseInt(promoInput, 10) / 100)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  {' '}/{' '}{listing?.unit || 'unit'}
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[styles.modalSaveBtn, promoSaving && { opacity: 0.6 }]}
+              onPress={handleSavePromotion}
+              disabled={promoSaving}
+            >
+              {promoSaving
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.modalSaveBtnText}>Activate Promotion</Text>
+              }
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowPromoModal(false)}>
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
     </View>
   );
 }
@@ -292,4 +452,60 @@ const makeStyles = (colors) => StyleSheet.create({
     borderWidth: 1, borderColor: `${colors.primary}40`,
   },
   actionBtnText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
+
+  // Promotion card (active)
+  promoCard: {
+    backgroundColor: `${colors.accent}10`, borderWidth: 1, borderColor: `${colors.accent}40`,
+    borderRadius: radii.xl, padding: spacing.md,
+  },
+  promoCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  promoCardLeft:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  promoCardTitle:  { fontSize: 14, fontFamily: fonts.semiBold, color: colors.accent },
+  promoRow:        { flexDirection: 'row', alignItems: 'center' },
+  promoStat:       { flex: 1, alignItems: 'center', gap: 2 },
+  promoStatDivider:{ width: 1, height: 32, backgroundColor: `${colors.accent}30` },
+  promoStatValue:  { fontSize: 14, fontFamily: fonts.bold, color: colors.text },
+  promoStatLabel:  { fontSize: 10, fontFamily: fonts.regular, color: colors.textSecondary },
+  promoOldPrice:   { textDecorationLine: 'line-through', color: colors.textSecondary },
+
+  // Put on promotion button
+  promoAddBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: `${colors.accent}10`, borderWidth: 1, borderColor: `${colors.accent}40`,
+    borderRadius: radii.xl, paddingHorizontal: spacing.md, paddingVertical: 14,
+  },
+  promoAddBtnText: { flex: 1, fontSize: 14, fontFamily: fonts.semiBold, color: colors.accent },
+
+  // Modal
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalSheet: {
+    backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: spacing.lg, paddingBottom: 36, gap: 14,
+  },
+  modalHandle:  { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 4 },
+  modalTitle:   { fontSize: 18, fontFamily: fonts.bold, color: colors.text },
+  modalSub:     { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 20 },
+  modalInputWrap: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radii.lg, paddingHorizontal: 16,
+  },
+  modalInput: {
+    flex: 1, paddingVertical: 14, fontSize: 28, fontFamily: fonts.bold, color: colors.text,
+    textAlign: 'center',
+  },
+  modalInputSuffix: { fontSize: 22, fontFamily: fonts.bold, color: colors.textSecondary },
+  modalPreview: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: colors.background, borderRadius: radii.lg, padding: spacing.md,
+  },
+  modalPreviewLabel: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
+  modalPreviewPrice: { fontSize: 15, fontFamily: fonts.bold, color: colors.accent },
+  modalSaveBtn: {
+    backgroundColor: colors.accent, borderRadius: radii.xl, paddingVertical: 16,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  modalSaveBtnText: { color: '#fff', fontSize: 16, fontFamily: fonts.semiBold },
+  modalCancelBtn:   { alignItems: 'center', paddingVertical: 8 },
+  modalCancelText:  { fontSize: 14, fontFamily: fonts.medium, color: colors.textSecondary },
 });

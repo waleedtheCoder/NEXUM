@@ -262,6 +262,33 @@ export async function getPromotions() {
   return _fetch('/api/promotions/');
 }
 
+/**
+ * POST /api/listings/<id>/promote/
+ * Creates or updates a discount promotion on a supplier's own listing.
+ * Body: { discount_percent: 20 }
+ * Response: { discountPercent, discountedPrice, originalPrice }
+ * Protected.
+ */
+export async function setListingPromotion(listingId, discountPercent, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/listings/${listingId}/promote/`, {
+    method: 'POST',
+    body: { discount_percent: discountPercent },
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+/**
+ * DELETE /api/listings/<id>/promote/
+ * Removes the promotion from the listing.
+ * Protected.
+ */
+export async function removeListingPromotion(listingId, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/listings/${listingId}/promote/`, {
+    method: 'DELETE',
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
 // ─── Trending Search ──────────────────────────────────────────────────────────
 
 /**
@@ -318,11 +345,43 @@ export async function getSavedListings({ idToken, sessionId, refreshToken, onTok
 /**
  * GET /api/users/supplier/<id>/
  * Returns a supplier's public profile plus their active listings.
- * Response: { id, name, initials, rating, totalListings, joinedDate, listings: [...] }
- * Public — no auth required.
+ * Response: { id, name, initials, rating, totalListings, is_favourite, listings: [...] }
+ * Optional auth — pass authArgs to get is_favourite populated.
  */
-export async function getSupplierProfile(supplierId) {
+export async function getSupplierProfile(supplierId, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  if (idToken || sessionId) {
+    return _fetchWithRefresh(`/api/users/supplier/${supplierId}/`, {
+      idToken, sessionId, refreshToken, onTokenRefreshed,
+    });
+  }
   return _fetch(`/api/users/supplier/${supplierId}/`);
+}
+
+/**
+ * GET /api/users/network/
+ * Returns the authenticated shopkeeper's list of favourite suppliers.
+ * Response: [ { id, name, initials, avatarColor, totalListings }, ... ]
+ * Protected.
+ */
+export async function getSupplierNetwork({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/users/network/', {
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+/**
+ * POST /api/users/network/toggle/
+ * Toggles a supplier in/out of the shopkeeper's favourites.
+ * Body: { supplier_id: <int> }
+ * Response: { is_favourite: true|false }
+ * Protected.
+ */
+export async function toggleFavouriteSupplier(supplierId, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/users/network/toggle/', {
+    method: 'POST',
+    body: { supplier_id: supplierId },
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
 }
 
 // ─── FCM Token ────────────────────────────────────────────────────────────────
@@ -336,7 +395,7 @@ export async function getSupplierProfile(supplierId) {
 export async function registerFCMToken(token, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
   return _fetchWithRefresh('/api/users/fcm-token/', {
     method: 'POST',
-    body: { token },
+    body: { fcm_token: token },
     idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }

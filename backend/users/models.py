@@ -24,3 +24,20 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.role}"
+
+
+class FavouriteSupplier(models.Model):
+    shopkeeper = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='favourite_suppliers',
+    )
+    supplier = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='favourited_by',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('shopkeeper', 'supplier')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.shopkeeper.username} → {self.supplier.username}"

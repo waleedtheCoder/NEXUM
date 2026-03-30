@@ -256,7 +256,7 @@ export default function SearchScreen() {
         />
       )}
 
-      <BottomNav activeTab="home" />
+      <BottomNav activeTab="search" />
     </View>
   );
 }

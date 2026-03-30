@@ -191,7 +191,7 @@ export default function LoginSelectionScreen() {
           {/* Use a different account */}
           <TouchableOpacity
             style={styles.differentBtn}
-            onPress={() => navigation.navigate('Login')}
+            onPress={() => navigation.navigate('LoginSignupOption')}
           >
             <View style={styles.plusCircle}>
               <Ionicons name="add" size={22} color="#fff" />
@@ -217,7 +217,7 @@ export default function LoginSelectionScreen() {
 }
 
 const makeStyles = (colors) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.primary },
 
   topRow: {
     flexDirection: 'row',
@@ -236,7 +236,7 @@ const makeStyles = (colors) => StyleSheet.create({
   subtitle: { fontSize: 14, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.8)', marginBottom: spacing.xl },
 
   accountCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderRadius: radii.xl,
     padding: spacing.md,
     flexDirection: 'row',
@@ -260,7 +260,7 @@ const makeStyles = (colors) => StyleSheet.create({
   accountEmail:  { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
 
   passwordBox: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface,
     borderBottomLeftRadius: radii.xl,
     borderBottomRightRadius: radii.xl,
     padding: spacing.md,

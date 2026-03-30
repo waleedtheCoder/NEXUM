@@ -107,11 +107,11 @@ class OrderDetailView(APIView):
             'cancelled': 'Order cancelled',
         }
         Notification.objects.create(
-            user=order.buyer,
+            user_id=order.buyer_id,
             type='order',
             title=labels[new_status],
             body=f'Your order for {order.listing.product_name if order.listing else "a listing"} has been {new_status}.',
-            listing=order.listing,
+            listing_id=order.listing_id,
         )
 
         return Response(OrderSerializer(order).data)

@@ -112,7 +112,8 @@ import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useUser } from '../context/UserContext';
-import { colors, fonts } from '../constants/theme';
+import { fonts } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 const TAB_MAP = {
   Home: 'home',
@@ -142,12 +143,14 @@ const SHOPKEEPER_TABS = [
 
 export default function BottomNav({ activeTab }) {
   const navigation = useNavigation();
-  const route = useRoute();
-  const { role } = useUser();
+  const route      = useRoute();
+  const { role }   = useUser();
+  const { colors } = useTheme();
 
   const isShopkeeper = role === 'shopkeeper' || !role;
-  const tabs = isShopkeeper ? SHOPKEEPER_TABS : SUPPLIER_TABS;
+  const tabs   = isShopkeeper ? SHOPKEEPER_TABS : SUPPLIER_TABS;
   const derived = activeTab || TAB_MAP[route.name] || 'home';
+  const styles = makeStyles(colors);
 
   return (
     <View style={styles.container}>
@@ -191,7 +194,7 @@ export default function BottomNav({ activeTab }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     backgroundColor: colors.surface,

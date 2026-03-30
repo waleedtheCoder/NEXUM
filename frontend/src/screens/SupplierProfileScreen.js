@@ -5,12 +5,6 @@
  * Routable from: ProductDetailScreen → seller card tap
  * Route params: { supplierId: number }
  * API: GET /api/users/supplier/<id>/
- *
- * Fully functional — no placeholder. Includes:
- *   - Avatar + initials, name, rating stars, listing count
- *   - FlatList of active listings using the same card style as MarketplaceBrowsing
- *   - Each listing card navigates to ProductDetail
- *   - Loading / error / empty states
  */
 
 import React, { useState, useEffect } from 'react';
@@ -23,26 +17,28 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useUser } from '../context/UserContext';
 import { getSupplierProfile } from '../services/marketplaceApi';
 
-function StarRating({ rating = 0 }) {
+// Props-based — avoids referencing out-of-scope colors/styles
+function StarRating({ rating = 0, accentColor }) {
   const full  = Math.floor(rating);
   const half  = rating - full >= 0.5;
   const empty = 5 - full - (half ? 1 : 0);
   return (
     <View style={{ flexDirection: 'row', gap: 2 }}>
       {Array(full).fill(null).map((_, i) => (
-        <Ionicons key={`f${i}`} name="star" size={14} color={colors.accent} />
+        <Ionicons key={`f${i}`} name="star" size={14} color={accentColor} />
       ))}
-      {half && <Ionicons name="star-half" size={14} color={colors.accent} />}
+      {half && <Ionicons name="star-half" size={14} color={accentColor} />}
       {Array(empty).fill(null).map((_, i) => (
-        <Ionicons key={`e${i}`} name="star-outline" size={14} color={colors.accent} />
+        <Ionicons key={`e${i}`} name="star-outline" size={14} color={accentColor} />
       ))}
     </View>
   );
 }
 
-function ListingCard({ item, onPress }) {
+function ListingCard({ item, onPress, colors, styles }) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       {item.imageUrl ? (
@@ -75,6 +71,7 @@ export default function SupplierProfileScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
+  const { idToken, sessionId, refreshToken, updateUser } = useUser();
 
   const { supplierId } = route.params || {};
 
@@ -82,6 +79,11 @@ export default function SupplierProfileScreen() {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const authArgs = {
+    idToken, sessionId, refreshToken,
+    onTokenRefreshed: (t) => updateUser({ idToken: t }),
+  };
 
   useEffect(() => {
     if (!supplierId) {
@@ -94,7 +96,7 @@ export default function SupplierProfileScreen() {
     (async () => {
       setLoading(true);
       try {
-        const data = await getSupplierProfile(supplierId);
+        const data = await getSupplierProfile(supplierId, authArgs);
         if (!cancelled) {
           setSupplier(data);
           setListings(Array.isArray(data.listings) ? data.listings : []);
@@ -108,7 +110,6 @@ export default function SupplierProfileScreen() {
     return () => { cancelled = true; };
   }, [supplierId]);
 
-  // ── Loading ─────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
@@ -117,7 +118,6 @@ export default function SupplierProfileScreen() {
     );
   }
 
-  // ── Error ────────────────────────────────────────────────────────────────
   if (error || !supplier) {
     return (
       <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
@@ -139,7 +139,6 @@ export default function SupplierProfileScreen() {
 
   const ListHeader = (
     <View>
-      {/* Header bar */}
       <View style={[styles.headerBar, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -148,25 +147,21 @@ export default function SupplierProfileScreen() {
         <View style={{ width: 38 }} />
       </View>
 
-      {/* Profile card */}
       <View style={styles.profileCard}>
-        {/* Avatar */}
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>
         </View>
 
         <Text style={styles.supplierName}>{supplier.name}</Text>
 
-        {/* Rating row */}
         <View style={styles.ratingRow}>
-          <StarRating rating={Number(supplier.rating) || 0} />
+          <StarRating rating={Number(supplier.rating) || 0} accentColor={colors.accent} />
           <Text style={styles.ratingValue}>{Number(supplier.rating || 0).toFixed(1)}</Text>
           {supplier.totalReviews != null && (
             <Text style={styles.ratingCount}>({supplier.totalReviews} reviews)</Text>
           )}
         </View>
 
-        {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statNum}>{supplier.totalListings ?? listings.length}</Text>
@@ -186,14 +181,12 @@ export default function SupplierProfileScreen() {
           )}
         </View>
 
-        {/* Verified badge */}
         <View style={styles.verifiedBadge}>
           <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
           <Text style={styles.verifiedText}>Verified Supplier</Text>
         </View>
       </View>
 
-      {/* Section heading */}
       {listings.length > 0 && (
         <Text style={styles.listingsHeading}>Active Listings</Text>
       )}
@@ -221,6 +214,8 @@ export default function SupplierProfileScreen() {
           <ListingCard
             item={item}
             onPress={() => navigation.navigate('ProductDetail', { product: item })}
+            colors={colors}
+            styles={styles}
           />
         )}
       />
@@ -234,7 +229,6 @@ const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center: { alignItems: 'center', justifyContent: 'center', gap: 12 },
 
-  // Header bar
   headerBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.md, paddingBottom: 16,
@@ -244,7 +238,6 @@ const makeStyles = (colors) => StyleSheet.create({
   backBtnAbsolute: { position: 'absolute', top: 60, left: 16 },
   headerTitle: { fontSize: 16, fontFamily: fonts.semiBold, color: '#fff' },
 
-  // Profile card
   profileCard: {
     backgroundColor: colors.surface, margin: spacing.md,
     borderRadius: radii.xl, padding: spacing.md, alignItems: 'center',
@@ -265,9 +258,7 @@ const makeStyles = (colors) => StyleSheet.create({
 
   statsRow: { flexDirection: 'row', width: '100%', marginBottom: 14 },
   statItem: { flex: 1, alignItems: 'center' },
-  statItemBorder: {
-    borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border,
-  },
+  statItemBorder: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border },
   statNum: { fontSize: 16, fontFamily: fonts.bold, color: colors.text },
   statLabel: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 2 },
 
@@ -278,7 +269,6 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   verifiedText: { fontSize: 12, fontFamily: fonts.medium, color: colors.primary },
 
-  // Listings section
   listingsHeading: {
     fontSize: 16, fontFamily: fonts.bold, color: colors.text,
     paddingHorizontal: spacing.md, marginBottom: 8,
@@ -286,7 +276,6 @@ const makeStyles = (colors) => StyleSheet.create({
   listContent: { paddingHorizontal: spacing.md, paddingBottom: 24 },
   columnWrapper: { justifyContent: 'space-between', marginBottom: 12 },
 
-  // Listing card (2-column grid)
   card: {
     width: CARD_WIDTH, backgroundColor: colors.surface,
     borderRadius: radii.xl, overflow: 'hidden', ...shadows.sm,
@@ -305,7 +294,6 @@ const makeStyles = (colors) => StyleSheet.create({
   cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   cardMetaText: { fontSize: 10, fontFamily: fonts.regular, color: colors.textSecondary, flex: 1 },
 
-  // Empty / error
   emptyState: { alignItems: 'center', paddingTop: 40, gap: 12 },
   emptyText: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
   errorText: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center', paddingHorizontal: 32 },

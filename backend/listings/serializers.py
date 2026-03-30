@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Listing, SavedListing
+from .models import Listing, SavedListing, ListingPromotion
 from .utils import time_ago, get_initials, compute_total_value
 
 
@@ -98,13 +98,14 @@ class MyListingSerializer(serializers.ModelSerializer):
     location     = serializers.CharField()
     views        = serializers.IntegerField()
     inquiries    = serializers.SerializerMethodField()
+    promotion    = serializers.SerializerMethodField()
 
     class Meta:
         model  = Listing
         fields = [
             'id', 'productName', 'description', 'category', 'quantity', 'unit',
             'pricePerUnit', 'totalValue', 'status', 'imageUrl',
-            'postedDate', 'location', 'views', 'inquiries',
+            'postedDate', 'location', 'views', 'inquiries', 'promotion',
         ]
 
     def get_quantity(self, obj):
@@ -118,6 +119,19 @@ class MyListingSerializer(serializers.ModelSerializer):
 
     def get_inquiries(self, obj):
         return obj.conversations.count()
+
+    def get_promotion(self, obj):
+        try:
+            p = obj.promotion
+            if p.is_active:
+                return {
+                    'discountPercent':  p.discount_percent,
+                    'discountedPrice':  str(round(p.discounted_price, 2)),
+                    'endsAt':           p.ends_at.isoformat() if p.ends_at else None,
+                }
+        except ListingPromotion.DoesNotExist:
+            pass
+        return None
 
 
 class CreateListingSerializer(serializers.Serializer):

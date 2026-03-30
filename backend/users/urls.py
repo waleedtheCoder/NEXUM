@@ -12,6 +12,7 @@ from .views import (
 )
 from .fcm_token_view import RegisterFCMTokenView
 from .supplier_profile_view import SupplierPublicProfileView
+from .network_views import SupplierNetworkView, ToggleFavouriteSupplierView
 
 urlpatterns = [
     # ── Auth ─────────────────────────────────────────────────────────────
@@ -24,7 +25,9 @@ urlpatterns = [
     path('auth/token-refresh/',   TokenRefreshView.as_view(),   name='auth-token-refresh'),
     # ── Profile ──────────────────────────────────────────────────────────
     path('profile/',              UserOnboardingView.as_view(), name='user-profile'),
-    # ── NEW ──────────────────────────────────────────────────────────────
-    path('fcm-token/',                   RegisterFCMTokenView.as_view(),     name='fcm-token'),
-    path('supplier/<int:supplier_id>/',  SupplierPublicProfileView.as_view(), name='supplier-profile'),
+    # ── Supplier / Network ────────────────────────────────────────────────
+    path('fcm-token/',                   RegisterFCMTokenView.as_view(),        name='fcm-token'),
+    path('supplier/<int:supplier_id>/',  SupplierPublicProfileView.as_view(),   name='supplier-profile'),
+    path('network/',                     SupplierNetworkView.as_view(),         name='supplier-network'),
+    path('network/toggle/',              ToggleFavouriteSupplierView.as_view(), name='network-toggle'),
 ]

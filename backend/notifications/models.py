@@ -10,6 +10,7 @@ class Notification(models.Model):
         ('supplier', 'New Supplier'),
         ('promo',    'Promotion'),
         ('system',   'System'),
+        ('order',    'Order'),
     ]
 
     user    = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
@@ -36,6 +37,7 @@ class Notification(models.Model):
         'supplier': ('business',             '#8B5CF6'),
         'promo':    ('pricetag',             '#F59E0B'),
         'system':   ('checkmark-circle',     '#10B981'),
+        'order':    ('bag-check',            '#3B82F6'),
     }
 
     @property

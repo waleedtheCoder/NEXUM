@@ -55,7 +55,7 @@ const STATUS_ACTIONS = {
   cancelled: [],
 };
 
-function StatusBadge({ status }) {
+function StatusBadge({ status, colors, styles }) {
   const cfg = STATUS_CONFIG[status] || { label: status, color: colors.textSecondary, bg: colors.surface };
   return (
     <View style={[styles.badge, { backgroundColor: cfg.bg }]}>
@@ -64,7 +64,7 @@ function StatusBadge({ status }) {
   );
 }
 
-function OrderCard({ order, onStatusUpdate, updatingId }) {
+function OrderCard({ order, onStatusUpdate, updatingId, colors, styles }) {
   const actions    = STATUS_ACTIONS[order.status] || [];
   const isUpdating = updatingId === order.id;
 
@@ -76,16 +76,14 @@ function OrderCard({ order, onStatusUpdate, updatingId }) {
           <Ionicons name="receipt-outline" size={20} color={colors.primary} />
         </View>
         <View style={styles.cardTopInfo}>
-          {/* FIX: was order.listing_title || order.product_name */}
           <Text style={styles.productName} numberOfLines={1}>
             {order.productName || '—'}
           </Text>
-          {/* FIX: was order.buyer_name || order.buyer?.name — buyerName now in serializer */}
           <Text style={styles.buyerName}>
             from {order.buyerName || 'Buyer'}
           </Text>
         </View>
-        <StatusBadge status={order.status} />
+        <StatusBadge status={order.status} colors={colors} styles={styles} />
       </View>
 
       {/* Details row */}
@@ -284,6 +282,8 @@ export default function IncomingOrdersScreen() {
               order={item}
               onStatusUpdate={handleStatusUpdate}
               updatingId={updatingId}
+              colors={colors}
+              styles={styles}
             />
           )}
         />

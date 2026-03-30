@@ -14,7 +14,7 @@ function normalizeRoleFromApi(role) {
   const value = String(role || '').trim().toUpperCase();
   if (value === 'SUPPLIER') return 'supplier';
   if (value === 'SHOPKEEPER') return 'shopkeeper';
-  if (value === 'CUSTOMER') return 'shopkeeper';
+  if (value === 'CUSTOMER') return 'customer';
   return 'shopkeeper';
 }
 

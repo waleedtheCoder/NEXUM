@@ -11,6 +11,7 @@ from .views import (
     SupplierDashboardView,
 )
 from .views_additions import TrendingSearchView, SavedListingsView, ImageUploadView
+from .promotion_view import ListingPromotionView
 
 urlpatterns = [
     # ── Public (no auth required) ────────────────────────────────────────
@@ -31,4 +32,5 @@ urlpatterns = [
     path('<int:pk>/',                ListingDetailView.as_view(),    name='listing-detail'),
     path('<int:pk>/manage/',         ListingManageView.as_view(),    name='listing-manage'),
     path('<int:pk>/save/',           SaveListingView.as_view(),      name='listing-save'),
+    path('<int:pk>/promote/',        ListingPromotionView.as_view(), name='listing-promote'),
 ]

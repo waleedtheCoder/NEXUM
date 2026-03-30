@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView,
-  StyleSheet, StatusBar, Alert, ActivityIndicator,
+  StyleSheet, StatusBar, Alert, ActivityIndicator, Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -60,8 +60,8 @@ const MENU_ITEMS = [
 ];
 
 export default function SupplierAccountScreen() {
-  const { colors } = useTheme();
-  const styles = makeStyles(colors);
+  const { colors, isDark, toggleTheme } = useTheme();
+  const styles = makeStyles(colors, isDark);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { user, logout, idToken, sessionId, refreshToken, updateUser } = useUser();
@@ -233,9 +233,44 @@ export default function SupplierAccountScreen() {
           ))}
         </View>
 
+        {/* Switch to Shopkeeper View */}
+        <TouchableOpacity
+          style={styles.switchRow}
+          onPress={() => navigation.navigate('SupplierShopkeeperScreen')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.themeLeft}>
+            <Ionicons name="swap-horizontal-outline" size={20} color={colors.primary} />
+            <View>
+              <Text style={styles.themeLabel}>Shopkeeper View</Text>
+              <Text style={styles.switchSubLabel}>Browse & order from marketplace</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+        </TouchableOpacity>
+
+        {/* Dark mode toggle */}
+        <View style={styles.themeRow}>
+          <View style={styles.themeLeft}>
+            <Ionicons
+              name={isDark ? 'moon' : 'sunny-outline'}
+              size={20}
+              color={colors.primary}
+            />
+            <Text style={styles.themeLabel}>{isDark ? 'Dark Mode' : 'Light Mode'}</Text>
+          </View>
+          <Switch
+            value={isDark}
+            onValueChange={toggleTheme}
+            trackColor={{ false: colors.border, true: `${colors.primary}80` }}
+            thumbColor={isDark ? colors.primary : colors.surface}
+            ios_backgroundColor={colors.border}
+          />
+        </View>
+
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+          <Ionicons name="log-out-outline" size={18} color={isDark ? '#000000' : '#EF4444'} />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
 
@@ -246,7 +281,7 @@ export default function SupplierAccountScreen() {
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const makeStyles = (colors, isDark) => StyleSheet.create({
   container:    { flex: 1, backgroundColor: colors.background },
   header:       { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingBottom: 20 },
   headerLeft:   { flexDirection: 'row', alignItems: 'center', gap: 14 },
@@ -275,6 +310,11 @@ const makeStyles = (colors) => StyleSheet.create({
   menuDesc:     { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
   newBadge:     { backgroundColor: colors.accent, borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 2, marginRight: 4 },
   newBadgeText: { color: '#fff', fontSize: 10, fontFamily: fonts.semiBold },
-  logoutBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: spacing.md, marginTop: 20, paddingVertical: 14, borderRadius: radii.xl, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' },
-  logoutText:   { fontSize: 15, fontFamily: fonts.semiBold, color: '#EF4444' },
+  switchRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: spacing.md, marginTop: 16, marginBottom: 4, backgroundColor: `${colors.primary}12`, borderWidth: 1, borderColor: `${colors.primary}30`, borderRadius: radii.xl, paddingHorizontal: spacing.md, paddingVertical: 14 },
+  switchSubLabel: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 1 },
+  themeRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: spacing.md, marginTop: 16, marginBottom: 4, backgroundColor: colors.surface, borderRadius: radii.xl, paddingHorizontal: spacing.md, paddingVertical: 14, ...shadows.sm },
+  themeLeft:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  themeLabel: { fontSize: 14, fontFamily: fonts.medium, color: colors.text },
+  logoutBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: spacing.md, marginTop: 12, paddingVertical: 14, borderRadius: radii.xl, backgroundColor: isDark ? colors.primary : 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: isDark ? colors.primaryDark : 'rgba(239,68,68,0.3)' },
+  logoutText:   { fontSize: 15, fontFamily: fonts.semiBold, color: isDark ? '#000000' : '#EF4444' },
 });

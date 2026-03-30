@@ -51,6 +51,11 @@ import IncomingOrdersScreen       from '../screens/IncomingOrdersScreen';
 import EditProfileScreen          from '../screens/EditProfileScreen';
 import RestockRemindersScreen     from '../screens/RestockRemindersScreen';
 
+// ── Supplier Network + mode-switching screens ────────────────────────────────
+import SupplierNetworkScreen      from '../screens/SupplierNetworkScreen';
+import SupplierShopkeeperScreen   from '../screens/SupplierShopkeeperScreen';
+import BecomeSupplierScreen       from '../screens/BecomeSupplierScreen';
+
 const Stack = createStackNavigator();
 const Tab   = createBottomTabNavigator();
 
@@ -98,6 +103,7 @@ function RootStack() {
       {/* Auth / onboarding flow */}
       <Stack.Screen name="Auth"    component={AuthStack} />
       <Stack.Screen name="LoginSelection"     component={LoginSelectionScreen} />
+      <Stack.Screen name="LoginSignupOption"  component={LoginSignupOptionScreen} />
 
       {/* Main tabbed app */}
       <Stack.Screen name="MainApp" component={MainTabNavigator} />
@@ -130,6 +136,11 @@ function RootStack() {
       {/* ── Orders (shopkeeper) ─────────────────────────────────────────── */}
       <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
       <Stack.Screen name="OrderDetail"  component={OrderDetailScreen} />
+
+      {/* ── Supplier Network + mode switching ───────────────────────────── */}
+      <Stack.Screen name="SupplierNetwork"         component={SupplierNetworkScreen} />
+      <Stack.Screen name="SupplierShopkeeperScreen" component={SupplierShopkeeperScreen} />
+      <Stack.Screen name="BecomeSupplierScreen"    component={BecomeSupplierScreen} />
 
       {/* ── Account ─────────────────────────────────────────────────────── */}
       <Stack.Screen name="AppNavigation"       component={AppNavigationScreen} />

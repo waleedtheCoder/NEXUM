@@ -21,33 +21,7 @@ const QUICK_CATEGORIES = [
   { icon: 'location', label: 'Local Favorites' },
 ];
 
-// Static fallback — shown if the API returns an empty array or fails
-const PROMO_FALLBACK = [
-  {
-    id: 'fallback-1',
-    title: 'Up to 25% off on staples',
-    subtitle: 'Rice, wheat, pulses & more',
-    imageUrl: 'https://images.unsplash.com/photo-1720206995413-94eac3307514?w=400&h=160&fit=crop',
-    actionUrl: null,
-    badge: null,
-  },
-  {
-    id: 'fallback-2',
-    title: 'Buy 1 get 1 on hygiene',
-    subtitle: 'Stock up on essentials',
-    imageUrl: 'https://images.unsplash.com/photo-1584744982491-665216d95f8b?w=400&h=160&fit=crop',
-    actionUrl: null,
-    badge: null,
-  },
-  {
-    id: 'fallback-3',
-    title: 'Exclusive deals for verified retailers',
-    subtitle: 'Join 10,000+ retailers',
-    imageUrl: 'https://images.unsplash.com/photo-1685119166946-d4050647b0e3?w=400&h=160&fit=crop',
-    actionUrl: null,
-    badge: null,
-  },
-];
+// No static fallbacks — promotions are supplier-created and fetched from the API
 
 // Fallback icon map for categories returned by the API
 const CATEGORY_ICON_FALLBACK = 'pricetag-outline';
@@ -60,7 +34,7 @@ export default function HomeScreen() {
 
   const [categories, setCategories] = useState([]);
   const [featured, setFeatured] = useState([]);
-  const [promos, setPromos] = useState(PROMO_FALLBACK);
+  const [promos, setPromos] = useState([]);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
@@ -70,12 +44,9 @@ export default function HomeScreen() {
     (async () => {
       try {
         const data = await getPromotions();
-        if (!cancelled && Array.isArray(data) && data.length > 0) {
-          setPromos(data);
-        }
-        // If empty array: keep fallback — no visible change to user
+        if (!cancelled) setPromos(Array.isArray(data) ? data : []);
       } catch {
-        // Network error: keep fallback silently
+        if (!cancelled) setPromos([]);
       }
     })();
     return () => { cancelled = true; };
@@ -116,17 +87,17 @@ export default function HomeScreen() {
   }, []);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <HomeTopBar onSearchPress={() => navigation.navigate('Search')} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
 
-        {/* ── Hero promo banner (first promo item) ──────────────────────── */}
+        {/* ── Hero promo banner (first active promotion) ───────────────── */}
         {promos.length > 0 && (
           <TouchableOpacity
             style={styles.promoBanner}
-            onPress={() => navigation.navigate('MarketplaceBrowsing')}
+            onPress={() => navigation.navigate('ProductDetail', { product: { id: promos[0].listingId, title: promos[0].title, price: promos[0].discountedPrice, imageUrl: promos[0].imageUrl } })}
             activeOpacity={0.9}
           >
             {promos[0].badge && (
@@ -137,16 +108,28 @@ export default function HomeScreen() {
             <View style={styles.promoText}>
               <Text style={styles.promoHeadline}>{promos[0].title}</Text>
               <Text style={styles.promoSub}>{promos[0].subtitle}</Text>
+              <View style={styles.promoPriceRow}>
+                <Text style={styles.promoDiscountedPrice}>
+                  Rs {parseFloat(promos[0].discountedPrice).toLocaleString()}
+                </Text>
+                <Text style={styles.promoOriginalPrice}>
+                  Rs {parseFloat(promos[0].originalPrice).toLocaleString()}
+                </Text>
+              </View>
               <TouchableOpacity
                 style={styles.shopNowBtn}
-                onPress={() => navigation.navigate('MarketplaceBrowsing')}
+                onPress={() => navigation.navigate('ProductDetail', { product: { id: promos[0].listingId, title: promos[0].title, price: promos[0].discountedPrice, imageUrl: promos[0].imageUrl } })}
               >
                 <Text style={styles.shopNowText}>Shop Now</Text>
               </TouchableOpacity>
             </View>
             {promos[0].imageUrl ? (
               <Image source={{ uri: promos[0].imageUrl }} style={styles.promoImage} />
-            ) : null}
+            ) : (
+              <View style={styles.promoImagePlaceholder}>
+                <Ionicons name="pricetag" size={32} color="rgba(255,255,255,0.6)" />
+              </View>
+            )}
           </TouchableOpacity>
         )}
 
@@ -259,27 +242,46 @@ export default function HomeScreen() {
           />
         )}
 
-        {/* ── Special Offers (live promo tiles, fallback if API empty) ──── */}
-        <View style={styles.sectionPad}>
-          <Text style={styles.sectionTitle}>Special Offers</Text>
-          {promos.map((p) => (
-            <TouchableOpacity
-              key={p.id}
-              style={styles.promoTile}
-              onPress={() => navigation.navigate('MarketplaceBrowsing')}
-            >
-              <Image
-                source={{ uri: p.imageUrl }}
-                style={StyleSheet.absoluteFill}
-                resizeMode="cover"
-              />
-              <View style={styles.promoTileOverlay}>
-                <Text style={styles.promoTileTitle}>{p.title}</Text>
-                <Text style={styles.promoTileSub}>{p.subtitle}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* ── Special Offers (supplier-created promotions only) ─────────── */}
+        {promos.length > 0 && (
+          <View style={styles.sectionPad}>
+            <Text style={styles.sectionTitle}>Special Offers</Text>
+            {promos.map((p) => (
+              <TouchableOpacity
+                key={p.id}
+                style={styles.promoTile}
+                onPress={() => navigation.navigate('ProductDetail', { product: { id: p.listingId, title: p.title, price: p.discountedPrice, imageUrl: p.imageUrl } })}
+              >
+                {p.imageUrl ? (
+                  <Image
+                    source={{ uri: p.imageUrl }}
+                    style={StyleSheet.absoluteFill}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[StyleSheet.absoluteFill, styles.promoTileFallbackBg]} />
+                )}
+                <View style={styles.promoTileOverlay}>
+                  <View style={styles.promoTileRow}>
+                    <View style={styles.promoDiscountBadge}>
+                      <Text style={styles.promoDiscountBadgeText}>{p.badge}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.promoTileTitle}>{p.title}</Text>
+                  <View style={styles.promoTilePriceRow}>
+                    <Text style={styles.promoTileDiscPrice}>
+                      Rs {parseFloat(p.discountedPrice).toLocaleString()}
+                    </Text>
+                    <Text style={styles.promoTileOrigPrice}>
+                      Rs {parseFloat(p.originalPrice).toLocaleString()}
+                    </Text>
+                  </View>
+                  <Text style={styles.promoTileSub}>{p.subtitle}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
       </ScrollView>
 
@@ -309,7 +311,11 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 7, alignSelf: 'flex-start',
   },
   shopNowText: { color: colors.accent, fontSize: 12, fontFamily: fonts.semiBold },
-  promoImage: { width: 90, height: 90, borderRadius: radii.lg, alignSelf: 'center' },
+  promoImage:            { width: 90, height: 90, borderRadius: radii.lg, alignSelf: 'center' },
+  promoImagePlaceholder: { width: 90, height: 90, borderRadius: radii.lg, alignSelf: 'center', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.15)' },
+  promoPriceRow:         { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  promoDiscountedPrice:  { color: '#fff', fontSize: 16, fontFamily: fonts.bold },
+  promoOriginalPrice:    { color: 'rgba(255,255,255,0.65)', fontSize: 12, fontFamily: fonts.regular, textDecorationLine: 'line-through' },
 
   // Sections
   sectionPad: { paddingHorizontal: spacing.md, paddingVertical: spacing.md },
@@ -361,10 +367,17 @@ const makeStyles = (colors) => StyleSheet.create({
 
   // Promo tiles
   promoTile: {
-    height: 120, borderRadius: radii.xl, overflow: 'hidden',
+    height: 130, borderRadius: radii.xl, overflow: 'hidden',
     marginBottom: 12, justifyContent: 'flex-end',
   },
-  promoTileOverlay: { padding: spacing.md, backgroundColor: 'rgba(0,0,0,0.45)' },
-  promoTileTitle: { color: '#fff', fontSize: 14, fontFamily: fonts.bold },
-  promoTileSub: { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: fonts.regular },
+  promoTileFallbackBg: { backgroundColor: colors.primary },
+  promoTileOverlay:    { padding: spacing.md, backgroundColor: 'rgba(0,0,0,0.48)' },
+  promoTileRow:        { flexDirection: 'row', marginBottom: 4 },
+  promoDiscountBadge:  { backgroundColor: colors.accent, borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' },
+  promoDiscountBadgeText: { color: '#fff', fontSize: 10, fontFamily: fonts.semiBold },
+  promoTileTitle:      { color: '#fff', fontSize: 14, fontFamily: fonts.bold, marginBottom: 2 },
+  promoTilePriceRow:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
+  promoTileDiscPrice:  { color: '#fff', fontSize: 14, fontFamily: fonts.bold },
+  promoTileOrigPrice:  { color: 'rgba(255,255,255,0.65)', fontSize: 11, fontFamily: fonts.regular, textDecorationLine: 'line-through' },
+  promoTileSub:        { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: fonts.regular },
 });

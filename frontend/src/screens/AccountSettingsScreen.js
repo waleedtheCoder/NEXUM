@@ -23,7 +23,7 @@ const MENU_ITEMS = [
     title: 'Supplier Network',
     description: 'Find and connect with verified suppliers',
     hasNew: false,
-    screen: 'MarketplaceBrowsing',
+    screen: 'SupplierNetwork',
   },
   {
     // FIX: was 'AppNavigation' then null — RestockRemindersScreen now exists
@@ -55,8 +55,8 @@ const STATUS_COLORS = {
 };
 
 export default function AccountSettingsScreen() {
-  const { colors } = useTheme();
-    const styles = makeStyles(colors);
+  const { colors, isDark } = useTheme();
+    const styles = makeStyles(colors, isDark);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { user, logout, role, idToken, sessionId, refreshToken, updateUser } = useUser();
@@ -83,7 +83,7 @@ export default function AccountSettingsScreen() {
           const data = await getOrders(authArgs);
           if (!cancelled) {
             const list = Array.isArray(data) ? data : (data.results || []);
-            setOrders(list.slice(0, 3));
+            setOrders(list);
           }
         } catch (err) {
           if (!cancelled) setOrdersError(err.message || 'Failed to load orders.');
@@ -128,19 +128,19 @@ export default function AccountSettingsScreen() {
           </View>
           <View style={styles.orderInfo}>
             <Text style={styles.orderProduct} numberOfLines={1}>
-              {order.listing_title || order.product || '—'}
+              {order.productName || '—'}
             </Text>
             <Text style={styles.orderSupplier}>
-              {order.supplier_name || order.supplier || '—'}
+              {order.supplierName || '—'}
             </Text>
-            <Text style={styles.orderDate}>{order.created_at_display || order.date || '—'}</Text>
+            <Text style={styles.orderDate}>{order.orderDate || '—'}</Text>
           </View>
         </View>
         <View style={styles.orderRight}>
           <Text style={styles.orderAmount}>
-            {order.total_price
-              ? `Rs ${Number(order.total_price).toLocaleString()}`
-              : order.amount || '—'}
+            {order.totalPrice
+              ? `Rs ${Number(order.totalPrice).toLocaleString()}`
+              : '—'}
           </Text>
           <View style={[
             styles.orderStatusBadge,
@@ -259,7 +259,7 @@ export default function AccountSettingsScreen() {
                 </Text>
               </View>
             )}
-            {!ordersLoading && !ordersError && orders.map((order, i, arr) =>
+            {!ordersLoading && !ordersError && orders.slice(0, 3).map((order, i, arr) =>
               renderOrder(order, i, arr)
             )}
           </View>
@@ -296,9 +296,27 @@ export default function AccountSettingsScreen() {
           <Ionicons name="chevron-forward" size={18} color={colors.primary} />
         </TouchableOpacity>
 
+        {/* Register as Supplier */}
+        <TouchableOpacity
+          style={styles.supplierCTA}
+          onPress={() => navigation.navigate('SupplierShopkeeperScreen')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.supplierCTALeft}>
+            <View style={styles.supplierCTAIcon}>
+              <Ionicons name="storefront-outline" size={20} color={colors.primary} />
+            </View>
+            <View>
+              <Text style={styles.supplierCTATitle}>Register as Supplier</Text>
+              <Text style={styles.supplierCTADesc}>Start selling on NEXUM</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+        </TouchableOpacity>
+
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={18} color="#EF4444" />
+          <Ionicons name="log-out-outline" size={18} color={isDark ? '#000000' : '#EF4444'} />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -308,7 +326,7 @@ export default function AccountSettingsScreen() {
   );
 }
 
-const makeStyles = (colors) => StyleSheet.create({
+const makeStyles = (colors, isDark) => StyleSheet.create({
   container:       { flex: 1, backgroundColor: colors.background },
   topBar:          { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingBottom: 14 },
   topBarIconLeft:  { width: 36 },
@@ -358,6 +376,11 @@ const makeStyles = (colors) => StyleSheet.create({
   menuItemDesc:    { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 1 },
   navCard:         { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: radii.xl, padding: spacing.md, marginBottom: spacing.md, ...shadows.sm },
   navCardText:     { flex: 1, fontSize: 14, fontFamily: fonts.medium, color: colors.text },
-  logoutBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA', borderRadius: radii.xl, paddingVertical: 14 },
-  logoutText:      { fontSize: 14, fontFamily: fonts.semiBold, color: '#EF4444' },
+  supplierCTA:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: `${colors.primary}12`, borderWidth: 1, borderColor: `${colors.primary}30`, borderRadius: radii.xl, padding: spacing.md, marginBottom: spacing.md },
+  supplierCTALeft:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  supplierCTAIcon:  { width: 38, height: 38, borderRadius: 19, backgroundColor: `${colors.primary}20`, alignItems: 'center', justifyContent: 'center' },
+  supplierCTATitle: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.text },
+  supplierCTADesc:  { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 1 },
+  logoutBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: isDark ? colors.primary : '#FEF2F2', borderWidth: 1, borderColor: isDark ? colors.primaryDark : '#FECACA', borderRadius: radii.xl, paddingVertical: 14 },
+  logoutText:      { fontSize: 14, fontFamily: fonts.semiBold, color: isDark ? '#000000' : '#EF4444' },
 });
