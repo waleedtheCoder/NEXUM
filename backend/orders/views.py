@@ -1,3 +1,5 @@
+from django.db import models as django_models
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -42,6 +44,21 @@ class OrderPlaceView(APIView):
             return Response({'detail': 'You cannot order your own listing.'}, status=status.HTTP_400_BAD_REQUEST)
 
         qty = ser.validated_data['quantity']
+
+        # Check minimum order quantity
+        if qty < listing.min_order_qty:
+            return Response(
+                {'detail': f'Minimum order is {listing.min_order_qty} {listing.unit}.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Check available stock
+        if listing.quantity < qty:
+            return Response(
+                {'detail': f'Only {listing.quantity} {listing.unit} available.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         order = Order.objects.create(
             buyer=request.user,
             supplier_id=listing.supplier_id,
@@ -51,6 +68,10 @@ class OrderPlaceView(APIView):
             total_price=listing.price * qty,
             notes=ser.validated_data.get('notes', ''),
         )
+
+        # Deduct stock
+        listing.quantity = listing.quantity - qty
+        listing.save(update_fields=['quantity'])
 
         # Notify the supplier
         Notification.objects.create(
@@ -88,16 +109,32 @@ class OrderDetailView(APIView):
         order = self._get_order(order_id, request.user)
         if not order:
             return Response({'detail': 'Order not found.'}, status=status.HTTP_404_NOT_FOUND)
-        if request.user.id != order.supplier_id:
-            return Response({'detail': 'Only the supplier may update order status.'}, status=status.HTTP_403_FORBIDDEN)
-
         new_status = request.data.get('status')
         valid = {'confirmed', 'shipped', 'delivered', 'cancelled'}
         if new_status not in valid:
             return Response({'detail': f'status must be one of: {", ".join(valid)}'}, status=status.HTTP_400_BAD_REQUEST)
 
+        is_supplier = request.user.id == order.supplier_id
+        is_buyer    = request.user.id == order.buyer_id
+
+        # Buyers may only cancel their own pending orders
+        if is_buyer and not is_supplier:
+            if new_status != 'cancelled':
+                return Response({'detail': 'Buyers may only cancel orders.'}, status=status.HTTP_403_FORBIDDEN)
+            if order.status != 'pending':
+                return Response({'detail': 'You can only cancel orders that are still pending.'}, status=status.HTTP_400_BAD_REQUEST)
+        elif not is_supplier:
+            return Response({'detail': 'Only the supplier may update order status.'}, status=status.HTTP_403_FORBIDDEN)
+
         order.status = new_status
         order.save(update_fields=['status', 'updated_at'])
+
+        # Restore stock if cancelled
+        if new_status == 'cancelled' and order.listing_id:
+            from listings.models import Listing as ListingModel
+            ListingModel.objects.filter(pk=order.listing_id).update(
+                quantity=django_models.F('quantity') + order.quantity
+            )
 
         # Notify the buyer
         labels = {

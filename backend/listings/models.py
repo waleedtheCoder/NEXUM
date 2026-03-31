@@ -41,6 +41,7 @@ class Listing(models.Model):
     image_url = models.URLField(blank=True, default='')
     is_featured = models.BooleanField(default=False)
     views = models.PositiveIntegerField(default=0)
+    min_order_qty = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

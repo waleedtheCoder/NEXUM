@@ -33,3 +33,18 @@ class Order(models.Model):
         if not self.total_price:
             self.total_price = self.unit_price * self.quantity
         super().save(*args, **kwargs)
+
+
+class Review(models.Model):
+    order    = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='review')
+    supplier = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews_received')
+    buyer    = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviews_given')
+    rating   = models.PositiveSmallIntegerField()   # 1–5
+    text     = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Review #{self.id} — {self.rating}★ by {self.buyer.email}"

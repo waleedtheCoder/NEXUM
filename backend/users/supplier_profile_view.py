@@ -57,12 +57,17 @@ class SupplierPublicProfileView(APIView):
                 shopkeeper=request.user, supplier=user,
             ).exists()
 
+        from orders.models import Review
+        from django.db.models import Avg, Count
+        agg = Review.objects.filter(supplier=user).aggregate(avg=Avg('rating'), count=Count('id'))
+
         return Response({
             'id':            str(user.id),
             'name':          name,
             'initials':      get_initials(name),
             'avatarColor':   avatar_color_for(user.id),
-            'rating':        4.5,               # static until a Review model is added
+            'rating':        round(agg['avg'], 1) if agg['avg'] else None,
+            'totalReviews':  agg['count'],
             'totalListings': listings.count(),
             'is_favourite':  is_favourite,
             'listings':      ListingCardSerializer(listings[:20], many=True).data,

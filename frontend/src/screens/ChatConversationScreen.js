@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
-import { getMessages, sendMessage } from '../services/marketplaceApi';
+import { getMessages, sendMessage, sendTypingSignal } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
 const POLL_INTERVAL_MS = 3000;
@@ -33,11 +33,13 @@ export default function ChatConversationScreen() {
 
   const listRef = useRef(null);
 
-  const [messages, setMessages] = useState([]);
-  const [input,    setInput]    = useState('');
-  const [loading,  setLoading]  = useState(true);
-  const [sending,  setSending]  = useState(false);
-  const [error,    setError]    = useState(null);
+  const [messages, setMessages]         = useState([]);
+  const [input,    setInput]            = useState('');
+  const [loading,  setLoading]          = useState(true);
+  const [sending,  setSending]          = useState(false);
+  const [error,    setError]            = useState(null);
+  const [otherIsTyping, setOtherIsTyping] = useState(false);
+  const typingTimerRef = useRef(null);
 
   // Build auth args from current token values (not in deps to avoid re-creating intervals)
   const authArgsRef = useRef({});
@@ -52,7 +54,14 @@ export default function ChatConversationScreen() {
     if (!convId) return;
     try {
       const data = await getMessages(convId, authArgsRef.current);
-      setMessages(data);
+      // Backend now returns { messages, other_is_typing }
+      if (data && typeof data === 'object' && Array.isArray(data.messages)) {
+        setMessages(data.messages);
+        setOtherIsTyping(!!data.other_is_typing);
+      } else {
+        // Fallback if backend returns plain array (old format)
+        setMessages(Array.isArray(data) ? data : []);
+      }
       if (isInitial) setError(null);
     } catch (err) {
       if (isInitial) setError(err.message || 'Failed to load messages.');
@@ -60,6 +69,20 @@ export default function ChatConversationScreen() {
       if (isInitial) setLoading(false);
     }
   }, [convId]);
+
+  // Send typing signal with debounce — fires at most once per 2.5s
+  const handleTyping = useCallback((text) => {
+    setInput(text);
+    if (!convId || !text) return;
+    if (typingTimerRef.current) return;  // already scheduled
+    typingTimerRef.current = setTimeout(() => {
+      typingTimerRef.current = null;
+      sendTypingSignal(convId, authArgsRef.current).catch(() => {});
+    }, 2500);
+  }, [convId]);
+
+  // Cleanup typing timer on unmount
+  useEffect(() => () => { if (typingTimerRef.current) clearTimeout(typingTimerRef.current); }, []);
 
   // Initial load
   useEffect(() => {
@@ -183,6 +206,15 @@ export default function ChatConversationScreen() {
         />
       )}
 
+      {/* Typing indicator */}
+      {otherIsTyping && (
+        <View style={styles.typingRow}>
+          <View style={styles.typingBubble}>
+            <Text style={styles.typingText}>{chat?.username || 'Seller'} is typing…</Text>
+          </View>
+        </View>
+      )}
+
       {/* Quick replies — shown when conversation is empty */}
       {!loading && !error && messages.length === 0 && (
         <FlatList
@@ -208,7 +240,7 @@ export default function ChatConversationScreen() {
         <TextInput
           style={styles.textInput}
           value={input}
-          onChangeText={setInput}
+          onChangeText={handleTyping}
           placeholder="Message..."
           placeholderTextColor={colors.textLight}
           multiline
@@ -280,6 +312,15 @@ const makeStyles = (colors) => StyleSheet.create({
   bubbleTime:          { fontSize: 10, fontFamily: fonts.regular, marginTop: 4 },
   bubbleTimeMine:      { color: 'rgba(255,255,255,0.6)', textAlign: 'right' },
   bubbleTimeTheirs:    { color: colors.textSecondary },
+
+  // Typing indicator
+  typingRow:    { paddingHorizontal: spacing.md, paddingBottom: 4 },
+  typingBubble: {
+    alignSelf: 'flex-start', backgroundColor: colors.surfaceAlt,
+    borderRadius: radii.lg, paddingHorizontal: 14, paddingVertical: 8,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  typingText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, fontStyle: 'italic' },
 
   // Quick replies
   quickReplies: { paddingVertical: 8, paddingHorizontal: spacing.md, gap: 8 },

@@ -4,7 +4,9 @@
  * Edit profile for both shopkeepers and suppliers.
  * Route name: EditProfile
  * Accessible from: AccountSettingsScreen profile card, SupplierAccountScreen pencil + Business Profile
- * API: PATCH /api/users/profile/  — accepts { name }
+ * API:
+ *   PATCH /api/users/profile/         — accepts { name, phone_number, profile_image_url }
+ *   POST  /api/users/profile/image/   — uploads profile photo, returns { imageUrl }
  *
  * On save: updates UserContext so the name change is reflected everywhere instantly.
  */
@@ -12,49 +14,89 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, StatusBar, ActivityIndicator, Alert,
+  StyleSheet, StatusBar, ActivityIndicator, Alert, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
-import { updateProfile } from '../services/marketplaceApi';
+import { updateProfile, uploadProfileImage } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
 export default function EditProfileScreen() {
   const { colors } = useTheme();
-    const styles = makeStyles(colors);
+  const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets     = useSafeAreaInsets();
   const { user, role, idToken, sessionId, refreshToken, updateUser } = useUser();
 
-  const [name, setName]       = useState(user?.name || '');
-  const [saving, setSaving]   = useState(false);
-  const [error, setError]     = useState(null);
-  const [saved, setSaved]     = useState(false);
+  const [name, setName]               = useState(user?.name || '');
+  const [phone, setPhone]             = useState(user?.phone_number || '');
+  const [profileImageUri, setProfileImageUri] = useState(user?.profile_image_url || '');
+  const [saving, setSaving]           = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [error, setError]             = useState(null);
+  const [saved, setSaved]             = useState(false);
 
-  const isSupplier    = role === 'SUPPLIER' || role === 'supplier';
-  const roleLabel     = isSupplier ? 'Supplier' : 'Shopkeeper';
-  const isDirty       = name.trim() !== (user?.name || '').trim();
+  const isSupplier = role === 'SUPPLIER' || role === 'supplier';
+  const roleLabel  = isSupplier ? 'Supplier' : 'Shopkeeper';
+
+  const isDirty =
+    name.trim() !== (user?.name || '').trim() ||
+    phone.trim() !== (user?.phone_number || '').trim() ||
+    profileImageUri !== (user?.profile_image_url || '');
+
+  const authArgs = {
+    idToken, sessionId, refreshToken,
+    onTokenRefreshed: (t) => updateUser({ idToken: t }),
+  };
+
+  const handlePickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Allow photo access to change your profile picture.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+
+    const asset = result.assets[0];
+    setUploadingImage(true);
+    try {
+      const ext  = asset.uri.split('.').pop() || 'jpg';
+      const data = await uploadProfileImage(
+        { uri: asset.uri, name: `photo.${ext}`, type: `image/${ext}` },
+        { idToken, sessionId },
+      );
+      setProfileImageUri(data.imageUrl);
+    } catch (err) {
+      Alert.alert('Upload Failed', err.message || 'Could not upload image.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleSave = async () => {
-    const trimmed = name.trim();
-    if (!trimmed) {
-      setError('Name cannot be empty.');
-      return;
-    }
-    if (!isDirty) {
-      navigation.goBack();
-      return;
-    }
+    const trimmedName = name.trim();
+    if (!trimmedName) { setError('Name cannot be empty.'); return; }
+    if (!isDirty) { navigation.goBack(); return; }
 
     setSaving(true);
     setError(null);
     try {
-      await updateProfile({ name: trimmed }, { idToken, sessionId, refreshToken, onTokenRefreshed: (t) => updateUser({ idToken: t }) });
-      // Reflect change in context immediately so all screens see updated name
-      await updateUser({ name: trimmed });
+      const payload = { name: trimmedName };
+      if (phone.trim() !== (user?.phone_number || '').trim()) payload.phone_number = phone.trim();
+      if (profileImageUri !== (user?.profile_image_url || '')) payload.profile_image_url = profileImageUri;
+
+      await updateProfile(payload, authArgs);
+      await updateUser({ name: trimmedName, phone_number: phone.trim(), profile_image_url: profileImageUri });
       setSaved(true);
       setTimeout(() => navigation.goBack(), 600);
     } catch (err) {
@@ -64,24 +106,21 @@ export default function EditProfileScreen() {
     }
   };
 
+  const initials = (name || user?.name || 'U').charAt(0).toUpperCase();
+
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
 
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Profile</Text>
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={saving || !isDirty}
-          style={styles.saveBtn}
-        >
+        <TouchableOpacity onPress={handleSave} disabled={saving || !isDirty} style={styles.saveBtn}>
           {saving
             ? <ActivityIndicator size="small" color="#fff" />
-            : <Text style={[styles.saveBtnText, (!isDirty) && styles.saveBtnDisabled]}>Save</Text>
+            : <Text style={[styles.saveBtnText, !isDirty && styles.saveBtnDisabled]}>Save</Text>
           }
         </TouchableOpacity>
       </View>
@@ -90,18 +129,28 @@ export default function EditProfileScreen() {
 
         {/* Avatar */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarInitials}>
-              {(name || user?.name || 'U').charAt(0).toUpperCase()}
-            </Text>
-          </View>
+          <TouchableOpacity onPress={handlePickImage} style={styles.avatarWrap} disabled={uploadingImage}>
+            {profileImageUri ? (
+              <Image source={{ uri: profileImageUri }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarInitials}>{initials}</Text>
+              </View>
+            )}
+            <View style={styles.cameraBadge}>
+              {uploadingImage
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Ionicons name="camera" size={14} color="#fff" />
+              }
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.changePhotoText}>Tap to change photo</Text>
           <Text style={styles.roleLabel}>{roleLabel} Account</Text>
         </View>
 
         {/* Editable fields */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
-
           <View style={styles.fieldCard}>
             <View style={[styles.field, styles.fieldBorder]}>
               <Text style={styles.fieldLabel}>Full Name</Text>
@@ -112,12 +161,24 @@ export default function EditProfileScreen() {
                 placeholder="Your full name"
                 placeholderTextColor={colors.textLight}
                 autoCorrect={false}
-                returnKeyType="done"
-                onSubmitEditing={handleSave}
+                returnKeyType="next"
               />
             </View>
 
-            {/* Email — read-only (managed by Firebase, can't change here) */}
+            <View style={[styles.field, styles.fieldBorder]}>
+              <Text style={styles.fieldLabel}>Phone Number</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={phone}
+                onChangeText={(t) => { setPhone(t); setSaved(false); }}
+                placeholder="e.g. 0300-1234567"
+                placeholderTextColor={colors.textLight}
+                keyboardType="phone-pad"
+                returnKeyType="done"
+              />
+            </View>
+
+            {/* Email — read-only */}
             <View style={styles.field}>
               <Text style={styles.fieldLabel}>Email</Text>
               <View style={styles.fieldReadOnly}>
@@ -155,7 +216,6 @@ export default function EditProfileScreen() {
           </View>
         </View>
 
-        {/* Error */}
         {!!error && (
           <View style={styles.errorBanner}>
             <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
@@ -163,7 +223,6 @@ export default function EditProfileScreen() {
           </View>
         )}
 
-        {/* Success */}
         {saved && (
           <View style={styles.successBanner}>
             <Ionicons name="checkmark-circle-outline" size={16} color={colors.green} />
@@ -171,7 +230,6 @@ export default function EditProfileScreen() {
           </View>
         )}
 
-        {/* Save button (bottom) */}
         <TouchableOpacity
           style={[styles.saveButtonLarge, (!isDirty || saving) && styles.saveButtonLargeDisabled]}
           onPress={handleSave}
@@ -203,14 +261,22 @@ const makeStyles = (colors) => StyleSheet.create({
 
   scroll: { padding: spacing.md, paddingBottom: 40 },
 
-  avatarSection: { alignItems: 'center', paddingVertical: 24 },
+  avatarSection:   { alignItems: 'center', paddingVertical: 24 },
+  avatarWrap:      { position: 'relative', marginBottom: 8 },
   avatar: {
-    width: 72, height: 72, borderRadius: 36,
+    width: 80, height: 80, borderRadius: 40,
     backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
-    marginBottom: 10,
   },
-  avatarInitials: { color: '#fff', fontSize: 28, fontFamily: fonts.bold },
-  roleLabel:      { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
+  avatarImage:     { width: 80, height: 80, borderRadius: 40 },
+  avatarInitials:  { color: '#fff', fontSize: 30, fontFamily: fonts.bold },
+  cameraBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: colors.background,
+  },
+  changePhotoText: { fontSize: 12, fontFamily: fonts.medium, color: colors.primary, marginBottom: 4 },
+  roleLabel:       { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
 
   section:      { marginBottom: spacing.md },
   sectionTitle: { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },

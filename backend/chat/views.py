@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db import IntegrityError
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -138,7 +139,15 @@ class MessageListView(APIView):
 
         messages = conv.messages.select_related('sender').order_by('created_at')
         serializer = MessageSerializer(messages, many=True, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # Include typing indicator for the other participant
+        other_id = conv.seller_id if request.user.id == conv.buyer_id else conv.buyer_id
+        other_is_typing = bool(cache.get(f'typing:{conv.id}:{other_id}'))
+
+        return Response({
+            'messages':       serializer.data,
+            'other_is_typing': other_is_typing,
+        }, status=status.HTTP_200_OK)
 
 
 class SendMessageView(APIView):
@@ -171,7 +180,30 @@ class SendMessageView(APIView):
         conv.last_message = text
         conv.increment_unread_for(request.user)   # increments the OTHER party's counter
 
+        # Clear typing indicator for this user now that they sent
+        cache.delete(f'typing:{conv.id}:{request.user.id}')
+
         return Response(
             MessageSerializer(msg, context={'request': request}).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class TypingView(APIView):
+    """
+    POST /api/chat/<conv_id>/typing/
+    Sets a 4-second cache entry indicating the current user is typing.
+    The message polling endpoint reads this to show "typing..." to the other party.
+    Body: {} (empty — presence of the request is enough)
+    """
+    def post(self, request, conv_id):
+        try:
+            conv = Conversation.objects.get(pk=conv_id)
+        except Conversation.DoesNotExist:
+            return Response({'detail': 'Conversation not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.user.id not in (conv.buyer_id, conv.seller_id):
+            return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+
+        cache.set(f'typing:{conv_id}:{request.user.id}', True, timeout=4)
+        return Response(status=status.HTTP_204_NO_CONTENT)

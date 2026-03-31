@@ -5,23 +5,22 @@
  * Route name: RestockReminders
  * Accessible from: AccountSettingsScreen → Restock Reminders
  *
- * Storage: AsyncStorage (local only — no backend for this feature yet).
+ * Storage: synced with backend (GET/POST/PATCH/DELETE /api/users/reminders/)
  * Each reminder: { id, product, quantity, unit, active }
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, StatusBar, Alert, Modal, Switch,
+  StyleSheet, StatusBar, Alert, Modal, Switch, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
-
-const STORAGE_KEY = 'nexum_restock_reminders';
+import { useUser } from '../context/UserContext';
+import { getReminders, createReminder, updateReminder, deleteReminder } from '../services/marketplaceApi';
 
 const UNITS = ['kg', 'bags', 'boxes', 'cartons', 'pieces', 'liters', 'bottles'];
 
@@ -32,89 +31,113 @@ const SUGGESTIONS = [
 
 export default function RestockRemindersScreen() {
   const { colors } = useTheme();
-    const styles = makeStyles(colors);
+  const styles = makeStyles(colors);
   const navigation = useNavigation();
-  const insets     = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
+  const { idToken, sessionId, refreshToken, updateUser } = useUser();
 
-  const [reminders, setReminders]     = useState([]);
-  const [modalOpen, setModalOpen]     = useState(false);
-  const [product, setProduct]         = useState('');
-  const [quantity, setQuantity]       = useState('');
-  const [unit, setUnit]               = useState('kg');
-  const [showUnitPicker, setShowUnitPicker] = useState(false);
-
-  // Load from AsyncStorage on mount
-  useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => {
-        if (raw) setReminders(JSON.parse(raw));
-      })
-      .catch(() => {});
-  }, []);
-
-  const persist = async (updated) => {
-    setReminders(updated);
-    try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    } catch {}
+  const authArgs = {
+    idToken, sessionId, refreshToken,
+    onTokenRefreshed: (t) => updateUser({ idToken: t }),
   };
 
-  const handleAdd = () => {
-    const trimProduct  = product.trim();
-    const trimQty      = quantity.trim();
+  const [reminders, setReminders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [product, setProduct] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [unit, setUnit] = useState('kg');
+  const [showUnitPicker, setShowUnitPicker] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const fetchReminders = useCallback(async () => {
+    try {
+      const data = await getReminders(authArgs);
+      setReminders(Array.isArray(data) ? data : []);
+    } catch {
+      // silent — show empty list
+    } finally {
+      setLoading(false);
+    }
+  }, [idToken, sessionId]);
+
+  useFocusEffect(useCallback(() => {
+    fetchReminders();
+  }, [fetchReminders]));
+
+  const handleAdd = async () => {
+    const trimProduct = product.trim();
+    const trimQty = quantity.trim();
     if (!trimProduct) { Alert.alert('Required', 'Enter a product name.'); return; }
     if (!trimQty || isNaN(Number(trimQty)) || Number(trimQty) <= 0) {
       Alert.alert('Required', 'Enter a valid quantity.');
       return;
     }
-    const newReminder = {
-      id:       `r-${Date.now()}`,
-      product:  trimProduct,
-      quantity: trimQty,
-      unit,
-      active:   true,
-    };
-    persist([newReminder, ...reminders]);
-    setProduct('');
-    setQuantity('');
-    setUnit('kg');
-    setModalOpen(false);
+    setSaving(true);
+    try {
+      const newReminder = await createReminder(
+        { product: trimProduct, quantity: trimQty, unit, active: true },
+        authArgs,
+      );
+      setReminders((prev) => [newReminder, ...prev]);
+      setProduct('');
+      setQuantity('');
+      setUnit('kg');
+      setModalOpen(false);
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Could not save reminder.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleToggle = (id) => {
-    persist(reminders.map((r) => r.id === id ? { ...r, active: !r.active } : r));
+  const handleToggle = async (item) => {
+    const updated = { ...item, active: !item.active };
+    setReminders((prev) => prev.map((r) => r.id === item.id ? updated : r));
+    try {
+      await updateReminder(item.id, { active: updated.active }, authArgs);
+    } catch {
+      // revert
+      setReminders((prev) => prev.map((r) => r.id === item.id ? item : r));
+    }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (item) => {
     Alert.alert('Delete Reminder', 'Remove this restock reminder?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => persist(reminders.filter((r) => r.id !== id)) },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          setReminders((prev) => prev.filter((r) => r.id !== item.id));
+          try {
+            await deleteReminder(item.id, authArgs);
+          } catch {
+            setReminders((prev) => [item, ...prev]);
+            Alert.alert('Error', 'Could not delete reminder.');
+          }
+        },
+      },
     ]);
   };
 
   const renderItem = ({ item }) => (
     <View style={[styles.card, !item.active && styles.cardInactive]}>
       <View style={[styles.cardIcon, { backgroundColor: item.active ? `${colors.primary}18` : colors.border }]}>
-        <Ionicons
-          name="repeat-outline"
-          size={20}
-          color={item.active ? colors.primary : colors.textLight}
-        />
+        <Ionicons name="repeat-outline" size={20} color={item.active ? colors.primary : colors.textLight} />
       </View>
       <View style={styles.cardBody}>
         <Text style={[styles.cardProduct, !item.active && styles.textMuted]}>{item.product}</Text>
-        <Text style={styles.cardQty}>
-          Remind when below {item.quantity} {item.unit}
-        </Text>
+        <Text style={styles.cardQty}>Remind when below {item.quantity} {item.unit}</Text>
       </View>
       <Switch
         value={item.active}
-        onValueChange={() => handleToggle(item.id)}
+        onValueChange={() => handleToggle(item)}
         trackColor={{ false: colors.border, true: `${colors.primary}60` }}
         thumbColor={item.active ? colors.primary : '#fff'}
         style={{ marginRight: 8 }}
       />
-      <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteBtn}>
+      <TouchableOpacity onPress={() => handleDelete(item)} style={styles.deleteBtn}>
         <Ionicons name="trash-outline" size={18} color={colors.accent} />
       </TouchableOpacity>
     </View>
@@ -124,7 +147,6 @@ export default function RestockRemindersScreen() {
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
 
-      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
@@ -135,53 +157,48 @@ export default function RestockRemindersScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* List */}
-      <FlatList
-        data={reminders}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="repeat-outline" size={52} color={colors.textLight} />
-            <Text style={styles.emptyTitle}>No reminders yet</Text>
-            <Text style={styles.emptySub}>
-              Add reminders for products you frequently restock so you never run out.
-            </Text>
-            <TouchableOpacity style={styles.emptyBtn} onPress={() => setModalOpen(true)}>
-              <Ionicons name="add" size={18} color="#fff" />
-              <Text style={styles.emptyBtnText}>Add First Reminder</Text>
-            </TouchableOpacity>
-          </View>
-        }
-        ListHeaderComponent={
-          reminders.length > 0 ? (
-            <View style={styles.listHeader}>
-              <Text style={styles.listHeaderText}>
-                {reminders.filter((r) => r.active).length} active · {reminders.length} total
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={reminders}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="repeat-outline" size={52} color={colors.textLight} />
+              <Text style={styles.emptyTitle}>No reminders yet</Text>
+              <Text style={styles.emptySub}>
+                Add reminders for products you frequently restock so you never run out.
               </Text>
-              <TouchableOpacity onPress={() => setModalOpen(true)} style={styles.addInlineBtn}>
-                <Ionicons name="add" size={16} color={colors.primary} />
-                <Text style={styles.addInlineBtnText}>Add</Text>
+              <TouchableOpacity style={styles.emptyBtn} onPress={() => setModalOpen(true)}>
+                <Ionicons name="add" size={18} color="#fff" />
+                <Text style={styles.emptyBtnText}>Add First Reminder</Text>
               </TouchableOpacity>
             </View>
-          ) : null
-        }
-      />
-
-      {/* Add reminder modal */}
-      <Modal
-        visible={modalOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setModalOpen(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalBackdrop}
-          activeOpacity={1}
-          onPress={() => setModalOpen(false)}
+          }
+          ListHeaderComponent={
+            reminders.length > 0 ? (
+              <View style={styles.listHeader}>
+                <Text style={styles.listHeaderText}>
+                  {reminders.filter((r) => r.active).length} active · {reminders.length} total
+                </Text>
+                <TouchableOpacity onPress={() => setModalOpen(true)} style={styles.addInlineBtn}>
+                  <Ionicons name="add" size={16} color={colors.primary} />
+                  <Text style={styles.addInlineBtnText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null
+          }
         />
+      )}
+
+      <Modal visible={modalOpen} transparent animationType="slide" onRequestClose={() => setModalOpen(false)}>
+        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setModalOpen(false)} />
         <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 16 }]}>
 
           <View style={styles.modalHeader}>
@@ -191,7 +208,6 @@ export default function RestockRemindersScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Product name */}
           <Text style={styles.inputLabel}>Product Name</Text>
           <TextInput
             style={styles.textInput}
@@ -202,20 +218,14 @@ export default function RestockRemindersScreen() {
             autoCorrect={false}
           />
 
-          {/* Suggestions */}
           <View style={styles.suggestions}>
             {SUGGESTIONS.filter((s) => !reminders.some((r) => r.product === s)).slice(0, 5).map((s) => (
-              <TouchableOpacity
-                key={s}
-                style={styles.chip}
-                onPress={() => setProduct(s)}
-              >
+              <TouchableOpacity key={s} style={styles.chip} onPress={() => setProduct(s)}>
                 <Text style={styles.chipText}>{s}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* Quantity + unit */}
           <Text style={styles.inputLabel}>Remind when stock falls below</Text>
           <View style={styles.qtyRow}>
             <TextInput
@@ -227,16 +237,12 @@ export default function RestockRemindersScreen() {
               keyboardType="numeric"
               returnKeyType="done"
             />
-            <TouchableOpacity
-              style={styles.unitSelector}
-              onPress={() => setShowUnitPicker(!showUnitPicker)}
-            >
+            <TouchableOpacity style={styles.unitSelector} onPress={() => setShowUnitPicker(!showUnitPicker)}>
               <Text style={styles.unitText}>{unit}</Text>
               <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          {/* Unit picker */}
           {showUnitPicker && (
             <View style={styles.unitPicker}>
               {UNITS.map((u) => (
@@ -245,16 +251,17 @@ export default function RestockRemindersScreen() {
                   style={[styles.unitOption, u === unit && styles.unitOptionActive]}
                   onPress={() => { setUnit(u); setShowUnitPicker(false); }}
                 >
-                  <Text style={[styles.unitOptionText, u === unit && styles.unitOptionTextActive]}>
-                    {u}
-                  </Text>
+                  <Text style={[styles.unitOptionText, u === unit && styles.unitOptionTextActive]}>{u}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           )}
 
-          <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
-            <Text style={styles.addButtonText}>Add Reminder</Text>
+          <TouchableOpacity style={[styles.addButton, saving && { opacity: 0.6 }]} onPress={handleAdd} disabled={saving}>
+            {saving
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={styles.addButtonText}>Add Reminder</Text>
+            }
           </TouchableOpacity>
         </View>
       </Modal>
@@ -264,6 +271,7 @@ export default function RestockRemindersScreen() {
 
 const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   header: {
     backgroundColor: colors.primary, flexDirection: 'row',
@@ -274,10 +282,8 @@ const makeStyles = (colors) => StyleSheet.create({
   addBtn:      { padding: 4 },
 
   listContent: { padding: spacing.md, paddingBottom: 32, flexGrow: 1 },
-
   listHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 12,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12,
   },
   listHeaderText:   { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
   addInlineBtn:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -290,12 +296,12 @@ const makeStyles = (colors) => StyleSheet.create({
     marginBottom: 10, ...shadows.sm,
   },
   cardInactive: { opacity: 0.55 },
-  cardIcon:     { width: 38, height: 38, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
-  cardBody:     { flex: 1 },
-  cardProduct:  { fontSize: 14, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 2 },
-  cardQty:      { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
-  textMuted:    { color: colors.textLight },
-  deleteBtn:    { padding: 4 },
+  cardIcon:  { width: 38, height: 38, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
+  cardBody:  { flex: 1 },
+  cardProduct: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 2 },
+  cardQty:   { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
+  textMuted: { color: colors.textLight },
+  deleteBtn: { padding: 4 },
 
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingTop: 80 },
   emptyTitle: { fontSize: 18, fontFamily: fonts.semiBold, color: colors.text },
@@ -306,7 +312,6 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   emptyBtnText: { color: '#fff', fontSize: 14, fontFamily: fonts.semiBold },
 
-  // Modal
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   modalSheet: {
     backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
@@ -319,42 +324,31 @@ const makeStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.background, borderRadius: radii.lg,
     borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 15, fontFamily: fonts.regular, color: colors.text,
-    marginBottom: spacing.md,
+    fontSize: 15, fontFamily: fonts.regular, color: colors.text, marginBottom: spacing.md,
   },
-
   suggestions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -8, marginBottom: spacing.md },
   chip: {
     backgroundColor: `${colors.primary}12`, borderRadius: radii.full,
-    borderWidth: 1, borderColor: `${colors.primary}30`,
-    paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderColor: `${colors.primary}30`, paddingHorizontal: 12, paddingVertical: 6,
   },
   chipText: { fontSize: 12, fontFamily: fonts.medium, color: colors.primary },
-
   qtyRow: { flexDirection: 'row', gap: 10 },
   qtyInput: { flex: 1, marginBottom: 0 },
   unitSelector: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: colors.background, borderRadius: radii.lg,
     borderWidth: 1, borderColor: colors.border,
-    paddingHorizontal: 14, paddingVertical: 12,
-    marginBottom: spacing.md,
+    paddingHorizontal: 14, paddingVertical: 12, marginBottom: spacing.md,
   },
   unitText: { fontSize: 15, fontFamily: fonts.regular, color: colors.text },
-
-  unitPicker: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
-    marginTop: -8, marginBottom: spacing.md,
-  },
+  unitPicker: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -8, marginBottom: spacing.md },
   unitOption: {
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: radii.full, borderWidth: 1, borderColor: colors.border,
-    backgroundColor: colors.background,
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: radii.full,
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background,
   },
   unitOptionActive:     { backgroundColor: colors.primary, borderColor: colors.primary },
   unitOptionText:       { fontSize: 13, fontFamily: fonts.medium, color: colors.textSecondary },
   unitOptionTextActive: { color: '#fff' },
-
   addButton: {
     backgroundColor: colors.primary, borderRadius: radii.xl,
     paddingVertical: 15, alignItems: 'center', marginTop: 8,

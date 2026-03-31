@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, StatusBar, Image, ActivityIndicator,
+  StyleSheet, StatusBar, Image, ActivityIndicator, Modal, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,9 @@ import BottomNav from '../components/BottomNav';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { searchListings, getTrendingSearch } from '../services/marketplaceApi';
+
+const FILTER_CONDITIONS = ['New', 'Bulk Wholesale', 'Clearance Stock'];
+const FILTER_UNITS = ['kg', 'liters', 'pieces', 'boxes', 'cartons', 'bags', 'bottles'];
 
 // Static fallbacks — shown while the API loads or if it fails
 const POPULAR_PRODUCTS_FALLBACK = [
@@ -30,6 +33,19 @@ export default function SearchScreen() {
   const [submitted, setSubmitted] = useState(false);
   const [recents, setRecents] = useState([]);
   const searchTimer = useRef(null);
+
+  // ── Filter state ────────────────────────────────────────────────────────────
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [priceMin, setPriceMin] = useState('');
+  const [priceMax, setPriceMax] = useState('');
+  const [filterCondition, setFilterCondition] = useState('');
+  const [filterUnit, setFilterUnit] = useState('');
+
+  const hasActiveFilters = !!(priceMin || priceMax || filterCondition || filterUnit);
+
+  const clearFilters = () => {
+    setPriceMin(''); setPriceMax(''); setFilterCondition(''); setFilterUnit('');
+  };
 
   // ── Trending chips (live) ───────────────────────────────────────────────────
   const [popularProducts, setPopularProducts] = useState(POPULAR_PRODUCTS_FALLBACK);
@@ -72,14 +88,19 @@ export default function SearchScreen() {
 
   const removeRecent = (id) => setRecents((prev) => prev.filter((r) => r.id !== id));
 
-  const doSearch = async (text) => {
+  const doSearch = async (text, filters = {}) => {
     const q = text.trim();
     if (!q) return;
     addRecent(q);
     setSubmitted(true);
     setLoading(true);
     try {
-      const data = await searchListings(q);
+      const data = await searchListings(q, {
+        price_min: filters.priceMin,
+        price_max: filters.priceMax,
+        condition: filters.condition,
+        unit: filters.unit,
+      });
       setResults(data.results || []);
     } catch {
       setResults([]);
@@ -88,7 +109,9 @@ export default function SearchScreen() {
     }
   };
 
-  const handleSearch = () => doSearch(query);
+  const handleSearch = () => doSearch(query, { priceMin, priceMax, condition: filterCondition, unit: filterUnit });
+
+  const activeFilters = () => ({ priceMin, priceMax, condition: filterCondition, unit: filterUnit });
 
   const handleChipPress = (text) => {
     setQuery(text);
@@ -129,6 +152,10 @@ export default function SearchScreen() {
             </TouchableOpacity>
           )}
         </View>
+        <TouchableOpacity onPress={() => setFilterVisible(true)} style={styles.filterBtn}>
+          <Ionicons name="options-outline" size={20} color="#fff" />
+          {hasActiveFilters && <View style={styles.filterDot} />}
+        </TouchableOpacity>
       </View>
 
       {/* Results or suggestion chips */}
@@ -257,6 +284,78 @@ export default function SearchScreen() {
       )}
 
       <BottomNav activeTab="search" />
+
+      {/* Filter Modal */}
+      <Modal visible={filterVisible} transparent animationType="slide" onRequestClose={() => setFilterVisible(false)}>
+        <TouchableOpacity style={styles.filterBackdrop} activeOpacity={1} onPress={() => setFilterVisible(false)} />
+        <View style={[styles.filterSheet, { paddingBottom: insets.bottom + 16 }]}>
+          <View style={styles.filterHeader}>
+            <Text style={styles.filterTitle}>Filters</Text>
+            <TouchableOpacity onPress={() => { clearFilters(); }}>
+              <Text style={styles.clearFiltersText}>Clear all</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={styles.filterLabel}>Price Range (Rs)</Text>
+            <View style={styles.priceRow}>
+              <TextInput
+                style={[styles.filterInput, styles.flex1]}
+                value={priceMin}
+                onChangeText={setPriceMin}
+                placeholder="Min"
+                placeholderTextColor={colors.textLight}
+                keyboardType="numeric"
+              />
+              <Text style={{ color: colors.textSecondary, alignSelf: 'center' }}>–</Text>
+              <TextInput
+                style={[styles.filterInput, styles.flex1]}
+                value={priceMax}
+                onChangeText={setPriceMax}
+                placeholder="Max"
+                placeholderTextColor={colors.textLight}
+                keyboardType="numeric"
+              />
+            </View>
+
+            <Text style={styles.filterLabel}>Condition</Text>
+            <View style={styles.filterChips}>
+              {FILTER_CONDITIONS.map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  style={[styles.filterChip, filterCondition === c && styles.filterChipActive]}
+                  onPress={() => setFilterCondition(filterCondition === c ? '' : c)}
+                >
+                  <Text style={[styles.filterChipText, filterCondition === c && styles.filterChipTextActive]}>{c}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.filterLabel}>Unit</Text>
+            <View style={styles.filterChips}>
+              {FILTER_UNITS.map((u) => (
+                <TouchableOpacity
+                  key={u}
+                  style={[styles.filterChip, filterUnit === u && styles.filterChipActive]}
+                  onPress={() => setFilterUnit(filterUnit === u ? '' : u)}
+                >
+                  <Text style={[styles.filterChipText, filterUnit === u && styles.filterChipTextActive]}>{u}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+
+          <TouchableOpacity
+            style={styles.applyFilterBtn}
+            onPress={() => {
+              setFilterVisible(false);
+              if (submitted) doSearch(query, activeFilters());
+            }}
+          >
+            <Text style={styles.applyFilterText}>Apply Filters</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -307,4 +406,44 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 7, ...shadows.sm,
   },
   chipText: { fontSize: 13, fontFamily: fonts.regular, color: colors.text },
+
+  // Filter button in top bar
+  filterBtn: { padding: 4, position: 'relative' },
+  filterDot: {
+    position: 'absolute', top: 2, right: 2,
+    width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent,
+  },
+
+  // Filter modal
+  filterBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  filterSheet: {
+    backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: spacing.lg, maxHeight: '75%',
+  },
+  filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
+  filterTitle:  { fontSize: 18, fontFamily: fonts.semiBold, color: colors.text },
+  clearFiltersText: { fontSize: 13, fontFamily: fonts.medium, color: colors.accent },
+  filterLabel: { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8, marginTop: 12 },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  flex1: { flex: 1 },
+  filterInput: {
+    backgroundColor: colors.background, borderRadius: radii.lg,
+    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: 14, paddingVertical: 10,
+    fontSize: 14, fontFamily: fonts.regular, color: colors.text,
+  },
+  filterChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  filterChip: {
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: radii.full, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filterChipText: { fontSize: 13, fontFamily: fonts.medium, color: colors.textSecondary },
+  filterChipTextActive: { color: '#fff' },
+  applyFilterBtn: {
+    backgroundColor: colors.primary, borderRadius: radii.xl,
+    paddingVertical: 15, alignItems: 'center', marginTop: spacing.md,
+  },
+  applyFilterText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
 });

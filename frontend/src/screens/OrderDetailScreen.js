@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
-  StatusBar, ActivityIndicator, Image,
+  StatusBar, ActivityIndicator, Image, TouchableOpacity, Alert, Modal, TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +9,7 @@ import { useRoute } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
-import { getOrderDetail } from '../services/marketplaceApi';
+import { getOrderDetail, cancelOrder, createReview } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
 const STATUS_STEPS = ['pending', 'confirmed', 'shipped', 'delivered'];
@@ -101,9 +101,15 @@ export default function OrderDetailScreen() {
   // Accept either a pre-loaded order object (fast path) or just the id
   const { orderId, order: preloaded } = route.params || {};
 
-  const [order, setOrder]   = useState(preloaded || null);
-  const [loading, setLoading] = useState(!preloaded);
-  const [error, setError]   = useState(null);
+  const [order, setOrder]       = useState(preloaded || null);
+  const [loading, setLoading]   = useState(!preloaded);
+  const [error, setError]       = useState(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   const authArgs = {
     idToken, sessionId, refreshToken,
@@ -128,6 +134,41 @@ export default function OrderDetailScreen() {
     fetch();
     return () => { cancelled = true; };
   }, [orderId]);
+
+  const handleCancel = () => {
+    Alert.alert('Cancel Order', 'Are you sure you want to cancel this order?', [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Yes, Cancel',
+        style: 'destructive',
+        onPress: async () => {
+          setCancelling(true);
+          try {
+            const updated = await cancelOrder(order.id, authArgs);
+            setOrder(updated);
+          } catch (err) {
+            Alert.alert('Error', err.message || 'Could not cancel order.');
+          } finally {
+            setCancelling(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleSubmitReview = async () => {
+    setSubmittingReview(true);
+    try {
+      await createReview(order.id, { rating: reviewRating, text: reviewText.trim() }, authArgs);
+      setReviewSubmitted(true);
+      setReviewModalOpen(false);
+      Alert.alert('Thank you!', 'Your review has been submitted.');
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Could not submit review.');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   const statusKey = (order?.status || '').toLowerCase();
   const statusCfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG.pending;
@@ -212,7 +253,88 @@ export default function OrderDetailScreen() {
           </View>
         </View>
 
+        {/* Cancel button — buyer only, pending orders */}
+        {statusKey === 'pending' && (
+          <TouchableOpacity
+            style={[styles.cancelBtn, cancelling && { opacity: 0.6 }]}
+            onPress={handleCancel}
+            disabled={cancelling}
+          >
+            {cancelling
+              ? <ActivityIndicator size="small" color="#EF4444" />
+              : <>
+                  <Ionicons name="close-circle-outline" size={16} color="#EF4444" />
+                  <Text style={styles.cancelBtnText}>Cancel Order</Text>
+                </>
+            }
+          </TouchableOpacity>
+        )}
+
+        {/* Review button — delivered orders without a review yet */}
+        {statusKey === 'delivered' && !reviewSubmitted && !order.hasReview && (
+          <TouchableOpacity style={styles.reviewBtn} onPress={() => setReviewModalOpen(true)}>
+            <Ionicons name="star-outline" size={16} color={colors.primary} />
+            <Text style={styles.reviewBtnText}>Leave a Review</Text>
+          </TouchableOpacity>
+        )}
+        {(reviewSubmitted || order.hasReview) && statusKey === 'delivered' && (
+          <View style={styles.reviewedBadge}>
+            <Ionicons name="checkmark-circle" size={16} color={colors.green || '#10B981'} />
+            <Text style={styles.reviewedText}>Review submitted</Text>
+          </View>
+        )}
+
       </ScrollView>
+
+      {/* Review Modal */}
+      <Modal visible={reviewModalOpen} transparent animationType="slide" onRequestClose={() => setReviewModalOpen(false)}>
+        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setReviewModalOpen(false)} />
+        <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 16 }]}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Rate your experience</Text>
+            <TouchableOpacity onPress={() => setReviewModalOpen(false)}>
+              <Ionicons name="close" size={22} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalSub}>{order.productName}</Text>
+
+          {/* Star picker */}
+          <View style={styles.starRow}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <TouchableOpacity key={star} onPress={() => setReviewRating(star)}>
+                <Ionicons
+                  name={star <= reviewRating ? 'star' : 'star-outline'}
+                  size={36}
+                  color={star <= reviewRating ? colors.accent : colors.border}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TextInput
+            style={styles.reviewInput}
+            value={reviewText}
+            onChangeText={setReviewText}
+            placeholder="Share your experience (optional)"
+            placeholderTextColor={colors.textLight}
+            multiline
+            textAlignVertical="top"
+          />
+
+          <TouchableOpacity
+            style={[styles.submitReviewBtn, submittingReview && { opacity: 0.6 }]}
+            onPress={handleSubmitReview}
+            disabled={submittingReview}
+          >
+            {submittingReview
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={styles.submitReviewText}>Submit Review</Text>
+            }
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -316,4 +438,46 @@ const makeStyles = (colors) => StyleSheet.create({
   cancelledText: { fontSize: 14, fontFamily: fonts.medium, color: '#EF4444' },
 
   errorText: { fontSize: 14, fontFamily: fonts.medium, color: colors.accent, textAlign: 'center' },
+
+  cancelBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderWidth: 1.5, borderColor: '#EF4444', borderRadius: radii.xl,
+    paddingVertical: 13, marginTop: 4,
+  },
+  cancelBtnText: { fontSize: 14, fontFamily: fonts.semiBold, color: '#EF4444' },
+
+  reviewBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderWidth: 1.5, borderColor: colors.primary, borderRadius: radii.xl,
+    paddingVertical: 13, marginTop: 4,
+  },
+  reviewBtnText: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.primary },
+  reviewedBadge: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 12, marginTop: 4,
+  },
+  reviewedText: { fontSize: 13, fontFamily: fonts.medium, color: colors.green || '#10B981' },
+
+  // Review modal
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalSheet: {
+    backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    padding: spacing.lg,
+  },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  modalTitle:  { fontSize: 18, fontFamily: fonts.semiBold, color: colors.text },
+  modalSub:    { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, marginBottom: spacing.md },
+  starRow:     { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: spacing.md },
+  reviewInput: {
+    backgroundColor: colors.background, borderRadius: radii.lg,
+    borderWidth: 1, borderColor: colors.border,
+    paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 14, fontFamily: fonts.regular, color: colors.text,
+    minHeight: 80, marginBottom: spacing.md,
+  },
+  submitReviewBtn: {
+    backgroundColor: colors.primary, borderRadius: radii.xl,
+    paddingVertical: 15, alignItems: 'center',
+  },
+  submitReviewText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
 });

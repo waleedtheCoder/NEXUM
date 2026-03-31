@@ -311,10 +311,16 @@ export default function ProductDetailScreen() {
               <View style={styles.sellerInfo}>
                 <Text style={styles.sellerName}>{product.seller.name}</Text>
                 <View style={styles.sellerMeta}>
-                  <Ionicons name="star" size={14} color={colors.accent} />
-                  <Text style={styles.sellerMetaText}>
-                    {product.seller.rating}  ·  {product.seller.sales} sales
-                  </Text>
+                  {product.seller.rating != null ? (
+                    <>
+                      <Ionicons name="star" size={14} color={colors.accent} />
+                      <Text style={styles.sellerMetaText}>
+                        {Number(product.seller.rating).toFixed(1)}  ·  {product.seller.sales ?? 0} sales
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={styles.sellerMetaText}>No reviews yet</Text>
+                  )}
                 </View>
               </View>
             </View>

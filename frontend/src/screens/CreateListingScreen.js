@@ -34,6 +34,7 @@ export default function CreateListingScreen() {
   const [price, setPrice] = useState(existing?.pricePerUnit ? String(existing.pricePerUnit) : '');
   const [quantity, setQuantity] = useState(existing?.quantity ? String(existing.quantity) : '');
   const [unit, setUnit] = useState(existing?.unit || 'kg');
+  const [minOrderQty, setMinOrderQty] = useState(existing?.minOrderQty ? String(existing.minOrderQty) : '1');
   const [condition, setCondition] = useState(existing?.condition || 'Bulk Wholesale');
   const [location, setLocation] = useState(existing?.location || '');
   const [loading, setLoading] = useState(false);
@@ -143,6 +144,7 @@ export default function CreateListingScreen() {
       price: parseFloat(price),
       quantity: parseInt(quantity, 10),
       unit,
+      minOrderQty: parseInt(minOrderQty, 10) || 1,
       condition,
       location: location.trim(),
       category,
@@ -287,6 +289,17 @@ export default function CreateListingScreen() {
             />
           </View>
         </View>
+
+        {/* Min Order Qty */}
+        <Text style={styles.label}>Min. Order Quantity</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g. 25"
+          placeholderTextColor={colors.textLight}
+          value={minOrderQty}
+          onChangeText={setMinOrderQty}
+          keyboardType="numeric"
+        />
 
         {/* Unit selector */}
         <Text style={styles.label}>Unit</Text>

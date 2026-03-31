@@ -18,7 +18,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useUser } from '../context/UserContext';
-import { getSupplierProfile } from '../services/marketplaceApi';
+import { getSupplierProfile, getSupplierReviews } from '../services/marketplaceApi';
 
 // Props-based — avoids referencing out-of-scope colors/styles
 function StarRating({ rating = 0, accentColor }) {
@@ -77,6 +77,7 @@ export default function SupplierProfileScreen() {
 
   const [supplier, setSupplier] = useState(null);
   const [listings, setListings] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -96,10 +97,14 @@ export default function SupplierProfileScreen() {
     (async () => {
       setLoading(true);
       try {
-        const data = await getSupplierProfile(supplierId, authArgs);
+        const [profileData, reviewsData] = await Promise.all([
+          getSupplierProfile(supplierId, authArgs),
+          getSupplierReviews(supplierId).catch(() => ({ reviews: [] })),
+        ]);
         if (!cancelled) {
-          setSupplier(data);
-          setListings(Array.isArray(data.listings) ? data.listings : []);
+          setSupplier(profileData);
+          setListings(Array.isArray(profileData.listings) ? profileData.listings : []);
+          setReviews(Array.isArray(reviewsData.reviews) ? reviewsData.reviews : []);
         }
       } catch (err) {
         if (!cancelled) setError(err.message || 'Could not load supplier profile.');
@@ -155,10 +160,14 @@ export default function SupplierProfileScreen() {
         <Text style={styles.supplierName}>{supplier.name}</Text>
 
         <View style={styles.ratingRow}>
-          <StarRating rating={Number(supplier.rating) || 0} accentColor={colors.accent} />
-          <Text style={styles.ratingValue}>{Number(supplier.rating || 0).toFixed(1)}</Text>
-          {supplier.totalReviews != null && (
-            <Text style={styles.ratingCount}>({supplier.totalReviews} reviews)</Text>
+          {supplier.rating != null ? (
+            <>
+              <StarRating rating={Number(supplier.rating)} accentColor={colors.accent} />
+              <Text style={styles.ratingValue}>{Number(supplier.rating).toFixed(1)}</Text>
+              <Text style={styles.ratingCount}>({supplier.totalReviews ?? 0} reviews)</Text>
+            </>
+          ) : (
+            <Text style={styles.ratingCount}>No reviews yet</Text>
           )}
         </View>
 
@@ -186,6 +195,28 @@ export default function SupplierProfileScreen() {
           <Text style={styles.verifiedText}>Verified Supplier</Text>
         </View>
       </View>
+
+      {/* Reviews section */}
+      {reviews.length > 0 && (
+        <View style={styles.reviewsSection}>
+          <Text style={styles.listingsHeading}>Reviews</Text>
+          {reviews.map((r) => (
+            <View key={r.id} style={styles.reviewCard}>
+              <View style={styles.reviewHeader}>
+                <View style={styles.reviewAvatar}>
+                  <Text style={styles.reviewAvatarText}>{(r.buyerName || 'U').charAt(0).toUpperCase()}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.reviewBuyer}>{r.buyerName || 'Anonymous'}</Text>
+                  <StarRating rating={r.rating} accentColor={colors.accent} />
+                </View>
+                <Text style={styles.reviewDate}>{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}</Text>
+              </View>
+              {!!r.text && <Text style={styles.reviewText}>{r.text}</Text>}
+            </View>
+          ))}
+        </View>
+      )}
 
       {listings.length > 0 && (
         <Text style={styles.listingsHeading}>Active Listings</Text>
@@ -268,6 +299,21 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 5,
   },
   verifiedText: { fontSize: 12, fontFamily: fonts.medium, color: colors.primary },
+
+  reviewsSection: { marginBottom: 4 },
+  reviewCard: {
+    backgroundColor: colors.surface, borderRadius: radii.xl,
+    padding: spacing.md, marginHorizontal: spacing.md, marginBottom: 8, ...shadows.sm,
+  },
+  reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  reviewAvatar: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: `${colors.primary}20`, alignItems: 'center', justifyContent: 'center',
+  },
+  reviewAvatarText: { fontSize: 14, fontFamily: fonts.bold, color: colors.primary },
+  reviewBuyer: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 3 },
+  reviewDate:  { fontSize: 11, fontFamily: fonts.regular, color: colors.textLight },
+  reviewText:  { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 18 },
 
   listingsHeading: {
     fontSize: 16, fontFamily: fonts.bold, color: colors.text,

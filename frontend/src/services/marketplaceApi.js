@@ -178,8 +178,14 @@ export async function getCategories() {
  * GET /api/listings/search/?q=<query>
  * Returns { results: [...listing cards] }. Public.
  */
-export async function searchListings(q) {
-  return _fetch(`/api/listings/search/?q=${encodeURIComponent(q)}`);
+export async function searchListings(q, { price_min, price_max, condition, unit, sort } = {}) {
+  const params = new URLSearchParams({ q });
+  if (price_min)  params.set('price_min', price_min);
+  if (price_max)  params.set('price_max', price_max);
+  if (condition)  params.set('condition', condition);
+  if (unit)       params.set('unit', unit);
+  if (sort)       params.set('sort', sort);
+  return _fetch(`/api/listings/search/?${params.toString()}`);
 }
 
 /**
@@ -554,6 +560,76 @@ export async function updateProfile(data, { idToken, sessionId, refreshToken, on
   return _fetchWithRefresh('/api/users/profile/', {
     method: 'PATCH',
     body: data,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+// ─── Profile Image Upload ─────────────────────────────────────────────────────
+
+export async function uploadProfileImage(file, { idToken, sessionId } = {}) {
+  const formData = new FormData();
+  formData.append('image', { uri: file.uri, name: file.name || 'photo.jpg', type: file.type || 'image/jpeg' });
+  return _fetchMultipart('/api/users/profile/image/', { formData, idToken, sessionId });
+}
+
+// ─── Reviews ──────────────────────────────────────────────────────────────────
+
+export async function createReview(orderId, { rating, text }, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/orders/${orderId}/review/`, {
+    method: 'POST',
+    body: { rating, text: text || '' },
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+export async function getSupplierReviews(supplierId) {
+  return _fetch(`/api/orders/reviews/?supplier_id=${supplierId}`);
+}
+
+// ─── Restock Reminders ────────────────────────────────────────────────────────
+
+export async function getReminders({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/users/reminders/', { idToken, sessionId, refreshToken, onTokenRefreshed });
+}
+
+export async function createReminder(data, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/users/reminders/', {
+    method: 'POST',
+    body: data,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+export async function updateReminder(id, data, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/users/reminders/${id}/`, {
+    method: 'PATCH',
+    body: data,
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+export async function deleteReminder(id, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/users/reminders/${id}/`, {
+    method: 'DELETE',
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+// ─── Typing Indicator ─────────────────────────────────────────────────────────
+
+export async function sendTypingSignal(convId, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/chat/${convId}/typing/`, {
+    method: 'POST',
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
+// ─── Order Cancellation (buyer) ───────────────────────────────────────────────
+
+export async function cancelOrder(orderId, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh(`/api/orders/${orderId}/`, {
+    method: 'PATCH',
+    body: { status: 'cancelled' },
     idToken, sessionId, refreshToken, onTokenRefreshed,
   });
 }

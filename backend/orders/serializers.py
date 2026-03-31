@@ -27,6 +27,7 @@ class OrderSerializer(serializers.ModelSerializer):
     imageUrl     = serializers.SerializerMethodField()
     orderDate    = serializers.SerializerMethodField()
     statusLabel  = serializers.SerializerMethodField()
+    hasReview    = serializers.SerializerMethodField()
     notes        = serializers.CharField(default='')
 
     class Meta:
@@ -34,7 +35,7 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'productName', 'supplierName', 'buyerName',
             'quantity', 'unit', 'unitPrice', 'totalPrice',
-            'imageUrl', 'status', 'statusLabel', 'orderDate', 'notes',
+            'imageUrl', 'status', 'statusLabel', 'orderDate', 'notes', 'hasReview',
         ]
 
     def get_id(self, obj):
@@ -61,6 +62,9 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_orderDate(self, obj):
         return time_ago(obj.created_at)
+
+    def get_hasReview(self, obj):
+        return hasattr(obj, 'review')
 
     def get_statusLabel(self, obj):
         labels = {

@@ -1,6 +1,9 @@
+from decimal import Decimal
+
 from rest_framework import serializers
 from .models import Listing, SavedListing, ListingPromotion
 from .utils import time_ago, get_initials, compute_total_value
+from orders.models import Order
 
 
 class ListingCardSerializer(serializers.ModelSerializer):
@@ -58,21 +61,28 @@ class ListingDetailSerializer(serializers.ModelSerializer):
         return [
             {'label': 'Category',   'value': obj.category},
             {'label': 'Quantity',   'value': f'{obj.quantity} {obj.unit} available'},
-            {'label': 'Min. Order', 'value': f'25 {obj.unit}'},
+            {'label': 'Min. Order', 'value': f'{obj.min_order_qty} {obj.unit}'},
             {'label': 'Condition',  'value': obj.condition},
         ]
 
     def get_seller(self, obj):
+        from orders.models import Review
+        from django.db.models import Avg, Count
         supplier = obj.supplier
         name     = supplier.first_name or supplier.email or 'Supplier'
         profile  = getattr(supplier, 'profile', None)
+        agg = Review.objects.filter(supplier=supplier).aggregate(
+            avg=Avg('rating'), count=Count('id')
+        )
+        sales = Order.objects.filter(supplier=supplier, status='delivered').count()
         return {
-            'id':       supplier.pk,
-            'name':     name,
-            'initials': get_initials(name),
-            'rating':   4.8,
-            'sales':    0,
-            'phone':    (profile.phone_number or '') if profile else '',
+            'id':           supplier.pk,
+            'name':         name,
+            'initials':     get_initials(name),
+            'rating':       round(agg['avg'], 1) if agg['avg'] else None,
+            'totalReviews': agg['count'],
+            'sales':        sales,
+            'phone':        (profile.phone_number or '') if profile else '',
         }
 
 
@@ -90,6 +100,7 @@ class MyListingSerializer(serializers.ModelSerializer):
     category     = serializers.CharField()
     quantity     = serializers.SerializerMethodField()
     unit         = serializers.CharField()
+    minOrderQty  = serializers.IntegerField(source='min_order_qty')
     pricePerUnit = serializers.DecimalField(source='price', max_digits=12, decimal_places=2)
     totalValue   = serializers.SerializerMethodField()
     status       = serializers.CharField()
@@ -104,7 +115,7 @@ class MyListingSerializer(serializers.ModelSerializer):
         model  = Listing
         fields = [
             'id', 'productName', 'description', 'category', 'quantity', 'unit',
-            'pricePerUnit', 'totalValue', 'status', 'imageUrl',
+            'minOrderQty', 'pricePerUnit', 'totalValue', 'status', 'imageUrl',
             'postedDate', 'location', 'views', 'inquiries', 'promotion',
         ]
 
@@ -138,8 +149,9 @@ class CreateListingSerializer(serializers.Serializer):
     """Validates the CreateListingScreen form submission."""
     productName = serializers.CharField(max_length=255)
     description = serializers.CharField(allow_blank=True, required=False, default='')
-    price       = serializers.DecimalField(max_digits=12, decimal_places=2)
+    price       = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal('0.01'))
     quantity    = serializers.IntegerField(min_value=1)
+    minOrderQty = serializers.IntegerField(min_value=1, required=False, default=1)
     unit        = serializers.ChoiceField(
         choices=['kg', 'liters', 'pieces', 'boxes', 'cartons', 'bags', 'bottles'],
         default='kg',
@@ -157,8 +169,9 @@ class UpdateListingSerializer(serializers.Serializer):
     """Partial update — all fields optional."""
     productName = serializers.CharField(max_length=255, required=False)
     description = serializers.CharField(allow_blank=True, required=False)
-    price       = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    price       = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal('0.01'), required=False)
     quantity    = serializers.IntegerField(min_value=1, required=False)
+    minOrderQty = serializers.IntegerField(min_value=1, required=False)
     unit        = serializers.ChoiceField(
         choices=['kg', 'liters', 'pieces', 'boxes', 'cartons', 'bags', 'bottles'],
         required=False,

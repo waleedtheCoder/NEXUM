@@ -146,7 +146,33 @@ class SearchView(APIView):
             Q(category__icontains=q) |
             Q(location__icontains=q) |
             Q(description__icontains=q)
-        ).select_related('supplier__profile').order_by('-created_at')
+        ).select_related('supplier__profile')
+
+        price_min = request.query_params.get('price_min', '').strip()
+        price_max = request.query_params.get('price_max', '').strip()
+        condition = request.query_params.get('condition', '').strip()
+        unit      = request.query_params.get('unit', '').strip()
+
+        try:
+            if price_min:
+                qs = qs.filter(price__gte=float(price_min))
+            if price_max:
+                qs = qs.filter(price__lte=float(price_max))
+        except ValueError:
+            pass
+
+        if condition:
+            qs = qs.filter(condition__iexact=condition)
+        if unit:
+            qs = qs.filter(unit__iexact=unit)
+
+        sort = request.query_params.get('sort', 'newest')
+        if sort == 'price_asc':
+            qs = qs.order_by('price')
+        elif sort == 'price_desc':
+            qs = qs.order_by('-price')
+        else:
+            qs = qs.order_by('-created_at')
 
         serializer = ListingCardSerializer(qs, many=True)
         return Response({'results': serializer.data}, status=status.HTTP_200_OK)
@@ -192,6 +218,7 @@ class CreateListingView(APIView):
             description=d.get('description', ''),
             price=d['price'],
             quantity=d['quantity'],
+            min_order_qty=d.get('minOrderQty', 1),
             unit=d.get('unit', 'kg'),
             condition=d.get('condition', 'New'),
             location=d['location'],
@@ -239,6 +266,7 @@ class ListingManageView(APIView):
             'description': 'description',
             'price': 'price',
             'quantity': 'quantity',
+            'minOrderQty': 'min_order_qty',
             'unit': 'unit',
             'condition': 'condition',
             'location': 'location',
@@ -336,7 +364,7 @@ class SupplierDashboardView(APIView):
             },
             {
                 'label': 'Avg. Response',
-                'value': '< 1hr',
+                'value': 'N/A',
                 'icon': 'time-outline',
                 'color': '#8B5CF6',
             },

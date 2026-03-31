@@ -30,12 +30,13 @@ class AuthRateThrottle(UserRateThrottle):
 
 def _build_profile_payload(user, profile):
     return {
-        'uid':            profile.firebase_uid,
-        'email':          user.email or '',
-        'name':           user.first_name or '',
-        'role':           profile.role,
-        'phone_number':   profile.phone_number,
-        'email_verified': profile.email_verified,
+        'uid':               profile.firebase_uid,
+        'email':             user.email or '',
+        'name':              user.first_name or '',
+        'role':              profile.role,
+        'phone_number':      profile.phone_number,
+        'email_verified':    profile.email_verified,
+        'profile_image_url': profile.profile_image_url or '',
     }
 
 
@@ -473,16 +474,30 @@ class UserOnboardingView(APIView):
         serializer = ProfileUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        name = serializer.validated_data.get('name')
-        role = serializer.validated_data.get('role')
+        name              = serializer.validated_data.get('name')
+        role              = serializer.validated_data.get('role')
+        phone_number      = serializer.validated_data.get('phone_number')
+        profile_image_url = serializer.validated_data.get('profile_image_url')
 
         if name is not None:
             request.user.first_name = name
             request.user.save(update_fields=['first_name'])
+
+        profile_update_fields = []
         if role is not None:
             profile.role = role
+            profile_update_fields.append('role')
+        if phone_number is not None:
+            profile.phone_number = phone_number
+            profile_update_fields.append('phone_number')
+        if profile_image_url is not None:
+            profile.profile_image_url = profile_image_url
+            profile_update_fields.append('profile_image_url')
 
-        profile.save()
+        if profile_update_fields:
+            profile.save(update_fields=profile_update_fields)
+        else:
+            profile.save()
 
         payload             = _build_profile_payload(request.user, profile)
         response_serializer = ProfileResponseSerializer(payload)

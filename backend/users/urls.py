@@ -13,6 +13,8 @@ from .views import (
 from .fcm_token_view import RegisterFCMTokenView
 from .supplier_profile_view import SupplierPublicProfileView
 from .network_views import SupplierNetworkView, ToggleFavouriteSupplierView
+from .reminder_views import RemindersView, ReminderDetailView
+from .profile_image_view import ProfileImageUploadView
 
 urlpatterns = [
     # ── Auth ─────────────────────────────────────────────────────────────
@@ -24,7 +26,11 @@ urlpatterns = [
     path('auth/session/',         AuthSessionView.as_view(),    name='auth-session'),
     path('auth/token-refresh/',   TokenRefreshView.as_view(),   name='auth-token-refresh'),
     # ── Profile ──────────────────────────────────────────────────────────
-    path('profile/',              UserOnboardingView.as_view(), name='user-profile'),
+    path('profile/',              UserOnboardingView.as_view(),    name='user-profile'),
+    path('profile/image/',        ProfileImageUploadView.as_view(), name='profile-image-upload'),
+    # ── Restock Reminders ────────────────────────────────────────────────
+    path('reminders/',            RemindersView.as_view(),          name='reminders-list'),
+    path('reminders/<int:reminder_id>/', ReminderDetailView.as_view(), name='reminder-detail'),
     # ── Supplier / Network ────────────────────────────────────────────────
     path('fcm-token/',                   RegisterFCMTokenView.as_view(),        name='fcm-token'),
     path('supplier/<int:supplier_id>/',  SupplierPublicProfileView.as_view(),   name='supplier-profile'),
