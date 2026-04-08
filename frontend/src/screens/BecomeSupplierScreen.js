@@ -15,46 +15,48 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
-
-const BENEFITS = [
-  {
-    icon: 'storefront-outline',
-    title: 'List Your Products',
-    desc: 'Create product listings visible to thousands of shopkeepers across Pakistan.',
-  },
-  {
-    icon: 'trending-up-outline',
-    title: 'Grow Your Sales',
-    desc: 'Receive bulk orders directly from verified retailers on the platform.',
-  },
-  {
-    icon: 'shield-checkmark-outline',
-    title: 'Get Verified',
-    desc: 'Earn a Verified Supplier badge to build trust with buyers.',
-  },
-  {
-    icon: 'chatbubble-outline',
-    title: 'Direct Communication',
-    desc: 'Chat directly with shopkeepers to close deals faster.',
-  },
-  {
-    icon: 'card-outline',
-    title: 'Easy Payouts',
-    desc: 'Manage your earnings and receive payments securely.',
-  },
-];
+import { useLanguage } from '../hooks/useLanguage';
 
 export default function BecomeSupplierScreen() {
   const { colors, isDark } = useTheme();
+  const { t, isUrdu } = useLanguage();
   const styles = makeStyles(colors, isDark);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
+  const BENEFITS = [
+    {
+      icon: 'storefront-outline',
+      title: t.becomeSupplier.feature1Title,
+      desc: t.becomeSupplier.feature1Desc,
+    },
+    {
+      icon: 'trending-up-outline',
+      title: t.becomeSupplier.feature2Title,
+      desc: t.becomeSupplier.feature2Desc,
+    },
+    {
+      icon: 'shield-checkmark-outline',
+      title: t.becomeSupplier.feature3Title,
+      desc: t.becomeSupplier.feature3Desc,
+    },
+    {
+      icon: 'chatbubble-outline',
+      title: t.becomeSupplier.feature4Title,
+      desc: t.becomeSupplier.feature4Desc,
+    },
+    {
+      icon: 'card-outline',
+      title: t.becomeSupplier.feature5Title,
+      desc: t.becomeSupplier.feature5Desc,
+    },
+  ];
+
   const handleApply = () => {
     Alert.alert(
-      'Supplier Registration',
-      'Supplier registration is coming soon! Our team will reach out to verified businesses. Please check back later.',
-      [{ text: 'OK' }],
+      t.becomeSupplier.supplierRegistration,
+      t.becomeSupplier.comingSoon,
+      [{ text: t.common.confirm }],
     );
   };
 
@@ -67,7 +69,7 @@ export default function BecomeSupplierScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Become a Supplier</Text>
+        <Text style={styles.headerTitle}>{t.becomeSupplier.title}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -80,14 +82,14 @@ export default function BecomeSupplierScreen() {
           <View style={styles.heroIcon}>
             <Ionicons name="storefront" size={40} color={colors.primary} />
           </View>
-          <Text style={styles.heroTitle}>Start Selling on NEXUM</Text>
+          <Text style={styles.heroTitle}>{t.becomeSupplier.heroTitle}</Text>
           <Text style={styles.heroSub}>
-            Join hundreds of suppliers already reaching shopkeepers across Pakistan.
+            {t.becomeSupplier.heroSubtitle}
           </Text>
         </View>
 
         {/* Benefits */}
-        <Text style={styles.sectionLabel}>Why Sell on NEXUM?</Text>
+        <Text style={styles.sectionLabel}>{t.becomeSupplier.whySell}</Text>
         <View style={styles.benefitsList}>
           {BENEFITS.map((b, i) => (
             <View
@@ -106,13 +108,13 @@ export default function BecomeSupplierScreen() {
         </View>
 
         {/* Requirements */}
-        <Text style={styles.sectionLabel}>Requirements</Text>
+        <Text style={styles.sectionLabel}>{t.becomeSupplier.requirements}</Text>
         <View style={styles.requirementsCard}>
           {[
-            'Valid business registration (SECP / NTN)',
-            'Active phone number for verification',
-            'Product photos and descriptions ready',
-            'Ability to fulfil bulk orders',
+            t.becomeSupplier.req1,
+            t.becomeSupplier.req2,
+            t.becomeSupplier.req3,
+            t.becomeSupplier.req4,
           ].map((req, i) => (
             <View key={i} style={styles.reqRow}>
               <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
@@ -124,12 +126,11 @@ export default function BecomeSupplierScreen() {
         {/* CTA */}
         <TouchableOpacity style={styles.applyBtn} onPress={handleApply} activeOpacity={0.85}>
           <Ionicons name="storefront-outline" size={20} color="#fff" />
-          <Text style={styles.applyBtnText}>Apply to Become a Supplier</Text>
+          <Text style={styles.applyBtnText}>{t.becomeSupplier.apply}</Text>
         </TouchableOpacity>
 
         <Text style={styles.footerNote}>
-          Our team reviews applications within 2–3 business days.
-          Approved suppliers are immediately listed on the platform.
+          {t.becomeSupplier.reviewNote}
         </Text>
       </ScrollView>
     </View>

@@ -4,40 +4,33 @@
 // Contains the theme toggle switch.
 // Updated to use useTheme() for full dark mode support.
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView,
-  StyleSheet, StatusBar, Modal, Alert, Switch,
+  StyleSheet, StatusBar, Alert, Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 
-const FEATURE_CARDS = [
-  { icon: 'business',      title: 'Business Profile Settings', screen: 'EditProfile'     },
-  { icon: 'storefront',    title: 'Saved Suppliers',           screen: 'MarketplaceBrowsing' },
-  { icon: 'cube',          title: 'Saved Products',            screen: 'SavedListings'   },
-  { icon: 'receipt',       title: 'Purchase History',          screen: 'OrderHistory'    },
-  { icon: 'notifications', title: 'Restock Reminders',         screen: 'RestockReminders'},
-  { icon: 'card',          title: 'Credits & Limits',          screen: null              },
-];
-
-const LANGUAGES = [
-  { key: 'english', label: 'English' },
-  { key: 'urdu',    label: 'اردو (Urdu)' },
+const getFeatureCards = (t) => [
+  { icon: 'business',      titleKey: 'businessProfile', screen: 'EditProfile'      },
+  { icon: 'storefront',    titleKey: 'savedSuppliers',  screen: 'MarketplaceBrowsing' },
+  { icon: 'cube',          titleKey: 'savedProducts',   screen: 'SavedListings'    },
+  { icon: 'receipt',       titleKey: 'purchaseHistory', screen: 'OrderHistory'     },
+  { icon: 'notifications', titleKey: 'restockReminders',screen: 'RestockReminders' },
+  { icon: 'card',          titleKey: 'creditsLimits',   screen: null               },
 ];
 
 export default function MoreMenuScreen() {
-  
   const navigation = useNavigation();
   const insets     = useSafeAreaInsets();
   const { colors, isDark, toggleTheme } = useTheme();
-
-  const [langModalOpen, setLangModalOpen] = useState(false);
-  const [selectedLang, setSelectedLang]   = useState('english');
+  const { t, isUrdu, toggleLanguage } = useLanguage();
 
   const styles = makeStyles(colors);
 
@@ -45,39 +38,39 @@ export default function MoreMenuScreen() {
     if (card.screen) {
       navigation.navigate(card.screen);
     } else {
-      Alert.alert(card.title, 'This feature is coming soon!');
+      Alert.alert(t.moreMenu[card.titleKey], t.common.comingSoon);
     }
   };
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title="NEXUM" showBack />
+      <ScreenHeader title={t.moreMenu.title} showBack />
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Feature grid */}
         <View style={styles.grid}>
-          {FEATURE_CARDS.map((card, i) => (
+          {getFeatureCards(t).map((card, i) => (
             <TouchableOpacity
               key={i}
               style={styles.featureCard}
               onPress={() => handleFeatureCard(card)}
             >
               <Ionicons name={`${card.icon}-outline`} size={26} color={colors.primary} />
-              <Text style={styles.featureCardText}>{card.title}</Text>
+              <Text style={styles.featureCardText}>{t.moreMenu[card.titleKey]}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
         {/* Promo card */}
         <View style={styles.promoCard}>
-          <Text style={styles.promoText}>Looking to expand your supplier network?</Text>
+          <Text style={styles.promoText}>{t.moreMenu.promoText}</Text>
           <TouchableOpacity
             style={styles.promoBtn}
             onPress={() => navigation.navigate('MarketplaceBrowsing')}
           >
-            <Text style={styles.promoBtnText}>Find Suppliers</Text>
+            <Text style={styles.promoBtnText}>{t.moreMenu.findSuppliers}</Text>
           </TouchableOpacity>
         </View>
 
@@ -95,10 +88,10 @@ export default function MoreMenuScreen() {
               />
               <View>
                 <Text style={styles.settingLabel}>
-                  {isDark ? 'Dark Mode' : 'Light Mode'}
+                  {isDark ? t.moreMenu.darkMode : t.moreMenu.lightMode}
                 </Text>
                 <Text style={styles.settingDesc}>
-                  {isDark ? 'Black / Rust Orange' : 'White / Teal Green'}
+                  {isDark ? t.moreMenu.darkDesc : t.moreMenu.lightDesc}
                 </Text>
               </View>
             </View>
@@ -113,33 +106,34 @@ export default function MoreMenuScreen() {
 
           <View style={styles.settingDivider} />
 
-          {/* ── Language ── */}
-          <TouchableOpacity
-            style={styles.settingRow}
-            onPress={() => setLangModalOpen(true)}
-          >
+          {/* ── Language Toggle ── */}
+          <View style={styles.settingRow}>
             <View style={styles.settingLeft}>
               <Ionicons name="globe-outline" size={20} color={colors.primary} style={styles.settingIcon} />
-              <Text style={styles.settingLabel}>Language</Text>
+              <View>
+                <Text style={styles.settingLabel}>{t.moreMenu.language}</Text>
+                <Text style={styles.settingDesc}>{isUrdu ? t.accountSettings.urdu : t.accountSettings.english}</Text>
+              </View>
             </View>
-            <View style={styles.settingRight}>
-              <Text style={styles.settingValue}>
-                {selectedLang === 'english' ? 'English' : 'اردو'}
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-            </View>
-          </TouchableOpacity>
+            <Switch
+              value={isUrdu}
+              onValueChange={toggleLanguage}
+              trackColor={{ false: colors.border, true: `${colors.primary}80` }}
+              thumbColor={isUrdu ? colors.primary : colors.surface}
+              ios_backgroundColor={colors.border}
+            />
+          </View>
 
           <View style={styles.settingDivider} />
 
           {/* ── Customer Support ── */}
           <TouchableOpacity
             style={styles.settingRow}
-            onPress={() => Alert.alert('Support', 'Email us at support@nexum.pk')}
+            onPress={() => Alert.alert(t.moreMenu.customerSupport, 'support@nexum.pk')}
           >
             <View style={styles.settingLeft}>
               <Ionicons name="headset-outline" size={20} color={colors.primary} style={styles.settingIcon} />
-              <Text style={styles.settingLabel}>Customer Support</Text>
+              <Text style={styles.settingLabel}>{t.moreMenu.customerSupport}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
           </TouchableOpacity>
@@ -149,11 +143,11 @@ export default function MoreMenuScreen() {
           {/* ── Invite ── */}
           <TouchableOpacity
             style={styles.settingRow}
-            onPress={() => Alert.alert('Invite', 'Share your referral link with other retailers!')}
+            onPress={() => Alert.alert(t.moreMenu.invite, t.common.comingSoon)}
           >
             <View style={styles.settingLeft}>
               <Ionicons name="person-add-outline" size={20} color={colors.primary} style={styles.settingIcon} />
-              <Text style={styles.settingLabel}>Invite Retailers to NEXUM</Text>
+              <Text style={styles.settingLabel}>{t.moreMenu.invite}</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
           </TouchableOpacity>
@@ -161,52 +155,9 @@ export default function MoreMenuScreen() {
         </View>
 
         {/* App version */}
-        <Text style={styles.version}>NEXUM v1.0.0</Text>
+        <Text style={styles.version}>{t.moreMenu.version}</Text>
 
       </ScrollView>
-
-      {/* Language modal */}
-      <Modal
-        visible={langModalOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setLangModalOpen(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>Select Language</Text>
-            {LANGUAGES.map((lang) => (
-              <TouchableOpacity
-                key={lang.key}
-                style={[
-                  styles.langOption,
-                  selectedLang === lang.key && styles.langOptionActive,
-                ]}
-                onPress={() => {
-                  setSelectedLang(lang.key);
-                  setLangModalOpen(false);
-                }}
-              >
-                <Text style={[
-                  styles.langOptionText,
-                  selectedLang === lang.key && styles.langOptionTextActive,
-                ]}>
-                  {lang.label}
-                </Text>
-                {selectedLang === lang.key && (
-                  <Ionicons name="checkmark" size={18} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={styles.modalClose}
-              onPress={() => setLangModalOpen(false)}
-            >
-              <Text style={styles.modalCloseText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -333,53 +284,4 @@ const makeStyles = (colors) => StyleSheet.create({
     marginTop: 8,
   },
 
-  // Language modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: spacing.lg,
-    paddingBottom: 36,
-    gap: 4,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontFamily: fonts.bold,
-    color: colors.text,
-    marginBottom: 12,
-  },
-  langOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: radii.lg,
-  },
-  langOptionActive: {
-    backgroundColor: `${colors.primary}12`,
-  },
-  langOptionText: {
-    fontSize: 15,
-    fontFamily: fonts.medium,
-    color: colors.text,
-  },
-  langOptionTextActive: {
-    color: colors.primary,
-  },
-  modalClose: {
-    marginTop: 8,
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  modalCloseText: {
-    fontSize: 14,
-    fontFamily: fonts.medium,
-    color: colors.textSecondary,
-  },
 });

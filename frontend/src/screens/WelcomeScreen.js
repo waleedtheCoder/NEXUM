@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -6,35 +6,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import CityIllustration from '../components/CityIllustration';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 
 export default function WelcomeScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
   const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const [lang, setLang] = useState('en');
-  const isUrdu = lang === 'ur';
-
-  const content = {
-    en: {
-      appName: 'NEXUM',
-      headline: 'Help us improve your product search experience!',
-      description: 'We need your permission to ensure the content we share is relevant and personalized to you.',
-      instruction: 'Tap Allow on the next screen to help us personalize your experience.',
-      button: 'Continue',
-      footer: 'You can always change this preference from your settings later.',
-    },
-    ur: {
-      appName: 'تعلقات',
-      headline: 'اپنے پروڈکٹ تلاش کے تجربے کو بہتر بنانے میں ہماری مدد کریں!',
-      description: 'ہمیں آپ کی اجازت کی ضرورت ہے تاکہ ہم جو مواد شیئر کرتے ہیں وہ آپ کے لیے متعلقہ ہو۔',
-      instruction: 'اپنے تجربے کو ذاتی نوعیت دینے کے لیے اگلی اسکرین پر اجازت دیں پر ٹیپ کریں۔',
-      button: 'جاری رکھیں',
-      footer: 'آپ بعد میں ترتیبات سے یہ ترجیح تبدیل کر سکتے ہیں۔',
-    },
-  };
-
-  const t = content[lang];
 
   const handleContinue = async () => {
     await AsyncStorage.setItem('has_seen_onboarding', 'true');
@@ -44,27 +23,21 @@ export default function WelcomeScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      <TouchableOpacity
-        style={[styles.langBtn, { top: insets.top + 12 }]}
-        onPress={() => setLang(isUrdu ? 'en' : 'ur')}
-      >
-        <Text style={styles.langText}>{isUrdu ? 'English' : 'اردو'}</Text>
-      </TouchableOpacity>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.illustrationWrap}>
           <CityIllustration />
         </View>
-        <Text style={[styles.appName, isUrdu && styles.urdu]}>{t.appName}</Text>
-        <Text style={[styles.headline, isUrdu && styles.urdu]}>{t.headline}</Text>
-        <Text style={[styles.desc, isUrdu && styles.urdu]}>{t.description}</Text>
+        <Text style={[styles.appName, isUrdu && styles.urdu]}>{t.welcome.appName}</Text>
+        <Text style={[styles.headline, isUrdu && styles.urdu]}>{t.welcome.headline}</Text>
+        <Text style={[styles.desc, isUrdu && styles.urdu]}>{t.welcome.description}</Text>
         <View style={styles.instructionBox}>
-          <Text style={[styles.instruction, isUrdu && styles.urdu]}>{t.instruction}</Text>
+          <Text style={[styles.instruction, isUrdu && styles.urdu]}>{t.welcome.instruction}</Text>
         </View>
         <TouchableOpacity style={styles.btn} onPress={handleContinue}>
-          <Text style={styles.btnText}>{t.button}</Text>
+          <Text style={styles.btnText}>{t.welcome.button}</Text>
         </TouchableOpacity>
-        <Text style={[styles.footer, isUrdu && styles.urdu]}>{t.footer}</Text>
+        <Text style={[styles.footer, isUrdu && styles.urdu]}>{t.welcome.footer}</Text>
       </ScrollView>
     </View>
   );
@@ -72,9 +45,7 @@ export default function WelcomeScreen() {
 
 const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  langBtn: { position: 'absolute', right: 16, zIndex: 10, backgroundColor: colors.primaryLight, borderRadius: radii.full, paddingHorizontal: 14, paddingVertical: 6 },
-  langText: { fontSize: 13, fontFamily: fonts.medium, color: colors.primary },
-  scroll: { padding: spacing.lg, paddingTop: 60, alignItems: 'center' },
+  scroll: { padding: spacing.lg, paddingTop: spacing.lg, alignItems: 'center' },
   illustrationWrap: { marginBottom: spacing.lg },
   appName: { fontSize: 28, fontFamily: fonts.bold, color: colors.primary, marginBottom: 8 },
   headline: { fontSize: 18, fontFamily: fonts.semiBold, color: colors.text, textAlign: 'center', marginBottom: 12, lineHeight: 26 },

@@ -10,15 +10,16 @@ import BottomNav from '../components/BottomNav';
 import HomeTopBar from '../components/HomeTopBar';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getListings, getCategories, getPromotions } from '../services/marketplaceApi';
 
 // ── Static / navigation-only data (no API equivalent) ────────────────────────
 const QUICK_CATEGORIES = [
-  { icon: 'pricetag', label: 'Offers' },
-  { icon: 'people', label: 'New Suppliers' },
-  { icon: 'trending-up', label: 'Restock Deals' },
-  { icon: 'cube', label: 'Bulk Essentials' },
-  { icon: 'location', label: 'Local Favorites' },
+  { icon: 'pricetag',  labelKey: 'offers'         },
+  { icon: 'people',    labelKey: 'newSuppliers'    },
+  { icon: 'trending-up', labelKey: 'restockDeals'  },
+  { icon: 'cube',      labelKey: 'bulkEssentials'  },
+  { icon: 'location',  labelKey: 'localFavorites'  },
 ];
 
 // No static fallbacks — promotions are supplier-created and fetched from the API
@@ -28,6 +29,7 @@ const CATEGORY_ICON_FALLBACK = 'pricetag-outline';
 
 export default function HomeScreen() {
   const { colors } = useTheme();
+  const { t } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -120,7 +122,7 @@ export default function HomeScreen() {
                 style={styles.shopNowBtn}
                 onPress={() => navigation.navigate('ProductDetail', { product: { id: promos[0].listingId, title: promos[0].title, price: promos[0].discountedPrice, imageUrl: promos[0].imageUrl } })}
               >
-                <Text style={styles.shopNowText}>Shop Now</Text>
+                <Text style={styles.shopNowText}>{t.home.shopNow}</Text>
               </TouchableOpacity>
             </View>
             {promos[0].imageUrl ? (
@@ -145,7 +147,7 @@ export default function HomeScreen() {
                 <View style={styles.quickIcon}>
                   <Ionicons name={`${item.icon}-outline`} size={22} color={colors.primary} />
                 </View>
-                <Text style={styles.quickLabel}>{item.label}</Text>
+                <Text style={styles.quickLabel}>{t.home[item.labelKey]}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -155,9 +157,9 @@ export default function HomeScreen() {
         {!loadingCategories && categories.length > 0 && (
           <View>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Browse Categories</Text>
+              <Text style={styles.sectionTitle}>{t.home.browseCategories}</Text>
               <TouchableOpacity onPress={() => navigation.navigate('MarketplaceBrowsing')}>
-                <Text style={styles.viewAll}>View all</Text>
+                <Text style={styles.viewAll}>{t.home.viewAll}</Text>
               </TouchableOpacity>
             </View>
             <FlatList
@@ -181,7 +183,7 @@ export default function HomeScreen() {
                   <View style={{ padding: 8 }}>
                     <Text style={styles.catName} numberOfLines={1}>{item.name}</Text>
                     {item.count != null && (
-                      <Text style={styles.catSub}>{item.count} listings</Text>
+                      <Text style={styles.catSub}>{item.count} {t.home.listings}</Text>
                     )}
                   </View>
                 </TouchableOpacity>
@@ -192,9 +194,9 @@ export default function HomeScreen() {
 
         {/* ── Featured listings ─────────────────────────────────────────── */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Featured Products</Text>
+          <Text style={styles.sectionTitle}>{t.home.featuredProducts}</Text>
           <TouchableOpacity onPress={() => navigation.navigate('MarketplaceBrowsing')}>
-            <Text style={styles.viewAll}>View all</Text>
+            <Text style={styles.viewAll}>{t.home.viewAll}</Text>
           </TouchableOpacity>
         </View>
 
@@ -209,7 +211,7 @@ export default function HomeScreen() {
             contentContainerStyle={{ paddingHorizontal: spacing.md, gap: 12 }}
             ListEmptyComponent={
               <Text style={{ color: colors.textSecondary, paddingHorizontal: spacing.md, fontSize: 13 }}>
-                No featured products right now.
+                {t.home.noFeatured}
               </Text>
             }
             renderItem={({ item }) => (
@@ -226,7 +228,7 @@ export default function HomeScreen() {
                 )}
                 {item.isFeatured && (
                   <View style={styles.featBadge}>
-                    <Text style={styles.featBadgeText}>Featured</Text>
+                    <Text style={styles.featBadgeText}>{t.home.featured}</Text>
                   </View>
                 )}
                 <View style={{ padding: 8 }}>
@@ -245,7 +247,7 @@ export default function HomeScreen() {
         {/* ── Special Offers (supplier-created promotions only) ─────────── */}
         {promos.length > 0 && (
           <View style={styles.sectionPad}>
-            <Text style={styles.sectionTitle}>Special Offers</Text>
+            <Text style={styles.sectionTitle}>{t.home.specialOffers}</Text>
             {promos.map((p) => (
               <TouchableOpacity
                 key={p.id}

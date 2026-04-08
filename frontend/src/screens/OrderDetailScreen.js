@@ -9,6 +9,7 @@ import { useRoute } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getOrderDetail, cancelOrder, createReview } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
@@ -32,6 +33,7 @@ function InfoRow({ label, value }) {
 }
 
 function StatusTimeline({ currentStatus }) {
+  const { t } = useLanguage();
   const isCancelled    = currentStatus === 'cancelled';
   const currentIndex   = STATUS_STEPS.indexOf(currentStatus);
 
@@ -39,7 +41,7 @@ function StatusTimeline({ currentStatus }) {
     return (
       <View style={styles.cancelledBanner}>
         <Ionicons name="close-circle" size={20} color="#EF4444" />
-        <Text style={styles.cancelledText}>This order was cancelled</Text>
+        <Text style={styles.cancelledText}>{t.common.cancelled}</Text>
       </View>
     );
   }
@@ -78,10 +80,10 @@ function StatusTimeline({ currentStatus }) {
                 isActive && { color: cfg.color, fontFamily: fonts.semiBold },
                 !isDone  && { color: colors.textLight },
               ]}>
-                {cfg.label}
+                {t.common[step] || cfg.label}
               </Text>
               {isActive && (
-                <Text style={[styles.timelineSub, { color: cfg.color }]}>Current status</Text>
+                <Text style={[styles.timelineSub, { color: cfg.color }]}>{t.orderDetail.currentStatus}</Text>
               )}
             </View>
           </View>
@@ -93,6 +95,7 @@ function StatusTimeline({ currentStatus }) {
 
 export default function OrderDetailScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
     const styles = makeStyles(colors);
   const insets  = useSafeAreaInsets();
   const route   = useRoute();
@@ -136,10 +139,10 @@ export default function OrderDetailScreen() {
   }, [orderId]);
 
   const handleCancel = () => {
-    Alert.alert('Cancel Order', 'Are you sure you want to cancel this order?', [
-      { text: 'No', style: 'cancel' },
+    Alert.alert(t.orderDetail.cancelOrder, t.orderDetail.cancelConfirmMsg, [
+      { text: t.common.cancel, style: 'cancel' },
       {
-        text: 'Yes, Cancel',
+        text: t.orderDetail.cancelYes,
         style: 'destructive',
         onPress: async () => {
           setCancelling(true);
@@ -147,7 +150,7 @@ export default function OrderDetailScreen() {
             const updated = await cancelOrder(order.id, authArgs);
             setOrder(updated);
           } catch (err) {
-            Alert.alert('Error', err.message || 'Could not cancel order.');
+            Alert.alert(t.orderDetail.cancelOrder, err.message || t.orderDetail.cancelFailed);
           } finally {
             setCancelling(false);
           }
@@ -162,9 +165,9 @@ export default function OrderDetailScreen() {
       await createReview(order.id, { rating: reviewRating, text: reviewText.trim() }, authArgs);
       setReviewSubmitted(true);
       setReviewModalOpen(false);
-      Alert.alert('Thank you!', 'Your review has been submitted.');
+      Alert.alert(t.orderDetail.thankYou, t.orderDetail.reviewSentMsg);
     } catch (err) {
-      Alert.alert('Error', err.message || 'Could not submit review.');
+      Alert.alert(t.orderDetail.rateExp, err.message || t.orderDetail.reviewFailed);
     } finally {
       setSubmittingReview(false);
     }
@@ -177,7 +180,7 @@ export default function OrderDetailScreen() {
     return (
       <View style={[styles.container, { paddingBottom: insets.bottom }]}>
         <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-        <ScreenHeader title="Order Details" showBack />
+        <ScreenHeader title={t.orderDetail.title} showBack />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -189,10 +192,10 @@ export default function OrderDetailScreen() {
     return (
       <View style={[styles.container, { paddingBottom: insets.bottom }]}>
         <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-        <ScreenHeader title="Order Details" showBack />
+        <ScreenHeader title={t.orderDetail.title} showBack />
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={40} color={colors.accent} />
-          <Text style={styles.errorText}>{error || 'Order not found.'}</Text>
+          <Text style={styles.errorText}>{error || t.orderDetail.notFound}</Text>
         </View>
       </View>
     );
@@ -201,7 +204,7 @@ export default function OrderDetailScreen() {
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title="Order Details" showBack />
+      <ScreenHeader title={t.orderDetail.title} showBack />
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
@@ -220,7 +223,7 @@ export default function OrderDetailScreen() {
             <View style={[styles.statusBadge, { backgroundColor: `${statusCfg.color}20` }]}>
               <Ionicons name={statusCfg.icon} size={13} color={statusCfg.color} />
               <Text style={[styles.statusBadgeText, { color: statusCfg.color }]}>
-                {statusCfg.label}
+                {t.common[statusKey] || statusCfg.label}
               </Text>
             </View>
           </View>
@@ -228,18 +231,18 @@ export default function OrderDetailScreen() {
 
         {/* Order summary */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Order Summary</Text>
+          <Text style={styles.sectionTitle}>{t.orderDetail.summary}</Text>
           <View style={styles.infoCard}>
-            <InfoRow label="Order ID"       value={`#${order.id}`} />
+            <InfoRow label={t.orderDetail.orderId}   value={`#${order.id}`} />
             <View style={styles.hairline} />
-            <InfoRow label="Quantity"       value={`${order.quantity} units`} />
+            <InfoRow label={t.orderDetail.quantity}  value={`${order.quantity} ${t.orderDetail.units}`} />
             <View style={styles.hairline} />
-            <InfoRow label="Unit Price"     value={`Rs ${Number(order.unitPrice).toLocaleString()}`} />
+            <InfoRow label={t.orderDetail.unitPrice} value={`Rs ${Number(order.unitPrice).toLocaleString()}`} />
             <View style={styles.hairline} />
-            <InfoRow label="Order Date"     value={order.orderDate} />
+            <InfoRow label={t.orderDetail.orderDate} value={order.orderDate} />
             <View style={styles.hairline} />
             <View style={[styles.infoRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalLabel}>{t.orderDetail.total}</Text>
               <Text style={styles.totalValue}>Rs {Number(order.totalPrice).toLocaleString()}</Text>
             </View>
           </View>
@@ -247,7 +250,7 @@ export default function OrderDetailScreen() {
 
         {/* Status timeline */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Order Status</Text>
+          <Text style={styles.sectionTitle}>{t.orderDetail.orderStatus}</Text>
           <View style={styles.infoCard}>
             <StatusTimeline currentStatus={statusKey} />
           </View>
@@ -264,7 +267,7 @@ export default function OrderDetailScreen() {
               ? <ActivityIndicator size="small" color="#EF4444" />
               : <>
                   <Ionicons name="close-circle-outline" size={16} color="#EF4444" />
-                  <Text style={styles.cancelBtnText}>Cancel Order</Text>
+                  <Text style={styles.cancelBtnText}>{t.orderDetail.cancelOrder}</Text>
                 </>
             }
           </TouchableOpacity>
@@ -274,13 +277,13 @@ export default function OrderDetailScreen() {
         {statusKey === 'delivered' && !reviewSubmitted && !order.hasReview && (
           <TouchableOpacity style={styles.reviewBtn} onPress={() => setReviewModalOpen(true)}>
             <Ionicons name="star-outline" size={16} color={colors.primary} />
-            <Text style={styles.reviewBtnText}>Leave a Review</Text>
+            <Text style={styles.reviewBtnText}>{t.orderDetail.leaveReview}</Text>
           </TouchableOpacity>
         )}
         {(reviewSubmitted || order.hasReview) && statusKey === 'delivered' && (
           <View style={styles.reviewedBadge}>
             <Ionicons name="checkmark-circle" size={16} color={colors.green || '#10B981'} />
-            <Text style={styles.reviewedText}>Review submitted</Text>
+            <Text style={styles.reviewedText}>{t.orderDetail.reviewSubmitted}</Text>
           </View>
         )}
 
@@ -291,7 +294,7 @@ export default function OrderDetailScreen() {
         <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setReviewModalOpen(false)} />
         <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 16 }]}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Rate your experience</Text>
+            <Text style={styles.modalTitle}>{t.orderDetail.rateExp}</Text>
             <TouchableOpacity onPress={() => setReviewModalOpen(false)}>
               <Ionicons name="close" size={22} color={colors.text} />
             </TouchableOpacity>
@@ -316,7 +319,7 @@ export default function OrderDetailScreen() {
             style={styles.reviewInput}
             value={reviewText}
             onChangeText={setReviewText}
-            placeholder="Share your experience (optional)"
+            placeholder={t.orderDetail.shareExp}
             placeholderTextColor={colors.textLight}
             multiline
             textAlignVertical="top"
@@ -329,7 +332,7 @@ export default function OrderDetailScreen() {
           >
             {submittingReview
               ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={styles.submitReviewText}>Submit Review</Text>
+              : <Text style={styles.submitReviewText}>{t.orderDetail.submitReview}</Text>
             }
           </TouchableOpacity>
         </View>

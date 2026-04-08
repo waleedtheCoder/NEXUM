@@ -9,6 +9,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import BottomNav from '../components/BottomNav';
 import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getConversations } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
@@ -50,6 +51,7 @@ export default function ChatListScreen() {
   const navigation = useNavigation();
   const insets     = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
   const { idToken, sessionId, refreshToken, updateUser, isLoggedIn } = useUser();
 
   const [conversations, setConversations] = useState([]);
@@ -85,6 +87,13 @@ export default function ChatListScreen() {
     return <ChatGuestPrompt insets={insets} colors={colors} navigation={navigation} />;
   }
 
+  const CHIP_LABELS = {
+    'All': t.chatList.all,
+    'Buying': t.chatList.buying,
+    'Selling': t.chatList.selling,
+    'Favourites': t.chatList.favourites,
+  };
+
   const chipFilter = activeChip.toLowerCase();
   const filtered = conversations.filter((c) => {
     const matchesChip =
@@ -106,7 +115,7 @@ export default function ChatListScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.headerTitle}>Messages</Text>
+        <Text style={styles.headerTitle}>{t.chatList.title}</Text>
         <TouchableOpacity style={styles.composeBtn}>
           <Ionicons name="create-outline" size={22} color={colors.primary} />
         </TouchableOpacity>
@@ -117,7 +126,7 @@ export default function ChatListScreen() {
         <Ionicons name="search-outline" size={16} color={colors.textLight} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search conversations…"
+          placeholder={t.chatList.searchPlaceholder}
           placeholderTextColor={colors.textLight}
           value={search}
           onChangeText={setSearch}
@@ -133,7 +142,7 @@ export default function ChatListScreen() {
             onPress={() => setActiveChip(chip)}
           >
             <Text style={[styles.chipText, activeChip === chip && styles.chipTextActive]}>
-              {chip}
+              {CHIP_LABELS[chip] || chip}
             </Text>
           </TouchableOpacity>
         ))}
@@ -168,12 +177,12 @@ export default function ChatListScreen() {
           ListEmptyComponent={
             <View style={styles.center}>
               <Ionicons name="chatbubbles-outline" size={52} color={colors.textLight} />
-              <Text style={styles.errorText}>No conversations found</Text>
+              <Text style={styles.errorText}>{t.chatList.noConversations}</Text>
               <TouchableOpacity
                 style={styles.retryBtn}
                 onPress={() => navigation.navigate('MarketplaceBrowsing')}
               >
-                <Text style={styles.retryText}>Browse Marketplace</Text>
+                <Text style={styles.retryText}>{t.chatList.browse}</Text>
               </TouchableOpacity>
             </View>
           }
@@ -295,32 +304,33 @@ const makeStyles = (colors) => StyleSheet.create({
 });
 
 function ChatGuestPrompt({ insets, colors, navigation }) {
+  const { t } = useLanguage();
   const styles = makeStyles(colors);
   return (
     <View style={[styles.guestContainer, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <View style={[styles.guestTopBar, { paddingTop: insets.top + 8 }]}>
-        <Text style={styles.guestTopBarTitle}>Messages</Text>
+        <Text style={styles.guestTopBarTitle}>{t.chatList.title}</Text>
       </View>
       <View style={styles.guestBody}>
         <View style={styles.guestIconCircle}>
           <Ionicons name="chatbubbles-outline" size={44} color={colors.primary} />
         </View>
-        <Text style={styles.guestHeading}>Sign in to view your chats</Text>
+        <Text style={styles.guestHeading}>{t.chatList.signInTitle}</Text>
         <Text style={styles.guestSubheading}>
-          Connect with suppliers, ask questions, and negotiate orders — all in one place.
+          {t.chatList.signInSubtext}
         </Text>
         <TouchableOpacity
           style={styles.guestPrimaryBtn}
           onPress={() => navigation.navigate('SavedAccountLogin')}
         >
-          <Text style={styles.guestPrimaryBtnText}>Sign In</Text>
+          <Text style={styles.guestPrimaryBtnText}>{t.chatList.signIn}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.guestSecondaryBtn}
           onPress={() => navigation.navigate('SignUp')}
         >
-          <Text style={styles.guestSecondaryBtnText}>Create an account</Text>
+          <Text style={styles.guestSecondaryBtnText}>{t.chatList.createAccount}</Text>
         </TouchableOpacity>
       </View>
       <BottomNav activeTab="chat" />

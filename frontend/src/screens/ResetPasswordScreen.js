@@ -10,8 +10,9 @@ import ScreenHeader from '../components/ScreenHeader';
 import { resetPasswordWithBackend } from '../services/authApi';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 
-function Rule({ valid, text }) {
+function Rule({ valid, text, styles }) {
   return (
     <View style={styles.ruleRow}>
       <View style={[styles.ruleDot, valid ? styles.valid : styles.invalid]}>
@@ -24,6 +25,7 @@ function Rule({ valid, text }) {
 
 export default function ResetPasswordScreen() {
   const { colors } = useTheme();
+  const { t } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const route = useRoute();
@@ -44,10 +46,10 @@ export default function ResetPasswordScreen() {
   const allValid = Object.values(rules).every(Boolean);
 
   const handleVerify = async () => {
-    if (!allValid) { Alert.alert('Error', 'Password does not meet requirements.'); return; }
-    if (newPass !== confirm) { Alert.alert('Error', 'Passwords do not match.'); return; }
+    if (!allValid) { Alert.alert(t.common.error, t.resetPassword.reqsNotMet); return; }
+    if (newPass !== confirm) { Alert.alert(t.common.error, t.resetPassword.mismatch); return; }
     if (!email || !otp) {
-      Alert.alert('Error', 'Reset session expired. Please request OTP again.');
+      Alert.alert(t.common.error, t.resetPassword.sessionExpired);
       navigation.reset({ index: 0, routes: [{ name: 'ForgotPassword' }] });
       return;
     }
@@ -60,30 +62,28 @@ export default function ResetPasswordScreen() {
         newPassword: newPass,
       });
       setLoading(false);
-      Alert.alert('Success', 'Password reset successful. Please sign in.', [
-        { text: 'OK', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }) },
+      Alert.alert(t.resetPassword.success, t.resetPassword.successMsg, [
+        { text: t.common.confirm, onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }) },
       ]);
     } catch (err) {
       setLoading(false);
-      Alert.alert('Reset Failed', err?.message || 'Unable to reset password.');
+      Alert.alert(t.resetPassword.failed, err?.message || t.resetPassword.failedMsg);
     }
   };
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title="Reset Password" showBack />
+      <ScreenHeader title={t.resetPassword.title} showBack />
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.message}>
-          Your security is our priority. Reset your password to continue managing your wholesale account.
-        </Text>
+        <Text style={styles.message}>{t.resetPassword.subtitle}</Text>
 
-        <Text style={styles.label}>New Password *</Text>
+        <Text style={styles.label}>{t.resetPassword.newPassword} *</Text>
         <View style={styles.passWrap}>
           <TextInput
             style={styles.passInput} value={newPass} onChangeText={setNewPass}
-            secureTextEntry={!showNew} placeholder="Enter new password"
+            secureTextEntry={!showNew} placeholder={t.resetPassword.newPasswordPlaceholder}
             placeholderTextColor={colors.textLight}
           />
           <TouchableOpacity onPress={() => setShowNew(!showNew)}>
@@ -91,11 +91,11 @@ export default function ResetPasswordScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.label}>Confirm Password *</Text>
+        <Text style={styles.label}>{t.resetPassword.confirmPassword} *</Text>
         <View style={styles.passWrap}>
           <TextInput
             style={styles.passInput} value={confirm} onChangeText={setConfirm}
-            secureTextEntry={!showConfirm} placeholder="Re-enter new password"
+            secureTextEntry={!showConfirm} placeholder={t.resetPassword.confirmPlaceholder}
             placeholderTextColor={colors.textLight}
           />
           <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
@@ -104,18 +104,18 @@ export default function ResetPasswordScreen() {
         </View>
 
         <View style={styles.rulesBox}>
-          <Text style={styles.rulesTitle}>Password must contain:</Text>
-          <Rule valid={rules.minLength} text="At least 8 characters" />
-          <Rule valid={rules.hasNumber} text="One number" />
-          <Rule valid={rules.hasLetter} text="One letter" />
-          <Rule valid={rules.hasSpecial} text="One special character (@, #, $, %, etc.)" />
+          <Text style={styles.rulesTitle}>{t.resetPassword.passwordReqs}</Text>
+          <Rule valid={rules.minLength} text={t.resetPassword.req8chars} styles={styles} />
+          <Rule valid={rules.hasNumber} text={t.resetPassword.reqNumber} styles={styles} />
+          <Rule valid={rules.hasLetter} text={t.resetPassword.reqLetter} styles={styles} />
+          <Rule valid={rules.hasSpecial} text={t.resetPassword.reqSpecial} styles={styles} />
         </View>
 
         <TouchableOpacity
           style={[styles.verifyBtn, (!allValid || loading) && styles.verifyBtnDisabled]}
           onPress={handleVerify} disabled={!allValid || loading}
         >
-          <Text style={styles.verifyBtnText}>{loading ? 'Resetting...' : 'Reset Password'}</Text>
+          <Text style={styles.verifyBtnText}>{loading ? t.resetPassword.resetting : t.resetPassword.reset}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

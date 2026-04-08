@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import BottomNav from '../components/BottomNav';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { searchListings, getTrendingSearch } from '../services/marketplaceApi';
 
 const FILTER_CONDITIONS = ['New', 'Bulk Wholesale', 'Clearance Stock'];
@@ -24,6 +25,7 @@ const POPULAR_SUPPLIERS_FALLBACK = [
 
 export default function SearchScreen() {
   const { colors } = useTheme();
+  const { t } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -138,7 +140,7 @@ export default function SearchScreen() {
           <Ionicons name="search-outline" size={16} color="rgba(255,255,255,0.7)" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search products or suppliers…"
+            placeholder={t.search.placeholder}
             placeholderTextColor="rgba(255,255,255,0.6)"
             value={query}
             onChangeText={setQuery}
@@ -171,14 +173,14 @@ export default function SearchScreen() {
             contentContainerStyle={styles.resultsList}
             ListHeaderComponent={
               <Text style={styles.resultsHeader}>
-                {results.length} result{results.length !== 1 ? 's' : ''}
+                {results.length} {t.search.results}
               </Text>
             }
             ListEmptyComponent={
               <View style={styles.center}>
                 <Ionicons name="search-outline" size={48} color={colors.textLight} />
                 <Text style={{ color: colors.textSecondary, fontSize: 14, fontFamily: fonts.regular, marginTop: 8 }}>
-                  No results found
+                  {t.search.noResults}
                 </Text>
               </View>
             }
@@ -218,9 +220,9 @@ export default function SearchScreen() {
               {recents.length > 0 && (
                 <View style={styles.section}>
                   <View style={styles.sectionHeaderRow}>
-                    <Text style={styles.sectionTitle}>Recent Searches</Text>
+                    <Text style={styles.sectionTitle}>{t.search.recentSearches}</Text>
                     <TouchableOpacity onPress={() => setRecents([])}>
-                      <Text style={styles.clearAll}>Clear all</Text>
+                      <Text style={styles.clearAll}>{t.search.clearAll}</Text>
                     </TouchableOpacity>
                   </View>
                   <View style={styles.chips}>
@@ -246,7 +248,7 @@ export default function SearchScreen() {
 
               {/* Popular products */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Popular Products</Text>
+                <Text style={styles.sectionTitle}>{t.search.popularProducts}</Text>
                 {trendingLoading ? (
                   <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
                 ) : (
@@ -263,7 +265,7 @@ export default function SearchScreen() {
 
               {/* Popular suppliers */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Popular Suppliers</Text>
+                <Text style={styles.sectionTitle}>{t.search.popularSuppliers}</Text>
                 {trendingLoading ? (
                   <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 8 }} />
                 ) : (
@@ -290,20 +292,20 @@ export default function SearchScreen() {
         <TouchableOpacity style={styles.filterBackdrop} activeOpacity={1} onPress={() => setFilterVisible(false)} />
         <View style={[styles.filterSheet, { paddingBottom: insets.bottom + 16 }]}>
           <View style={styles.filterHeader}>
-            <Text style={styles.filterTitle}>Filters</Text>
+            <Text style={styles.filterTitle}>{t.search.filters}</Text>
             <TouchableOpacity onPress={() => { clearFilters(); }}>
-              <Text style={styles.clearFiltersText}>Clear all</Text>
+              <Text style={styles.clearFiltersText}>{t.search.clearAll}</Text>
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.filterLabel}>Price Range (Rs)</Text>
+            <Text style={styles.filterLabel}>{t.search.priceRange}</Text>
             <View style={styles.priceRow}>
               <TextInput
                 style={[styles.filterInput, styles.flex1]}
                 value={priceMin}
                 onChangeText={setPriceMin}
-                placeholder="Min"
+                placeholder={t.search.min}
                 placeholderTextColor={colors.textLight}
                 keyboardType="numeric"
               />
@@ -312,13 +314,13 @@ export default function SearchScreen() {
                 style={[styles.filterInput, styles.flex1]}
                 value={priceMax}
                 onChangeText={setPriceMax}
-                placeholder="Max"
+                placeholder={t.search.max}
                 placeholderTextColor={colors.textLight}
                 keyboardType="numeric"
               />
             </View>
 
-            <Text style={styles.filterLabel}>Condition</Text>
+            <Text style={styles.filterLabel}>{t.search.condition}</Text>
             <View style={styles.filterChips}>
               {FILTER_CONDITIONS.map((c) => (
                 <TouchableOpacity
@@ -331,7 +333,7 @@ export default function SearchScreen() {
               ))}
             </View>
 
-            <Text style={styles.filterLabel}>Unit</Text>
+            <Text style={styles.filterLabel}>{t.search.unit}</Text>
             <View style={styles.filterChips}>
               {FILTER_UNITS.map((u) => (
                 <TouchableOpacity
@@ -352,7 +354,7 @@ export default function SearchScreen() {
               if (submitted) doSearch(query, activeFilters());
             }}
           >
-            <Text style={styles.applyFilterText}>Apply Filters</Text>
+            <Text style={styles.applyFilterText}>{t.search.applyFilters}</Text>
           </TouchableOpacity>
         </View>
       </Modal>

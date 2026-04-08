@@ -47,10 +47,10 @@ export function UserProvider({ children }) {
   const [isLoading, setIsLoading]       = useState(true);
 
   // ── Theme state ─────────────────────────────────────────────────────────────
-  // Stored under 'nexum_theme' — a separate key that is intentionally NOT
-  // cleared on logout. The user's theme preference should survive across
-  // account switches and logouts.
   const [isDark, setIsDark] = useState(false);
+
+  // ── Language state ───────────────────────────────────────────────────────────
+  const [isUrdu, setIsUrdu] = useState(false);
 
   const isLoggedIn = !!sessionId;
 
@@ -58,13 +58,14 @@ export function UserProvider({ children }) {
   useEffect(() => {
     const loadSession = async () => {
       try {
-        const [sid, userData, userRole, idTok, refreshTok, themeVal] = await Promise.all([
+        const [sid, userData, userRole, idTok, refreshTok, themeVal, langVal] = await Promise.all([
           AsyncStorage.getItem('session_id'),
           AsyncStorage.getItem('user_data'),
           AsyncStorage.getItem('user_role'),
           AsyncStorage.getItem('id_token'),
           AsyncStorage.getItem('refresh_token'),
-          AsyncStorage.getItem('nexum_theme'),   // ← theme key
+          AsyncStorage.getItem('nexum_theme'),
+          AsyncStorage.getItem('nexum_language'),
         ]);
 
         if (sid)       setSessionId(sid);
@@ -72,7 +73,8 @@ export function UserProvider({ children }) {
         if (userRole)  setRole(userRole);
         if (idTok)     setIdToken(idTok);
         if (refreshTok) setRefreshToken(refreshTok);
-        if (themeVal === 'dark') setIsDark(true);   // default is light
+        if (themeVal === 'dark') setIsDark(true);
+        if (langVal === 'ur') setIsUrdu(true);
       } catch (e) {
         console.error('Failed to load session:', e);
       } finally {
@@ -91,6 +93,17 @@ export function UserProvider({ children }) {
       await AsyncStorage.setItem('nexum_theme', next ? 'dark' : 'light');
     } catch (e) {
       console.warn('Failed to persist theme preference:', e);
+    }
+  };
+
+  // ── Toggle language ───────────────────────────────────────────────────────────
+  const toggleLanguage = async () => {
+    const next = !isUrdu;
+    setIsUrdu(next);
+    try {
+      await AsyncStorage.setItem('nexum_language', next ? 'ur' : 'en');
+    } catch (e) {
+      console.warn('Failed to persist language preference:', e);
     }
   };
 
@@ -185,6 +198,9 @@ export function UserProvider({ children }) {
         // Theme
         isDark,
         toggleTheme,
+        // Language
+        isUrdu,
+        toggleLanguage,
       }}
     >
       {children}

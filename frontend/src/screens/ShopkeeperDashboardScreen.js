@@ -21,6 +21,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../context/UserContext';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getOrders } from '../services/marketplaceApi';
 
 const STATUS_COLORS = {
@@ -31,43 +32,45 @@ const STATUS_COLORS = {
   cancelled: '#EF4444',
 };
 
-const MENU_ITEMS = [
-  {
-    title: 'Browse Marketplace',
-    desc:  'Discover products from verified suppliers',
-    icon:  'storefront-outline',
-    screen: 'MarketplaceBrowsing',
-  },
-  {
-    title: 'My Orders',
-    desc:  'View your full purchase history',
-    icon:  'receipt-outline',
-    screen: 'OrderHistory',
-  },
-  {
-    title: 'Saved Listings',
-    desc:  "Products you've saved for later",
-    icon:  'bookmark-outline',
-    screen: 'SavedListings',
-  },
-  {
-    title: 'Supplier Network',
-    desc:  'Manage your trusted suppliers',
-    icon:  'people-outline',
-    screen: 'SupplierNetwork',
-  },
-  {
-    title: 'Restock Reminders',
-    desc:  'Set alerts for frequently ordered products',
-    icon:  'notifications-outline',
-    screen: 'RestockReminders',
-  },
-];
 
 export default function ShopkeeperDashboardScreen() {
   const { colors, isDark } = useTheme();
+  const { t, isUrdu } = useLanguage();
   const styles = makeStyles(colors, isDark);
   const navigation = useNavigation();
+
+  const MENU_ITEMS = [
+    {
+      title: t.shopkeeperDashboard.browseMarketplace,
+      desc:  t.shopkeeperDashboard.browseDesc,
+      icon:  'storefront-outline',
+      screen: 'MarketplaceBrowsing',
+    },
+    {
+      title: t.shopkeeperDashboard.myOrders,
+      desc:  t.shopkeeperDashboard.myOrdersDesc,
+      icon:  'receipt-outline',
+      screen: 'OrderHistory',
+    },
+    {
+      title: t.shopkeeperDashboard.savedListings,
+      desc:  t.shopkeeperDashboard.savedDesc,
+      icon:  'bookmark-outline',
+      screen: 'SavedListings',
+    },
+    {
+      title: t.shopkeeperDashboard.supplierNetwork,
+      desc:  t.shopkeeperDashboard.supplierNetworkDesc,
+      icon:  'people-outline',
+      screen: 'SupplierNetwork',
+    },
+    {
+      title: t.shopkeeperDashboard.restockReminders,
+      desc:  t.shopkeeperDashboard.restockDesc,
+      icon:  'notifications-outline',
+      screen: 'RestockReminders',
+    },
+  ];
   const insets = useSafeAreaInsets();
   const { user, logout, role, idToken, sessionId, refreshToken, updateUser } = useUser();
 
@@ -158,7 +161,7 @@ export default function ShopkeeperDashboardScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.topBarBackBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>Shopkeeper View</Text>
+        <Text style={styles.topBarTitle}>{t.shopkeeperDashboard.title}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -176,8 +179,8 @@ export default function ShopkeeperDashboardScreen() {
             <View style={styles.modeBannerLeft}>
               <Ionicons name="swap-horizontal" size={20} color="#fff" />
               <View>
-                <Text style={styles.modeBannerTitle}>You're in Shopkeeper Mode</Text>
-                <Text style={styles.modeBannerSub}>Tap to switch back to Supplier Mode</Text>
+                <Text style={styles.modeBannerTitle}>{t.shopkeeperDashboard.inShopkeeperMode}</Text>
+                <Text style={styles.modeBannerSub}>{t.shopkeeperDashboard.tapToSwitch}</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#fff" />
@@ -191,8 +194,8 @@ export default function ShopkeeperDashboardScreen() {
             <View style={styles.modeBannerLeft}>
               <Ionicons name="storefront-outline" size={20} color={colors.primary} />
               <View>
-                <Text style={styles.modeBannerTitleAlt}>Want to sell on NEXUM?</Text>
-                <Text style={styles.modeBannerSubAlt}>Tap to register as a supplier</Text>
+                <Text style={styles.modeBannerTitleAlt}>{t.shopkeeperDashboard.wantToSell}</Text>
+                <Text style={styles.modeBannerSubAlt}>{t.shopkeeperDashboard.tapToRegister}</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.primary} />
@@ -201,7 +204,7 @@ export default function ShopkeeperDashboardScreen() {
 
         {/* Greeting */}
         <View style={styles.greetSection}>
-          <Text style={styles.greetText}>Hello, {user?.name || 'Retailer'} 👋</Text>
+          <Text style={styles.greetText}>{t.shopkeeperDashboard.hello}, {user?.name || t.accountSettings.retailer} 👋</Text>
           <Text style={styles.greetSub}>{user?.email || 'Shopkeeper Dashboard'}</Text>
         </View>
 
@@ -219,7 +222,7 @@ export default function ShopkeeperDashboardScreen() {
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{user?.name || 'Your Profile'}</Text>
             <Text style={styles.profileRole}>
-              {isSupplier ? 'Supplier (Shopkeeper Mode)' : 'Shopkeeper Account'}
+              {isSupplier ? t.editProfile.supplierMode : t.editProfile.shopkeeperAccount}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.primary} />
@@ -229,14 +232,14 @@ export default function ShopkeeperDashboardScreen() {
         <View style={styles.statsRow}>
           {[
             {
-              label: 'Orders',
+              label: t.shopkeeperDashboard.orders,
               value: ordersLoading ? '…' : String(orders.length),
               icon: 'receipt-outline',
               onPress: () => navigation.navigate('OrderHistory'),
             },
-            { label: 'Suppliers', value: '—', icon: 'business-outline' },
+            { label: t.shopkeeperDashboard.suppliers, value: '—', icon: 'business-outline' },
             {
-              label: 'Saved',
+              label: t.shopkeeperDashboard.saved,
               value: '—',
               icon: 'bookmark-outline',
               onPress: () => navigation.navigate('SavedListings'),
@@ -259,9 +262,9 @@ export default function ShopkeeperDashboardScreen() {
         {/* Recent Orders */}
         <View style={styles.ordersSection}>
           <View style={styles.ordersSectionHeader}>
-            <Text style={styles.sectionLabel}>Recent Orders</Text>
+            <Text style={styles.sectionLabel}>{t.shopkeeperDashboard.recentOrders}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('OrderHistory')}>
-              <Text style={styles.viewAllText}>View All</Text>
+              <Text style={styles.viewAllText}>{t.common.viewAll}</Text>
             </TouchableOpacity>
           </View>
           {ordersLoading && (
@@ -278,8 +281,8 @@ export default function ShopkeeperDashboardScreen() {
           {!ordersLoading && !ordersError && orders.length === 0 && (
             <View style={styles.ordersCenter}>
               <Ionicons name="receipt-outline" size={28} color={colors.textLight} />
-              <Text style={styles.ordersEmptyText}>No orders yet</Text>
-              <Text style={styles.ordersEmptySubText}>Browse the marketplace to place your first order</Text>
+              <Text style={styles.ordersEmptyText}>{t.shopkeeperDashboard.noOrders}</Text>
+              <Text style={styles.ordersEmptySubText}>{t.shopkeeperDashboard.noOrdersSubtext}</Text>
             </View>
           )}
           {!ordersLoading && !ordersError && orders.slice(0, 3).map((order, i, arr) =>
@@ -288,7 +291,7 @@ export default function ShopkeeperDashboardScreen() {
         </View>
 
         {/* Menu items */}
-        <Text style={styles.sectionLabel}>Shopkeeper Tools</Text>
+        <Text style={styles.sectionLabel}>{t.shopkeeperDashboard.tools}</Text>
         <View style={styles.menuList}>
           {MENU_ITEMS.map((item, i) => (
             <TouchableOpacity
@@ -311,7 +314,7 @@ export default function ShopkeeperDashboardScreen() {
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={18} color={isDark ? '#000000' : '#EF4444'} />
-          <Text style={styles.logoutText}>Log Out</Text>
+          <Text style={styles.logoutText}>{t.shopkeeperDashboard.logOut}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

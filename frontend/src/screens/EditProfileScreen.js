@@ -22,11 +22,13 @@ import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { updateProfile, uploadProfileImage } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
 export default function EditProfileScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
   const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets     = useSafeAreaInsets();
@@ -56,7 +58,7 @@ export default function EditProfileScreen() {
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Allow photo access to change your profile picture.');
+      Alert.alert(t.editProfile.permRequired, t.editProfile.photoPermission);
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -77,7 +79,7 @@ export default function EditProfileScreen() {
       );
       setProfileImageUri(data.imageUrl);
     } catch (err) {
-      Alert.alert('Upload Failed', err.message || 'Could not upload image.');
+      Alert.alert(t.editProfile.uploadTitle, err.message || t.editProfile.uploadFailed);
     } finally {
       setUploadingImage(false);
     }
@@ -85,7 +87,7 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     const trimmedName = name.trim();
-    if (!trimmedName) { setError('Name cannot be empty.'); return; }
+    if (!trimmedName) { setError(t.editProfile.nameRequired); return; }
     if (!isDirty) { navigation.goBack(); return; }
 
     setSaving(true);
@@ -116,11 +118,11 @@ export default function EditProfileScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <Text style={styles.headerTitle}>{t.editProfile.title}</Text>
         <TouchableOpacity onPress={handleSave} disabled={saving || !isDirty} style={styles.saveBtn}>
           {saving
             ? <ActivityIndicator size="small" color="#fff" />
-            : <Text style={[styles.saveBtnText, !isDirty && styles.saveBtnDisabled]}>Save</Text>
+            : <Text style={[styles.saveBtnText, !isDirty && styles.saveBtnDisabled]}>{t.editProfile.save}</Text>
           }
         </TouchableOpacity>
       </View>
@@ -144,21 +146,21 @@ export default function EditProfileScreen() {
               }
             </View>
           </TouchableOpacity>
-          <Text style={styles.changePhotoText}>Tap to change photo</Text>
-          <Text style={styles.roleLabel}>{roleLabel} Account</Text>
+          <Text style={styles.changePhotoText}>{t.editProfile.tapToChange}</Text>
+          <Text style={styles.roleLabel}>{isSupplier ? t.editProfile.supplierMode : t.editProfile.shopkeeperAccount}</Text>
         </View>
 
         {/* Editable fields */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <Text style={styles.sectionTitle}>{t.editProfile.personalInfo}</Text>
           <View style={styles.fieldCard}>
             <View style={[styles.field, styles.fieldBorder]}>
-              <Text style={styles.fieldLabel}>Full Name</Text>
+              <Text style={styles.fieldLabel}>{t.editProfile.fullName}</Text>
               <TextInput
                 style={styles.fieldInput}
                 value={name}
                 onChangeText={(t) => { setName(t); setError(null); setSaved(false); }}
-                placeholder="Your full name"
+                placeholder={t.editProfile.namePlaceholder}
                 placeholderTextColor={colors.textLight}
                 autoCorrect={false}
                 returnKeyType="next"
@@ -166,12 +168,12 @@ export default function EditProfileScreen() {
             </View>
 
             <View style={[styles.field, styles.fieldBorder]}>
-              <Text style={styles.fieldLabel}>Phone Number</Text>
+              <Text style={styles.fieldLabel}>{t.editProfile.phoneNumber}</Text>
               <TextInput
                 style={styles.fieldInput}
                 value={phone}
                 onChangeText={(t) => { setPhone(t); setSaved(false); }}
-                placeholder="e.g. 0300-1234567"
+                placeholder={t.editProfile.phonePlaceholder}
                 placeholderTextColor={colors.textLight}
                 keyboardType="phone-pad"
                 returnKeyType="done"
@@ -180,12 +182,12 @@ export default function EditProfileScreen() {
 
             {/* Email — read-only */}
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Email</Text>
+              <Text style={styles.fieldLabel}>{t.editProfile.email}</Text>
               <View style={styles.fieldReadOnly}>
                 <Text style={styles.fieldReadOnlyText}>{user?.email || '—'}</Text>
                 <View style={styles.lockedBadge}>
                   <Ionicons name="lock-closed" size={10} color={colors.textLight} />
-                  <Text style={styles.lockedText}>Managed by Firebase</Text>
+                  <Text style={styles.lockedText}>{t.editProfile.managedByFirebase}</Text>
                 </View>
               </View>
             </View>
@@ -194,14 +196,14 @@ export default function EditProfileScreen() {
 
         {/* Account details */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Details</Text>
+          <Text style={styles.sectionTitle}>{t.editProfile.accountDetails}</Text>
           <View style={styles.fieldCard}>
             <View style={[styles.field, styles.fieldBorder]}>
-              <Text style={styles.fieldLabel}>Account Type</Text>
+              <Text style={styles.fieldLabel}>{t.editProfile.accountType}</Text>
               <Text style={styles.fieldValue}>{roleLabel}</Text>
             </View>
             <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Email Verified</Text>
+              <Text style={styles.fieldLabel}>{t.editProfile.emailVerified}</Text>
               <View style={styles.verifiedRow}>
                 <Ionicons
                   name={user?.email_verified ? 'checkmark-circle' : 'close-circle'}
@@ -209,7 +211,7 @@ export default function EditProfileScreen() {
                   color={user?.email_verified ? colors.green : colors.accent}
                 />
                 <Text style={[styles.fieldValue, { color: user?.email_verified ? colors.green : colors.accent }]}>
-                  {user?.email_verified ? 'Verified' : 'Not verified'}
+                  {user?.email_verified ? t.editProfile.verified : t.editProfile.notVerified}
                 </Text>
               </View>
             </View>
@@ -226,7 +228,7 @@ export default function EditProfileScreen() {
         {saved && (
           <View style={styles.successBanner}>
             <Ionicons name="checkmark-circle-outline" size={16} color={colors.green} />
-            <Text style={styles.successText}>Profile updated successfully</Text>
+            <Text style={styles.successText}>{t.editProfile.updatedSuccess}</Text>
           </View>
         )}
 
@@ -237,7 +239,7 @@ export default function EditProfileScreen() {
         >
           {saving
             ? <ActivityIndicator size="small" color="#fff" />
-            : <Text style={styles.saveButtonLargeText}>Save Changes</Text>
+            : <Text style={styles.saveButtonLargeText}>{t.editProfile.saveChanges}</Text>
           }
         </TouchableOpacity>
 

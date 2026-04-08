@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getListingDetail, toggleSaveListing, startConversation, placeOrder } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
@@ -16,6 +17,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 
 export default function ProductDetailScreen() {
   const { colors } = useTheme();
+  const { t } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const route      = useRoute();
@@ -62,9 +64,9 @@ export default function ProductDetailScreen() {
   // ── Save / unsave ────────────────────────────────────────────────────────
   const handleSaveToggle = async () => {
     if (!isLoggedIn) {
-      Alert.alert('Sign In Required', 'Please sign in to save listings.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: () => navigation.navigate('SavedAccountLogin') },
+      Alert.alert(t.productDetail.signInRequired, t.productDetail.signInToSave, [
+        { text: t.productDetail.cancel, style: 'cancel' },
+        { text: t.common.signIn, onPress: () => navigation.navigate('SavedAccountLogin') },
       ]);
       return;
     }
@@ -88,20 +90,20 @@ export default function ProductDetailScreen() {
   const handleCall = () => {
     const phone = product?.seller?.phone || '';
     if (!phone) {
-      Alert.alert('Not available', 'Seller phone number is not listed.');
+      Alert.alert(t.productDetail.sellerInfo, t.productDetail.phoneNotAvail);
       return;
     }
     Linking.openURL(`tel:${phone}`).catch(() =>
-      Alert.alert('Error', 'Could not open phone dialler.')
+      Alert.alert(t.productDetail.call, t.productDetail.cantOpenPhone)
     );
   };
 
   // ── Start Chat ───────────────────────────────────────────────────────────
   const handleChat = async () => {
     if (!isLoggedIn) {
-      Alert.alert('Sign In Required', 'Please sign in to contact suppliers.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: () => navigation.navigate('SavedAccountLogin') },
+      Alert.alert(t.productDetail.signInRequired, t.productDetail.signInToContact, [
+        { text: t.productDetail.cancel, style: 'cancel' },
+        { text: t.common.signIn, onPress: () => navigation.navigate('SavedAccountLogin') },
       ]);
       return;
     }
@@ -116,9 +118,9 @@ export default function ProductDetailScreen() {
       navigation.navigate('ChatConversation', { chat: result.conversation });
     } catch (err) {
       if (err.status === 400 && err.payload?.detail?.includes('own listing')) {
-        Alert.alert('Own Listing', 'You cannot start a conversation about your own listing.');
+        Alert.alert(t.productDetail.ownListing, t.productDetail.ownListingChat);
       } else {
-        Alert.alert('Error', err.message || 'Could not start conversation.');
+        Alert.alert(t.productDetail.chat, err.message || t.productDetail.orderFailedMsg);
       }
     } finally {
       setChatLoading(false);
@@ -134,9 +136,9 @@ export default function ProductDetailScreen() {
   // ── Place Order ──────────────────────────────────────────────────────────
   const handleOpenOrder = () => {
     if (!isLoggedIn) {
-      Alert.alert('Sign In Required', 'Please sign in to place orders.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: () => navigation.navigate('SavedAccountLogin') },
+      Alert.alert(t.productDetail.signInRequired, t.productDetail.signInToContact, [
+        { text: t.productDetail.cancel, style: 'cancel' },
+        { text: t.common.signIn, onPress: () => navigation.navigate('SavedAccountLogin') },
       ]);
       return;
     }
@@ -148,7 +150,7 @@ export default function ProductDetailScreen() {
   const handlePlaceOrder = async () => {
     const qty = parseInt(orderQty, 10);
     if (!qty || qty < 1) {
-      Alert.alert('Invalid Quantity', 'Please enter a quantity of at least 1.');
+      Alert.alert(t.productDetail.invalidQty, t.productDetail.minQty);
       return;
     }
     setOrderLoading(true);
@@ -159,18 +161,18 @@ export default function ProductDetailScreen() {
       );
       setOrderModalVisible(false);
       Alert.alert(
-        'Order Placed!',
-        `Your order for ${qty} ${product.unit || 'units'} of "${product.title}" has been sent to the supplier.`,
+        t.productDetail.orderPlaced,
+        t.productDetail.orderSent,
         [
-          { text: 'View Orders', onPress: () => navigation.navigate('OrderHistory') },
-          { text: 'OK' },
+          { text: t.productDetail.viewOrders, onPress: () => navigation.navigate('OrderHistory') },
+          { text: t.common.confirm },
         ],
       );
     } catch (err) {
       if (err.status === 400 && err.payload?.detail?.includes('own listing')) {
-        Alert.alert('Own Listing', 'You cannot order your own listing.');
+        Alert.alert(t.productDetail.ownListing, t.productDetail.ownListingOrder);
       } else {
-        Alert.alert('Order Failed', err.message || 'Could not place order. Please try again.');
+        Alert.alert(t.productDetail.orderFailed, err.message || t.productDetail.orderFailedMsg);
       }
     } finally {
       setOrderLoading(false);
@@ -190,9 +192,9 @@ export default function ProductDetailScreen() {
     return (
       <View style={[styles.container, styles.center]}>
         <Ionicons name="cloud-offline-outline" size={52} color="#374151" />
-        <Text style={styles.errorText}>{error || 'Product not found.'}</Text>
+        <Text style={styles.errorText}>{error || t.productDetail.notFound}</Text>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.retryBtn}>
-          <Text style={styles.retryText}>Go back</Text>
+          <Text style={styles.retryText}>{t.productDetail.goBack}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -254,7 +256,7 @@ export default function ProductDetailScreen() {
         <View style={styles.card}>
           {product.isFeatured && (
             <View style={styles.featuredBadge}>
-              <Text style={styles.featuredText}>Featured</Text>
+              <Text style={styles.featuredText}>{t.common.featured}</Text>
             </View>
           )}
           <Text style={styles.price}>Rs {product.price}</Text>
@@ -270,7 +272,7 @@ export default function ProductDetailScreen() {
         {/* Details table */}
         {product.details?.length > 0 && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Product Details</Text>
+            <Text style={styles.cardTitle}>{t.productDetail.title}</Text>
             {product.details.map((d, i) => (
               <View key={i} style={[styles.detailRow, i < product.details.length - 1 && styles.detailRowBorder]}>
                 <Text style={styles.detailLabel}>{d.label}</Text>
@@ -283,7 +285,7 @@ export default function ProductDetailScreen() {
         {/* Description */}
         {!!product.description && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Description</Text>
+            <Text style={styles.cardTitle}>{t.productDetail.description}</Text>
             <Text style={styles.descText}>{product.description}</Text>
           </View>
         )}
@@ -296,10 +298,10 @@ export default function ProductDetailScreen() {
             activeOpacity={product.seller.id ? 0.75 : 1}
           >
             <View style={styles.sellerHeader}>
-              <Text style={styles.cardTitle}>Seller Information</Text>
+              <Text style={styles.cardTitle}>{t.productDetail.sellerInfo}</Text>
               {product.seller.id && (
                 <View style={styles.viewProfileBtn}>
-                  <Text style={styles.viewProfileText}>View Profile</Text>
+                  <Text style={styles.viewProfileText}>{t.productDetail.viewProfile}</Text>
                   <Ionicons name="chevron-forward" size={14} color={colors.primary} />
                 </View>
               )}
@@ -319,14 +321,14 @@ export default function ProductDetailScreen() {
                       </Text>
                     </>
                   ) : (
-                    <Text style={styles.sellerMetaText}>No reviews yet</Text>
+                    <Text style={styles.sellerMetaText}>{t.productDetail.noReviews}</Text>
                   )}
                 </View>
               </View>
             </View>
             <View style={styles.badgeRow}>
-              <View style={styles.verifiedBadge}><Text style={styles.verifiedText}>Verified</Text></View>
-              <View style={styles.fastBadge}><Text style={styles.fastText}>Fast Response</Text></View>
+              <View style={styles.verifiedBadge}><Text style={styles.verifiedText}>{t.productDetail.verified}</Text></View>
+              <View style={styles.fastBadge}><Text style={styles.fastText}>{t.productDetail.fastResponse}</Text></View>
             </View>
           </TouchableOpacity>
         )}
@@ -340,21 +342,21 @@ export default function ProductDetailScreen() {
         <View style={styles.actionRowTop}>
           <TouchableOpacity style={styles.callBtn} onPress={handleCall}>
             <Ionicons name="call" size={16} color={colors.primary} />
-            <Text style={styles.callBtnText}>Call</Text>
+            <Text style={styles.callBtnText}>{t.productDetail.call}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.chatBtn} onPress={handleChat} disabled={chatLoading}>
             {chatLoading
               ? <ActivityIndicator size="small" color={colors.accent} />
               : <>
                   <Ionicons name="chatbubble-outline" size={16} color={colors.accent} />
-                  <Text style={styles.chatBtnText}>Chat</Text>
+                  <Text style={styles.chatBtnText}>{t.productDetail.chat}</Text>
                 </>}
           </TouchableOpacity>
         </View>
         {/* Bottom row: Place Order (solid, primary, full-width) */}
         <TouchableOpacity style={styles.orderBtn} onPress={handleOpenOrder}>
           <Ionicons name="bag-check-outline" size={18} color="#fff" />
-          <Text style={styles.orderBtnText}>Place Order</Text>
+          <Text style={styles.orderBtnText}>{t.productDetail.placeOrder}</Text>
         </TouchableOpacity>
       </View>
 
@@ -370,7 +372,7 @@ export default function ProductDetailScreen() {
 
             {/* Header */}
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Place Order</Text>
+              <Text style={styles.modalTitle}>{t.productDetail.placeOrder}</Text>
               <TouchableOpacity
                 onPress={() => { if (!orderLoading) setOrderModalVisible(false); }}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -397,7 +399,7 @@ export default function ProductDetailScreen() {
             </View>
 
             {/* Quantity */}
-            <Text style={styles.modalLabel}>Quantity</Text>
+            <Text style={styles.modalLabel}>{t.productDetail.quantity}</Text>
             <View style={styles.qtyRow}>
               <TouchableOpacity
                 style={styles.qtyBtn}
@@ -427,18 +429,18 @@ export default function ProductDetailScreen() {
             {/* Live total */}
             {modalTotal && (
               <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total</Text>
+                <Text style={styles.totalLabel}>{t.productDetail.total}</Text>
                 <Text style={styles.totalValue}>Rs {modalTotal}</Text>
               </View>
             )}
 
             {/* Notes */}
             <Text style={styles.modalLabel}>
-              Notes <Text style={styles.optional}>(optional)</Text>
+              {t.productDetail.notes} <Text style={styles.optional}>{t.productDetail.optional}</Text>
             </Text>
             <TextInput
               style={styles.notesInput}
-              placeholder="e.g. preferred delivery time, packaging notes…"
+              placeholder={t.productDetail.notesPlaceholder}
               placeholderTextColor={colors.textLight}
               value={orderNotes}
               onChangeText={setOrderNotes}
@@ -457,7 +459,7 @@ export default function ProductDetailScreen() {
                 ? <ActivityIndicator size="small" color="#fff" />
                 : <>
                     <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
-                    <Text style={styles.orderConfirmText}>Confirm Order</Text>
+                    <Text style={styles.orderConfirmText}>{t.productDetail.confirmOrder}</Text>
                   </>}
             </TouchableOpacity>
 
@@ -466,7 +468,7 @@ export default function ProductDetailScreen() {
               onPress={() => setOrderModalVisible(false)}
               disabled={orderLoading}
             >
-              <Text style={styles.orderCancelText}>Cancel</Text>
+              <Text style={styles.orderCancelText}>{t.productDetail.cancel}</Text>
             </TouchableOpacity>
 
           </View>

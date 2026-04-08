@@ -11,15 +11,16 @@ import { useUser } from '../context/UserContext';
 import { loginWithBackend, normalizeRoleFromApi } from '../services/authApi';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 
 export default function SavedAccountLoginScreen() {
   const { colors } = useTheme();
-    const styles = makeStyles(colors);
+  const { t, isUrdu } = useLanguage();
+  const styles = makeStyles(colors);
   const navigation  = useNavigation();
   const insets      = useSafeAreaInsets();
   const { login }   = useUser();
 
-  const [lang, setLang]               = useState('en');
   const [savedEmail, setSavedEmail]   = useState(null);
   const [savedName, setSavedName]     = useState(null);
 
@@ -29,8 +30,6 @@ export default function SavedAccountLoginScreen() {
   const [showPass, setShowPass]         = useState(false);
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState(null);
-
-  const isUrdu = lang === 'ur';
 
   // Load previously saved email/name from AsyncStorage on mount
   useEffect(() => {
@@ -52,7 +51,7 @@ export default function SavedAccountLoginScreen() {
   };
 
   const handleLogin = async () => {
-    if (!password) { setError('Please enter your password.'); return; }
+    if (!password) { setError(t.savedLogin.invalidPassword); return; }
     setLoading(true);
     setError(null);
     try {
@@ -69,7 +68,7 @@ export default function SavedAccountLoginScreen() {
       });
       navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
     } catch (err) {
-      setError(err?.message || 'Incorrect password. Please try again.');
+      setError(err?.message || t.savedLogin.incorrectPassword);
     } finally {
       setLoading(false);
     }
@@ -88,13 +87,6 @@ export default function SavedAccountLoginScreen() {
           <TouchableOpacity onPress={() => navigation.navigate('AuthOptions')}>
             <Text style={styles.closeBtn}>✕</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setLang(isUrdu ? 'en' : 'ur')}>
-            <Text style={styles.langToggle}>
-              <Text style={lang === 'en' ? styles.langActive : styles.langDim}>English</Text>
-              {'  |  '}
-              <Text style={lang === 'ur' ? styles.langActive : styles.langDim}>اردو</Text>
-            </Text>
-          </TouchableOpacity>
         </View>
 
         <ScrollView
@@ -102,13 +94,11 @@ export default function SavedAccountLoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.appName}>{isUrdu ? 'نیکسم' : 'NEXUM'}</Text>
+          <Text style={styles.appName}>{t.savedLogin.appName}</Text>
 
           {savedEmail ? (
             <>
-              <Text style={styles.subtitle}>
-                {isUrdu ? 'آپ نے پہلے اس اکاؤنٹ سے لاگ ان کیا ہے' : 'You previously logged in with this account'}
-              </Text>
+              <Text style={styles.subtitle}>{t.savedLogin.previouslyLoggedIn}</Text>
 
               {/* Saved account card */}
               <TouchableOpacity
@@ -134,13 +124,13 @@ export default function SavedAccountLoginScreen() {
               {showPassword && (
                 <View style={styles.passwordBox}>
                   <Text style={styles.passwordLabel}>
-                    {isUrdu ? 'پاس ورڈ درج کریں' : `Enter password for ${savedEmail}`}
+                    {`${t.savedLogin.enterPassword} ${savedEmail}`}
                   </Text>
 
                   <View style={styles.passWrap}>
                     <TextInput
                       style={styles.passInput}
-                      placeholder={isUrdu ? 'پاس ورڈ' : 'Password'}
+                      placeholder={t.savedLogin.password}
                       placeholderTextColor={colors.textLight}
                       secureTextEntry={!showPass}
                       value={password}
@@ -167,7 +157,7 @@ export default function SavedAccountLoginScreen() {
                   >
                     {loading
                       ? <ActivityIndicator color="#fff" />
-                      : <Text style={styles.loginBtnText}>{isUrdu ? 'لاگ ان' : 'Sign In'}</Text>
+                      : <Text style={styles.loginBtnText}>{t.savedLogin.signIn}</Text>
                     }
                   </TouchableOpacity>
 
@@ -175,17 +165,13 @@ export default function SavedAccountLoginScreen() {
                     onPress={() => navigation.navigate('ForgotPassword')}
                     style={styles.forgotWrap}
                   >
-                    <Text style={styles.forgotText}>
-                      {isUrdu ? 'پاس ورڈ بھول گئے؟' : 'Forgot password?'}
-                    </Text>
+                    <Text style={styles.forgotText}>{t.savedLogin.forgotPassword}</Text>
                   </TouchableOpacity>
                 </View>
               )}
             </>
           ) : (
-            <Text style={styles.subtitle}>
-              {isUrdu ? 'سائن ان کریں یا نیا اکاؤنٹ بنائیں' : 'Sign in or create a new account to get started'}
-            </Text>
+            <Text style={styles.subtitle}>{t.savedLogin.noAccount}</Text>
           )}
 
           {/* Use a different account */}
@@ -196,9 +182,7 @@ export default function SavedAccountLoginScreen() {
             <View style={styles.plusCircle}>
               <Ionicons name="add" size={22} color="#fff" />
             </View>
-            <Text style={styles.differentText}>
-              {isUrdu ? 'مختلف اکاؤنٹ استعمال کریں' : 'Use a different account'}
-            </Text>
+            <Text style={styles.differentText}>{t.savedLogin.useDifferentAccount}</Text>
           </TouchableOpacity>
 
           {/* Sign up link */}
@@ -206,8 +190,8 @@ export default function SavedAccountLoginScreen() {
             style={styles.signupRow}
             onPress={() => navigation.navigate('SignUp')}
           >
-            <Text style={styles.signupText}>{isUrdu ? 'نیا اکاؤنٹ بنائیں؟  ' : "Don't have an account?  "}</Text>
-            <Text style={styles.signupLink}>{isUrdu ? 'رجسٹر کریں' : 'Sign Up'}</Text>
+            <Text style={styles.signupText}>{t.savedLogin.dontHaveAccount}</Text>
+            <Text style={styles.signupLink}>{t.savedLogin.register}</Text>
           </TouchableOpacity>
 
         </ScrollView>
@@ -221,15 +205,12 @@ const makeStyles = (colors) => StyleSheet.create({
 
   topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.lg,
   },
-  closeBtn:   { fontSize: 18, color: '#fff', padding: 4 },
-  langToggle: { fontSize: 14 },
-  langActive: { color: '#fff', fontFamily: fonts.semiBold },
-  langDim:    { color: 'rgba(255,255,255,0.5)', fontFamily: fonts.regular },
+  closeBtn: { fontSize: 18, color: '#fff', padding: 4 },
 
   scroll:   { padding: spacing.lg },
   appName:  { fontSize: 32, fontFamily: fonts.bold, color: '#fff', marginBottom: 6 },

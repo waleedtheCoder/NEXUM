@@ -9,6 +9,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getOrders } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
@@ -21,7 +22,15 @@ const STATUS_CONFIG = {
 };
 
 function OrderCard({ order, onPress, colors, styles }) {
+  const { t } = useLanguage();
   const statusKey = (order.status || '').toLowerCase();
+  const STATUS_LABELS = {
+    pending: t.orderHistory.pending,
+    confirmed: t.orderHistory.confirmed,
+    shipped: t.orderHistory.shipped,
+    delivered: t.orderHistory.delivered,
+    cancelled: t.orderHistory.cancelled,
+  };
   const s = STATUS_CONFIG[statusKey] || {
     color: colors.textSecondary,
     bg: colors.border,
@@ -44,14 +53,14 @@ function OrderCard({ order, onPress, colors, styles }) {
         <View style={styles.cardTop}>
           <Text style={styles.productName} numberOfLines={1}>{order.productName}</Text>
           <View style={[styles.statusBadge, { backgroundColor: s.bg }]}>
-            <Text style={[styles.statusText, { color: s.color }]}>{s.label}</Text>
+            <Text style={[styles.statusText, { color: s.color }]}>{STATUS_LABELS[statusKey] || s.label}</Text>
           </View>
         </View>
 
         <Text style={styles.supplierName}>{order.supplierName}</Text>
 
         <View style={styles.cardFooter}>
-          <Text style={styles.orderMeta}>Qty: {order.quantity}</Text>
+          <Text style={styles.orderMeta}>{t.orderHistory.qty} {order.quantity}</Text>
           <Text style={styles.orderDate}>{order.orderDate}</Text>
           <Text style={styles.totalPrice}>Rs {Number(order.totalPrice).toLocaleString()}</Text>
         </View>
@@ -64,6 +73,7 @@ function OrderCard({ order, onPress, colors, styles }) {
 
 export default function OrderHistoryScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets     = useSafeAreaInsets();
@@ -111,15 +121,15 @@ export default function OrderHistoryScreen() {
   const renderEmpty = () => (
     <View style={styles.emptyWrap}>
       <Ionicons name="receipt-outline" size={56} color={colors.textLight} />
-      <Text style={styles.emptyTitle}>No orders yet</Text>
+      <Text style={styles.emptyTitle}>{t.orderHistory.none}</Text>
       <Text style={styles.emptySub}>
-        Browse the marketplace and place your first order to see it here.
+        {t.orderHistory.noneSubtext}
       </Text>
       <TouchableOpacity
         style={styles.browseBtn}
         onPress={() => navigation.navigate('MarketplaceBrowsing')}
       >
-        <Text style={styles.browseBtnText}>Browse Marketplace</Text>
+        <Text style={styles.browseBtnText}>{t.orderHistory.browse}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -127,7 +137,7 @@ export default function OrderHistoryScreen() {
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title="My Orders" showBack />
+      <ScreenHeader title={t.orderHistory.title} showBack />
 
       {loading ? (
         <View style={styles.center}>
@@ -139,7 +149,7 @@ export default function OrderHistoryScreen() {
           <Text style={styles.errorText}>{error}</Text>
           {/* FIX: was calling useFocusEffect inside onPress (hooks violation) */}
           <TouchableOpacity style={styles.retryBtn} onPress={loadOrders}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t.common.retry}</Text>
           </TouchableOpacity>
         </View>
       ) : (

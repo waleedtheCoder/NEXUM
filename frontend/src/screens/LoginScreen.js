@@ -11,9 +11,11 @@ import { useUser } from '../context/UserContext';
 import { loginWithBackend, normalizeRoleFromApi } from '../services/authApi';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -25,7 +27,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter email and password.');
+      Alert.alert(t.common.error, t.login.fillFields);
       return;
     }
     setLoading(true);
@@ -48,26 +50,26 @@ export default function LoginScreen() {
       navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
     } catch (err) {
       setLoading(false);
-      Alert.alert('Sign In Failed', err?.message || 'Unable to sign in right now.');
+      Alert.alert(t.login.failed, err?.message || t.login.failedMsg);
     }
   };
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title="Sign In" showBack />
+      <ScreenHeader title={t.login.title} showBack />
 
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.subtitle}>Sign in with your registered email and password.</Text>
+        <Text style={styles.subtitle}>{t.login.subtitle}</Text>
 
-        <Text style={styles.label}>Email *</Text>
+        <Text style={styles.label}>{t.login.email} *</Text>
         <TextInput
           style={styles.input}
-          placeholder="your@email.com"
+          placeholder={t.login.emailPlaceholder}
           placeholderTextColor={colors.textLight}
           keyboardType="email-address"
           autoCapitalize="none"
@@ -75,11 +77,11 @@ export default function LoginScreen() {
           onChangeText={setEmail}
         />
 
-        <Text style={styles.label}>Password *</Text>
+        <Text style={styles.label}>{t.login.password} *</Text>
         <View style={styles.passWrap}>
           <TextInput
             style={styles.passInput}
-            placeholder="Enter password"
+            placeholder={t.login.passwordPlaceholder}
             placeholderTextColor={colors.textLight}
             secureTextEntry={!showPass}
             value={password}
@@ -98,7 +100,7 @@ export default function LoginScreen() {
           onPress={() => navigation.navigate('ForgotPassword')}
           style={styles.forgotWrap}
         >
-          <Text style={styles.forgotText}>Forgot Password?</Text>
+          <Text style={styles.forgotText}>{t.login.forgotPassword}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -107,14 +109,14 @@ export default function LoginScreen() {
           disabled={loading}
         >
           <Text style={styles.loginBtnText}>
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? t.login.signingIn : t.login.signIn}
           </Text>
         </TouchableOpacity>
 
         <View style={styles.signupRow}>
-          <Text style={styles.signupText}>Don't have an account?</Text>
+          <Text style={styles.signupText}>{t.login.noAccount}</Text>
           <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-            <Text style={styles.signupLink}> Sign Up</Text>
+            <Text style={styles.signupLink}> {t.login.signUp}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

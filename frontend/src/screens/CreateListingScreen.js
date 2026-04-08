@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import ScreenHeader from '../components/ScreenHeader';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { createListing, updateListing, uploadListingImage } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
@@ -18,6 +19,7 @@ const CONDITIONS = ['New', 'Bulk Wholesale', 'Clearance Stock'];
 
 export default function CreateListingScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const route = useRoute();
@@ -70,8 +72,8 @@ export default function CreateListingScreen() {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(
-          'Permission Required',
-          'Please allow access to your photo library in Settings to add a product photo.',
+          t.createListing.permRequired,
+          t.createListing.permMsg,
         );
         return;
       }
@@ -104,14 +106,14 @@ export default function CreateListingScreen() {
         );
         setImageUrl(uploaded.imageUrl);
       } catch (err) {
-        Alert.alert('Upload Failed', err.message || 'Could not upload image. Please try again.');
+        Alert.alert(t.createListing.uploadFailed, err.message || t.createListing.uploadFailedMsg);
         // Keep local preview but clear remote URL so submit won't use a broken link
         setImageUrl(null);
       } finally {
         setUploading(false);
       }
     } catch (err) {
-      Alert.alert('Error', 'Could not open photo library.');
+      Alert.alert(t.createListing.permRequired, t.createListing.cantOpenLibrary);
     }
   };
 
@@ -122,12 +124,12 @@ export default function CreateListingScreen() {
 
   // ── Validation ──────────────────────────────────────────────────────────
   const validate = () => {
-    if (!productName.trim()) { Alert.alert('Required', 'Please enter a product name.'); return false; }
-    if (!price.trim() || isNaN(parseFloat(price))) { Alert.alert('Required', 'Please enter a valid price.'); return false; }
-    if (!quantity.trim() || isNaN(parseInt(quantity))) { Alert.alert('Required', 'Please enter a valid quantity.'); return false; }
-    if (!location.trim()) { Alert.alert('Required', 'Please enter a location.'); return false; }
+    if (!productName.trim()) { Alert.alert(t.createListing.required, t.createListing.enterProductName); return false; }
+    if (!price.trim() || isNaN(parseFloat(price))) { Alert.alert(t.createListing.required, t.createListing.enterValidPrice); return false; }
+    if (!quantity.trim() || isNaN(parseInt(quantity))) { Alert.alert(t.createListing.required, t.createListing.enterValidQty); return false; }
+    if (!location.trim()) { Alert.alert(t.createListing.required, t.createListing.enterLocation); return false; }
     if (imageUri && !imageUrl) {
-      Alert.alert('Image Uploading', 'Please wait for your photo to finish uploading before submitting.');
+      Alert.alert(t.createListing.imageUploading, t.createListing.imageUploadingMsg);
       return false;
     }
     return true;
@@ -155,19 +157,19 @@ export default function CreateListingScreen() {
     try {
       if (editMode && existing?.id) {
         await updateListing(existing.id, payload, authArgs);
-        Alert.alert('Updated!', 'Your listing has been updated.', [
-          { text: 'OK', onPress: () => navigation.goBack() },
+        Alert.alert(t.createListing.updated, t.createListing.updatedMsg, [
+          { text: t.common.confirm, onPress: () => navigation.goBack() },
         ]);
       } else {
         await createListing(payload, authArgs);
         Alert.alert(
-          'Listing Submitted!',
-          `Your listing for "${productName}" has been submitted for review. It will go live after approval.`,
-          [{ text: 'View My Listings', onPress: () => navigation.navigate('Sell') }]
+          t.createListing.submitted,
+          t.createListing.submittedMsg,
+          [{ text: t.createListing.viewListings, onPress: () => navigation.navigate('Sell') }]
         );
       }
     } catch (err) {
-      Alert.alert('Error', err.message || 'Could not submit listing. Please try again.');
+      Alert.alert(t.createListing.required, err.message || t.common.comingSoon);
     } finally {
       setLoading(false);
     }
@@ -176,7 +178,7 @@ export default function CreateListingScreen() {
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title={editMode ? 'Edit Listing' : 'Create Listing'} showBack />
+      <ScreenHeader title={editMode ? t.createListing.editTitle : t.createListing.title} showBack />
 
       <ScrollView
         style={{ flex: 1 }}
@@ -190,14 +192,14 @@ export default function CreateListingScreen() {
           <Text style={styles.categoryText}>{category}</Text>
           {!editMode && (
             <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={styles.changeText}>Change</Text>
+              <Text style={styles.changeText}>{t.createListing.change}</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {/* ── Photo upload ──────────────────────────────────────────────── */}
         <View style={styles.photoSection}>
-          <Text style={styles.label}>Product Photo</Text>
+          <Text style={styles.label}>{t.createListing.productPhoto}</Text>
 
           {imageUri ? (
             // Preview + remove button
@@ -208,7 +210,7 @@ export default function CreateListingScreen() {
               {uploading && (
                 <View style={styles.uploadOverlay}>
                   <ActivityIndicator size="large" color="#fff" />
-                  <Text style={styles.uploadingText}>Uploading…</Text>
+                  <Text style={styles.uploadingText}>{t.createListing.uploading}</Text>
                 </View>
               )}
 
@@ -223,7 +225,7 @@ export default function CreateListingScreen() {
               {!uploading && imageUrl && (
                 <View style={styles.successBadge}>
                   <Ionicons name="checkmark-circle" size={16} color="#fff" />
-                  <Text style={styles.successText}>Uploaded</Text>
+                  <Text style={styles.successText}>{t.createListing.uploaded}</Text>
                 </View>
               )}
             </View>
@@ -232,31 +234,31 @@ export default function CreateListingScreen() {
             <View style={styles.photoRow}>
               <TouchableOpacity style={styles.photoAddBtn} onPress={handlePickImage}>
                 <Ionicons name="camera-outline" size={28} color={colors.primary} />
-                <Text style={styles.photoAddText}>Add Photo</Text>
+                <Text style={styles.photoAddText}>{t.createListing.addPhoto}</Text>
               </TouchableOpacity>
               <View style={styles.photoHint}>
-                <Text style={styles.photoHintText}>Tap to choose from your photo library.</Text>
-                <Text style={styles.photoHintText}>JPEG, PNG or WebP — max 5 MB.</Text>
+                <Text style={styles.photoHintText}>{t.createListing.tapToChoose}</Text>
+                <Text style={styles.photoHintText}>{t.createListing.fileTypes}</Text>
               </View>
             </View>
           )}
         </View>
 
         {/* Product Name */}
-        <Text style={styles.label}>Product Name <Text style={styles.required}>*</Text></Text>
+        <Text style={styles.label}>{t.createListing.productName} <Text style={styles.required}>*</Text></Text>
         <TextInput
           style={styles.input}
-          placeholder="e.g. Basmati Rice 25kg"
+          placeholder={t.createListing.productNamePlaceholder}
           placeholderTextColor={colors.textLight}
           value={productName}
           onChangeText={setProductName}
         />
 
         {/* Description */}
-        <Text style={styles.label}>Description</Text>
+        <Text style={styles.label}>{t.createListing.description}</Text>
         <TextInput
           style={[styles.input, styles.textarea]}
-          placeholder="Describe your product — quality, packaging, delivery terms…"
+          placeholder={t.createListing.descPlaceholder}
           placeholderTextColor={colors.textLight}
           value={description}
           onChangeText={setDescription}
@@ -267,10 +269,10 @@ export default function CreateListingScreen() {
         {/* Price & Quantity */}
         <View style={styles.row2}>
           <View style={styles.flex1}>
-            <Text style={styles.label}>Price (Rs) <Text style={styles.required}>*</Text></Text>
+            <Text style={styles.label}>{t.createListing.price} <Text style={styles.required}>*</Text></Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. 8800"
+              placeholder={t.createListing.pricePlaceholder}
               placeholderTextColor={colors.textLight}
               value={price}
               onChangeText={setPrice}
@@ -278,10 +280,10 @@ export default function CreateListingScreen() {
             />
           </View>
           <View style={styles.flex1}>
-            <Text style={styles.label}>Quantity <Text style={styles.required}>*</Text></Text>
+            <Text style={styles.label}>{t.createListing.quantity} <Text style={styles.required}>*</Text></Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. 500"
+              placeholder={t.createListing.qtyPlaceholder}
               placeholderTextColor={colors.textLight}
               value={quantity}
               onChangeText={setQuantity}
@@ -291,10 +293,10 @@ export default function CreateListingScreen() {
         </View>
 
         {/* Min Order Qty */}
-        <Text style={styles.label}>Min. Order Quantity</Text>
+        <Text style={styles.label}>{t.createListing.minOrder}</Text>
         <TextInput
           style={styles.input}
-          placeholder="e.g. 25"
+          placeholder={t.createListing.minOrderPlaceholder}
           placeholderTextColor={colors.textLight}
           value={minOrderQty}
           onChangeText={setMinOrderQty}
@@ -302,7 +304,7 @@ export default function CreateListingScreen() {
         />
 
         {/* Unit selector */}
-        <Text style={styles.label}>Unit</Text>
+        <Text style={styles.label}>{t.createListing.unit}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
           <View style={styles.chipRow}>
             {UNITS.map((u) => (
@@ -318,7 +320,7 @@ export default function CreateListingScreen() {
         </ScrollView>
 
         {/* Condition selector */}
-        <Text style={styles.label}>Condition</Text>
+        <Text style={styles.label}>{t.createListing.condition}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: spacing.md }}>
           <View style={styles.chipRow}>
             {CONDITIONS.map((c) => (
@@ -334,10 +336,10 @@ export default function CreateListingScreen() {
         </ScrollView>
 
         {/* Location */}
-        <Text style={styles.label}>Location <Text style={styles.required}>*</Text></Text>
+        <Text style={styles.label}>{t.createListing.location} <Text style={styles.required}>*</Text></Text>
         <TextInput
           style={styles.input}
-          placeholder="e.g. Lahore Wholesale Market"
+          placeholder={t.createListing.locationPlaceholder}
           placeholderTextColor={colors.textLight}
           value={location}
           onChangeText={setLocation}
@@ -352,7 +354,7 @@ export default function CreateListingScreen() {
           {loading
             ? <ActivityIndicator size="small" color="#fff" />
             : <Text style={styles.submitText}>
-                {editMode ? 'Save Changes' : 'Post Listing'}
+                {editMode ? t.createListing.saveChanges : t.createListing.post}
               </Text>}
         </TouchableOpacity>
       </ScrollView>

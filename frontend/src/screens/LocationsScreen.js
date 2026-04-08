@@ -6,11 +6,13 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 
 const CITIES = ['Lahore', 'Islamabad', 'Karachi', 'Quetta', 'Peshawar', 'Faisalabad', 'Bahawalpur', 'Sialkot', 'Gujranwala', 'Sargodha'];
 
 export default function LocationsScreen() {
   const { colors } = useTheme();
+  const { t } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -35,14 +37,14 @@ export default function LocationsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Select your city</Text>
+        <Text style={styles.title}>{t.locations.title}</Text>
       </View>
 
       <View style={styles.searchWrap}>
         <Ionicons name="search" size={16} color={colors.textSecondary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search cities..."
+          placeholder={t.locations.searchPlaceholder}
           placeholderTextColor={colors.textLight}
           value={query}
           onChangeText={setQuery}
@@ -64,10 +66,10 @@ export default function LocationsScreen() {
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
         <TouchableOpacity style={styles.skipBtn} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] })}>
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={styles.skipText}>{t.locations.skip}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.continueBtn} onPress={handleContinue}>
-          <Text style={styles.continueText}>Continue{selected.length ? ` (${selected.length})` : ''}</Text>
+          <Text style={styles.continueText}>{t.locations.continue}{selected.length ? ` (${selected.length})` : ''}</Text>
         </TouchableOpacity>
       </View>
     </View>

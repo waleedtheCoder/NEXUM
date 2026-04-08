@@ -7,9 +7,11 @@ import { useUser } from '../context/UserContext';
 import { forgotPasswordWithBackend, normalizeRoleFromApi, verifyOtpWithBackend } from '../services/authApi';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 
 export default function OTPVerificationScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const route = useRoute();
@@ -41,7 +43,7 @@ export default function OTPVerificationScreen() {
   };
 
   const handleVerify = async () => {
-    if (otp.some((d) => !d)) { Alert.alert('Error', 'Please enter all 4 digits.'); return; }
+    if (otp.some((d) => !d)) { Alert.alert(t.otp.failed, t.otp.fillAll); return; }
 
     const otpCode = otp.join('');
     setLoading(true);
@@ -72,7 +74,7 @@ export default function OTPVerificationScreen() {
       navigation.reset({ index: 0, routes: [{ name: 'RoleSelection' }] });
     } catch (err) {
       setLoading(false);
-      Alert.alert('Verification Failed', err?.message || 'Could not verify OTP.');
+      Alert.alert(t.otp.failed, err?.message || t.otp.failedMsg);
     }
   };
 
@@ -84,9 +86,9 @@ export default function OTPVerificationScreen() {
       }
       setCountdown(60);
       setOtp(['', '', '', '']);
-      Alert.alert('OTP Sent', 'A new OTP has been sent.');
+      Alert.alert(t.otp.sent, t.otp.sentMsg);
     } catch (err) {
-      Alert.alert('Resend Failed', err?.message || 'Unable to resend OTP now.');
+      Alert.alert(t.otp.resendFailed, err?.message || t.otp.resendFailedMsg);
     }
   };
 
@@ -95,9 +97,9 @@ export default function OTPVerificationScreen() {
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title="Verify Your Email" showBack />
+      <ScreenHeader title={t.otp.title} showBack />
       <View style={styles.body}>
-        <Text style={styles.message}>Please enter the 4-digit OTP sent to{'\n'}<Text style={styles.email}>{email}</Text></Text>
+        <Text style={styles.message}>{t.otp.subtitle}{'\n'}<Text style={styles.email}>{email}</Text></Text>
         <View style={styles.otpRow}>
           {otp.map((digit, index) => (
             <TextInput
@@ -115,15 +117,15 @@ export default function OTPVerificationScreen() {
         </View>
         <View style={styles.resendRow}>
           {countdown > 0 ? (
-            <Text style={styles.countdownText}>Resend in {countdown}s</Text>
+            <Text style={styles.countdownText}>{t.otp.resendIn} {countdown}s</Text>
           ) : (
             <TouchableOpacity onPress={handleResend}>
-              <Text style={styles.resendText}>Resend OTP</Text>
+              <Text style={styles.resendText}>{t.otp.resend}</Text>
             </TouchableOpacity>
           )}
         </View>
         <TouchableOpacity style={[styles.verifyBtn, (!allFilled || loading) && styles.verifyBtnDisabled]} onPress={handleVerify} disabled={!allFilled || loading}>
-          <Text style={styles.verifyBtnText}>{loading ? 'Verifying...' : 'Verify'}</Text>
+          <Text style={styles.verifyBtnText}>{loading ? t.otp.verifying : t.otp.verify}</Text>
         </TouchableOpacity>
       </View>
     </View>

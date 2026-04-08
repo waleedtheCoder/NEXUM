@@ -9,13 +9,14 @@ import { useNavigation } from '@react-navigation/native';
 import FilterChip from '../components/FilterChip';
 import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getListings, toggleSaveListing } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
 const SORT_OPTIONS = [
-  { label: 'Newest',  value: 'newest'    },
-  { label: 'Price ↑', value: 'price_asc' },
-  { label: 'Price ↓', value: 'price_desc'},
+  { labelKey: 'newest',   value: 'newest'    },
+  { labelKey: 'priceUp',  value: 'price_asc' },
+  { labelKey: 'priceDown',value: 'price_desc'},
 ];
 
 export default function MarketplaceBrowsingScreen() {
@@ -23,6 +24,7 @@ export default function MarketplaceBrowsingScreen() {
   const navigation = useNavigation();
   const insets     = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { t } = useLanguage();
   const { idToken, sessionId, refreshToken, updateUser } = useUser();
 
   const [products, setProducts]   = useState([]);
@@ -112,7 +114,7 @@ export default function MarketplaceBrowsingScreen() {
               </View>
             )}
             {item.isFeatured && (
-              <View style={styles.featBadge}><Text style={styles.featText}>Featured</Text></View>
+              <View style={styles.featBadge}><Text style={styles.featText}>{t.marketplace.featured}</Text></View>
             )}
           </View>
 
@@ -120,7 +122,7 @@ export default function MarketplaceBrowsingScreen() {
           <View style={styles.listInfo}>
             <View style={styles.listCategoryRow}>
               <View style={styles.categoryChip}>
-                <Text style={styles.categoryChipText} numberOfLines={1}>{item.category || 'General'}</Text>
+                <Text style={styles.categoryChipText} numberOfLines={1}>{item.category || t.marketplace.general}</Text>
               </View>
               <Text style={styles.timeText}>{item.time}</Text>
             </View>
@@ -172,7 +174,7 @@ export default function MarketplaceBrowsingScreen() {
 
           {/* Featured badge — top left */}
           {item.isFeatured && (
-            <View style={styles.featBadge}><Text style={styles.featText}>Featured</Text></View>
+            <View style={styles.featBadge}><Text style={styles.featText}>{t.marketplace.featured}</Text></View>
           )}
         </View>
 
@@ -180,7 +182,7 @@ export default function MarketplaceBrowsingScreen() {
         <View style={styles.gridInfo}>
           {/* Category chip */}
           <View style={styles.categoryChip}>
-            <Text style={styles.categoryChipText} numberOfLines={1}>{item.category || 'General'}</Text>
+            <Text style={styles.categoryChipText} numberOfLines={1}>{item.category || t.marketplace.general}</Text>
           </View>
 
           {/* Price — prominent, primary color */}
@@ -212,7 +214,7 @@ export default function MarketplaceBrowsingScreen() {
           <Ionicons name="search" size={16} color={colors.textSecondary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search products or suppliers…"
+            placeholder={t.marketplace.searchPlaceholder}
             placeholderTextColor={colors.textLight}
             value={searchText}
             onChangeText={handleSearchChange}
@@ -235,7 +237,7 @@ export default function MarketplaceBrowsingScreen() {
           keyExtractor={(f) => f.value}
           renderItem={({ item }) => (
             <FilterChip
-              label={item.label}
+              label={t.marketplace[item.labelKey] || item.labelKey}
               active={activeSort === item.value}
               onPress={() => setActiveSort(item.value)}
             />
@@ -246,7 +248,7 @@ export default function MarketplaceBrowsingScreen() {
       {/* Result count + view toggle */}
       <View style={styles.resultsRow}>
         <Text style={styles.resultsText}>
-          {loading ? 'Loading…' : `${products.length} result${products.length !== 1 ? 's' : ''}`}
+          {loading ? t.marketplace.loading : `${products.length} ${t.marketplace.results}`}
         </Text>
         <View style={styles.viewToggle}>
           <TouchableOpacity
@@ -273,7 +275,7 @@ export default function MarketplaceBrowsingScreen() {
           <Ionicons name="cloud-offline-outline" size={48} color={colors.textLight} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchProducts()}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t.common.retry}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -288,7 +290,7 @@ export default function MarketplaceBrowsingScreen() {
           ListEmptyComponent={
             <View style={styles.center}>
               <Ionicons name="search-outline" size={48} color={colors.textLight} />
-              <Text style={styles.errorText}>No products found</Text>
+              <Text style={styles.errorText}>{t.marketplace.noProducts}</Text>
             </View>
           }
         />

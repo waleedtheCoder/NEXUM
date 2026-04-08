@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { fonts, spacing, radii } from '../constants/theme';
 import MyListingsScreen from './MyListingsScreen';
 import BottomNav from '../components/BottomNav';
@@ -26,6 +27,7 @@ function SellPrompt({ isLoggedIn }) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
   const styles = makeStyles(colors);
 
   return (
@@ -33,7 +35,7 @@ function SellPrompt({ isLoggedIn }) {
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
 
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        <Text style={styles.topBarTitle}>Sell on NEXUM</Text>
+        <Text style={styles.topBarTitle}>{t.sellTab.title}</Text>
       </View>
 
       <View style={styles.body}>
@@ -41,16 +43,16 @@ function SellPrompt({ isLoggedIn }) {
           <Ionicons name="storefront-outline" size={52} color={colors.primary} />
         </View>
 
-        <Text style={styles.heading}>Become a Supplier</Text>
+        <Text style={styles.heading}>{t.sellTab.becomeSupplier}</Text>
         <Text style={styles.subheading}>
-          List your products and reach hundreds of shopkeepers across Pakistan.
+          {t.sellTab.subtitle}
         </Text>
 
         <View style={styles.perks}>
           {[
-            { icon: 'trending-up-outline', text: 'Grow your wholesale business' },
-            { icon: 'people-outline',      text: 'Connect with verified retailers' },
-            { icon: 'shield-checkmark-outline', text: 'Secure payments & order management' },
+            { icon: 'trending-up-outline', text: t.sellTab.benefit1 },
+            { icon: 'people-outline',      text: t.sellTab.benefit2 },
+            { icon: 'shield-checkmark-outline', text: t.sellTab.benefit3 },
           ].map((p) => (
             <View key={p.text} style={styles.perkRow}>
               <Ionicons name={p.icon} size={18} color={colors.primary} />
@@ -64,7 +66,7 @@ function SellPrompt({ isLoggedIn }) {
           onPress={() => navigation.navigate(isLoggedIn ? 'BecomeSupplier' : 'SignUp')}
         >
           <Text style={styles.primaryBtnText}>
-            {isLoggedIn ? 'Apply as Supplier' : 'Sign Up to Sell'}
+            {isLoggedIn ? t.sellTab.apply : t.sellTab.signUpToSell}
           </Text>
         </TouchableOpacity>
 
@@ -73,7 +75,7 @@ function SellPrompt({ isLoggedIn }) {
             style={styles.secondaryBtn}
             onPress={() => navigation.navigate('SavedAccountLogin')}
           >
-            <Text style={styles.secondaryBtnText}>Already have an account? Sign In</Text>
+            <Text style={styles.secondaryBtnText}>{t.sellTab.haveAccount}</Text>
           </TouchableOpacity>
         )}
       </View>

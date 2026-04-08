@@ -10,6 +10,7 @@ import BottomNav from '../components/BottomNav';
 import ListingCard from '../components/ListingCard';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getMyListings } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
@@ -17,6 +18,7 @@ const TABS = ['active', 'pending', 'removed'];
 
 export default function MyListingsScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -67,17 +69,23 @@ export default function MyListingsScreen() {
     removed: allListings.filter((l) => l.status === 'removed').length,
   };
 
+  const TAB_LABELS = {
+    active: t.myListings.active,
+    pending: t.myListings.pending,
+    removed: t.myListings.removed,
+  };
+
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor="#0D0F12" />
 
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>My Listings ({counts[activeTab]})</Text>
+          <Text style={styles.headerTitle}>{t.myListings.title} ({counts[activeTab]})</Text>
           <TouchableOpacity onPress={() => navigation.navigate('CategorySelection')}>
             <View style={styles.addBtn}>
               <Ionicons name="add" size={18} color="#fff" />
-              <Text style={styles.addBtnText}>Add</Text>
+              <Text style={styles.addBtnText}>{t.myListings.add}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -86,7 +94,7 @@ export default function MyListingsScreen() {
           {TABS.map((tab) => (
             <TouchableOpacity key={tab} style={styles.tab} onPress={() => setActiveTab(tab)}>
               <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                {tab.charAt(0).toUpperCase() + tab.slice(1)} ({counts[tab]})
+                {TAB_LABELS[tab] || tab.charAt(0).toUpperCase() + tab.slice(1)} ({counts[tab]})
               </Text>
               {activeTab === tab && <View style={styles.tabIndicator} />}
             </TouchableOpacity>
@@ -96,12 +104,12 @@ export default function MyListingsScreen() {
 
       <TouchableOpacity
         style={styles.promoteBanner}
-        onPress={() => Alert.alert('Promote a Listing', 'Open any active listing below and tap "Put on Promotion" to set a discount.')}
+        onPress={() => Alert.alert(t.myListings.promoteTitle, t.myListings.promoteSubtext)}
       >
         <View style={styles.promoteBannerIcon}>
           <Ionicons name="pricetag" size={18} color="#fff" />
         </View>
-        <Text style={styles.promoteBannerText}>Promote Your Products</Text>
+        <Text style={styles.promoteBannerText}>{t.myListings.promoteTitle}</Text>
         <Ionicons name="chevron-forward" size={18} color="#fff" />
       </TouchableOpacity>
 
@@ -114,7 +122,7 @@ export default function MyListingsScreen() {
           <Ionicons name="cloud-offline-outline" size={48} color="#374151" />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchListings()}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t.myListings.retry}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -138,13 +146,13 @@ export default function MyListingsScreen() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="cube-outline" size={60} color="#374151" />
-              <Text style={styles.emptyText}>No {activeTab} listings yet</Text>
+              <Text style={styles.emptyText}>{t.myListings.noneStatus}</Text>
               {activeTab === 'active' && (
                 <TouchableOpacity
                   style={styles.emptyAction}
                   onPress={() => navigation.navigate('CategorySelection')}
                 >
-                  <Text style={styles.emptyActionText}>Create your first listing</Text>
+                  <Text style={styles.emptyActionText}>{t.myListings.createFirst}</Text>
                 </TouchableOpacity>
               )}
             </View>

@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView,
-  StyleSheet, StatusBar, Alert, ActivityIndicator,
+  StyleSheet, StatusBar, Alert, ActivityIndicator, Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,40 +10,15 @@ import BottomNav from '../components/BottomNav';
 import { useUser } from '../context/UserContext';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getOrders } from '../services/marketplaceApi';
 
-const MENU_ITEMS = [
-  {
-    title: 'Saved Listings',
-    description: "Products you've hearted for later",
-    hasNew: false,
-    screen: 'SavedListings',
-  },
-  {
-    title: 'Supplier Network',
-    description: 'Find and connect with verified suppliers',
-    hasNew: false,
-    screen: 'SupplierNetwork',
-  },
-  {
-    // FIX: was 'AppNavigation' then null — RestockRemindersScreen now exists
-    title: 'Restock Reminders',
-    description: 'Set alerts for your frequently ordered products',
-    hasNew: true,
-    screen: 'RestockReminders',
-  },
-  {
-    title: 'Bulk Deals & Offers',
-    description: 'Exclusive deals for verified retailers',
-    hasNew: false,
-    screen: 'MarketplaceBrowsing',
-  },
-  {
-    title: 'Invite Retailers',
-    description: 'Earn rewards by inviting other retailers',
-    hasNew: false,
-    screen: null,
-  },
+const getMenuItems = (t) => [
+  { titleKey: 'savedListings',    descKey: 'savedListingsDesc',    hasNew: false, screen: 'SavedListings'     },
+  { titleKey: 'supplierNetwork',  descKey: 'supplierNetworkDesc',  hasNew: false, screen: 'SupplierNetwork'   },
+  { titleKey: 'restockReminders', descKey: 'restockDesc',          hasNew: true,  screen: 'RestockReminders'  },
+  { titleKey: 'bulkDeals',        descKey: 'bulkDealsDesc',        hasNew: false, screen: 'MarketplaceBrowsing'},
+  { titleKey: 'inviteRetailers',  descKey: 'inviteDesc',           hasNew: false, screen: null               },
 ];
 
 const STATUS_COLORS = {
@@ -55,7 +30,8 @@ const STATUS_COLORS = {
 };
 
 export default function AccountSettingsScreen() {
-  const { colors, isDark } = useTheme();
+  const { colors, isDark, toggleTheme } = useTheme();
+  const { t, isUrdu, toggleLanguage } = useLanguage();
     const styles = makeStyles(colors, isDark);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -106,7 +82,7 @@ export default function AccountSettingsScreen() {
     if (item.screen) {
       navigation.navigate(item.screen);
     } else {
-      Alert.alert(item.title, 'This feature is coming soon!');
+      Alert.alert(t.accountSettings[item.titleKey], t.common.comingSoon);
     }
   };
 
@@ -160,7 +136,7 @@ export default function AccountSettingsScreen() {
       {/* Top bar */}
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <View style={styles.topBarIconLeft} />
-        <Text style={styles.topBarTitle}>Account</Text>
+        <Text style={styles.topBarTitle}>{t.accountSettings.title}</Text>
         <TouchableOpacity
           onPress={() => navigation.navigate('MoreMenu')}
           style={styles.topBarIconRight}
@@ -176,8 +152,8 @@ export default function AccountSettingsScreen() {
       >
         {/* Greeting */}
         <View style={styles.greetSection}>
-          <Text style={styles.greetText}>Hello, {user?.name || 'Retailer'} 👋</Text>
-          <Text style={styles.greetSub}>{user?.email || 'Manage your account'}</Text>
+          <Text style={styles.greetText}>{t.accountSettings.hello}, {user?.name || t.accountSettings.retailer} 👋</Text>
+          <Text style={styles.greetSub}>{user?.email || t.accountSettings.manageAccount}</Text>
         </View>
 
         {/* Profile card — FIX: now navigates to real EditProfileScreen */}
@@ -194,7 +170,7 @@ export default function AccountSettingsScreen() {
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{user?.name || 'Your Profile'}</Text>
             <Text style={styles.profileRole}>
-              {isShopkeeper ? 'Shopkeeper Account' : 'Supplier Account'}
+              {isShopkeeper ? t.accountSettings.shopkeeperAccount : t.accountSettings.supplierAccount}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.primary} />
@@ -204,14 +180,14 @@ export default function AccountSettingsScreen() {
         <View style={styles.statsRow}>
           {[
             {
-              label: 'Orders',
+              label: t.accountSettings.orders,
               value: ordersLoading ? '…' : String(orders.length),
               icon: 'receipt-outline',
               onPress: () => navigation.navigate('OrderHistory'),
             },
-            { label: 'Suppliers', value: '—', icon: 'business-outline' },
+            { label: t.accountSettings.suppliers, value: '—', icon: 'business-outline' },
             {
-              label: 'Saved',
+              label: t.accountSettings.saved,
               value: '—',
               icon: 'bookmark-outline',
               onPress: () => navigation.navigate('SavedListings'),
@@ -235,9 +211,9 @@ export default function AccountSettingsScreen() {
         {isShopkeeper && (
           <View style={styles.ordersSection}>
             <View style={styles.ordersSectionHeader}>
-              <Text style={styles.sectionLabel}>Recent Orders</Text>
+              <Text style={styles.sectionLabel}>{t.accountSettings.recentOrders}</Text>
               <TouchableOpacity onPress={() => navigation.navigate('OrderHistory')}>
-                <Text style={styles.viewAllText}>View All</Text>
+                <Text style={styles.viewAllText}>{t.accountSettings.viewAll}</Text>
               </TouchableOpacity>
             </View>
             {ordersLoading && (
@@ -254,10 +230,8 @@ export default function AccountSettingsScreen() {
             {!ordersLoading && !ordersError && orders.length === 0 && (
               <View style={styles.ordersCenter}>
                 <Ionicons name="receipt-outline" size={28} color={colors.textLight} />
-                <Text style={styles.ordersEmptyText}>No orders yet</Text>
-                <Text style={styles.ordersEmptySubText}>
-                  Browse the marketplace to place your first order
-                </Text>
+                <Text style={styles.ordersEmptyText}>{t.accountSettings.noOrders}</Text>
+                <Text style={styles.ordersEmptySubText}>{t.accountSettings.browseOrder}</Text>
               </View>
             )}
             {!ordersLoading && !ordersError && orders.slice(0, 3).map((order, i, arr) =>
@@ -267,19 +241,19 @@ export default function AccountSettingsScreen() {
         )}
 
         {/* More on NEXUM */}
-        <Text style={styles.sectionLabel}>More on NEXUM</Text>
+        <Text style={styles.sectionLabel}>{t.accountSettings.moreOnNexum}</Text>
         <View style={styles.menuList}>
-          {MENU_ITEMS.map((item, i) => (
+          {getMenuItems(t).map((item, i, arr) => (
             <TouchableOpacity
               key={i}
-              style={[styles.menuItem, i < MENU_ITEMS.length - 1 && styles.menuItemBorder]}
+              style={[styles.menuItem, i < arr.length - 1 && styles.menuItemBorder]}
               onPress={() => handleMenuPress(item)}
             >
               <View style={styles.menuItemLeft}>
                 {item.hasNew && <View style={styles.newDot} />}
                 <View style={item.hasNew ? {} : styles.noNewOffset}>
-                  <Text style={styles.menuItemTitle}>{item.title}</Text>
-                  <Text style={styles.menuItemDesc}>{item.description}</Text>
+                  <Text style={styles.menuItemTitle}>{t.accountSettings[item.titleKey]}</Text>
+                  <Text style={styles.menuItemDesc}>{t.accountSettings[item.descKey]}</Text>
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.primary} />
@@ -293,7 +267,7 @@ export default function AccountSettingsScreen() {
           onPress={() => navigation.navigate('MoreMenu')}
         >
           <Ionicons name="menu" size={20} color={colors.primary} />
-          <Text style={styles.navCardText}>More Settings & Features</Text>
+          <Text style={styles.navCardText}>{t.accountSettings.moreSettings}</Text>
           <Ionicons name="chevron-forward" size={18} color={colors.primary} />
         </TouchableOpacity>
 
@@ -308,17 +282,47 @@ export default function AccountSettingsScreen() {
               <Ionicons name="storefront-outline" size={20} color={colors.primary} />
             </View>
             <View>
-              <Text style={styles.supplierCTATitle}>Register as Supplier</Text>
-              <Text style={styles.supplierCTADesc}>Start selling on NEXUM</Text>
+              <Text style={styles.supplierCTATitle}>{t.accountSettings.registerSupplier}</Text>
+              <Text style={styles.supplierCTADesc}>{t.accountSettings.startSelling}</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.primary} />
         </TouchableOpacity>
 
+        {/* Dark mode toggle */}
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleLeft}>
+            <Ionicons name={isDark ? 'moon' : 'sunny-outline'} size={20} color={colors.primary} />
+            <Text style={styles.toggleLabel}>{isDark ? t.accountSettings.darkMode : t.accountSettings.lightMode}</Text>
+          </View>
+          <Switch
+            value={isDark}
+            onValueChange={toggleTheme}
+            trackColor={{ false: colors.border, true: `${colors.primary}80` }}
+            thumbColor={isDark ? colors.primary : colors.surface}
+            ios_backgroundColor={colors.border}
+          />
+        </View>
+
+        {/* Language toggle */}
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleLeft}>
+            <Ionicons name="globe-outline" size={20} color={colors.primary} />
+            <Text style={styles.toggleLabel}>{isUrdu ? t.accountSettings.urdu : t.accountSettings.english}</Text>
+          </View>
+          <Switch
+            value={isUrdu}
+            onValueChange={toggleLanguage}
+            trackColor={{ false: colors.border, true: `${colors.primary}80` }}
+            thumbColor={isUrdu ? colors.primary : colors.surface}
+            ios_backgroundColor={colors.border}
+          />
+        </View>
+
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={18} color={isDark ? '#000000' : '#EF4444'} />
-          <Text style={styles.logoutText}>Log Out</Text>
+          <Text style={styles.logoutText}>{t.accountSettings.logOut}</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -382,6 +386,9 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
   supplierCTAIcon:  { width: 38, height: 38, borderRadius: 19, backgroundColor: `${colors.primary}20`, alignItems: 'center', justifyContent: 'center' },
   supplierCTATitle: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.text },
   supplierCTADesc:  { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 1 },
+  toggleRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: radii.xl, paddingHorizontal: spacing.md, paddingVertical: 14, marginBottom: 8, ...shadows.sm },
+  toggleLeft:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  toggleLabel: { fontSize: 14, fontFamily: fonts.medium, color: colors.text },
   logoutBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: isDark ? colors.primary : '#FEF2F2', borderWidth: 1, borderColor: isDark ? colors.primaryDark : '#FECACA', borderRadius: radii.xl, paddingVertical: 14 },
   logoutText:      { fontSize: 14, fontFamily: fonts.semiBold, color: isDark ? '#000000' : '#EF4444' },
 });

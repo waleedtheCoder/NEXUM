@@ -12,6 +12,7 @@ import ProductCard from '../components/ProductCard';
 import BottomNav from '../components/BottomNav';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getListings } from '../services/marketplaceApi';
 
 const SORT_FILTERS = ['Newest', 'Price ↑', 'Price ↓'];
@@ -19,6 +20,7 @@ const SORT_MAP = { 'Newest': 'newest', 'Price ↑': 'price_asc', 'Price ↓': 'p
 
 export default function CategoryListingsScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -30,6 +32,12 @@ export default function CategoryListingsScreen() {
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState('Newest');
 
+  const SORT_LABELS = {
+    'Newest':  t.categoryListings.newest,
+    'Price ↑': t.categoryListings.priceUp,
+    'Price ↓': t.categoryListings.priceDown,
+  };
+
   const fetchProducts = async (sort = 'newest') => {
     setLoading(true);
     setError(null);
@@ -40,7 +48,7 @@ export default function CategoryListingsScreen() {
       });
       setProducts(data);
     } catch (err) {
-      setError(err.message || 'Failed to load listings.');
+      setError(t.categoryListings.failedLoad);
     } finally {
       setLoading(false);
     }
@@ -69,7 +77,7 @@ export default function CategoryListingsScreen() {
           keyExtractor={(f) => f}
           renderItem={({ item }) => (
             <FilterChip
-              label={item}
+              label={SORT_LABELS[item] || item}
               active={activeFilter === item}
               onPress={() => handleFilterChange(item)}
             />
@@ -85,9 +93,9 @@ export default function CategoryListingsScreen() {
       ) : error ? (
         <View style={styles.center}>
           <Ionicons name="cloud-offline-outline" size={48} color={colors.textLight} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>{error || t.categoryListings.failedLoad}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchProducts(SORT_MAP[activeFilter])}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t.categoryListings.retry}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -110,7 +118,7 @@ export default function CategoryListingsScreen() {
           ListEmptyComponent={
             <View style={styles.center}>
               <Ionicons name="cube-outline" size={48} color={colors.textLight} />
-              <Text style={styles.errorText}>No listings in this category yet</Text>
+              <Text style={styles.errorText}>{t.categoryListings.noListings}</Text>
             </View>
           }
         />

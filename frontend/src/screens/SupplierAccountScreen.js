@@ -10,57 +10,22 @@ import BottomNav from '../components/BottomNav';
 import { useUser } from '../context/UserContext';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getSupplierDashboard } from '../services/marketplaceApi';
 
-const MENU_ITEMS = [
-  {
-    title: 'My Listings',
-    desc:  'View and manage all your active listings',
-    icon:  'cube-outline',
-    screen: 'Sell',
-  },
-  {
-    title: 'Incoming Orders',
-    desc:  'View and manage orders from shopkeepers',
-    icon:  'receipt-outline',
-    screen: 'IncomingOrders',
-    badge: 'New',
-  },
-  {
-    // FIX: was null (coming soon) — EditProfileScreen now exists
-    title: 'Business Profile',
-    desc:  'Update your business name and details',
-    icon:  'business-outline',
-    screen: 'EditProfile',
-  },
-  {
-    title: 'Payout & Banking',
-    desc:  'Manage how you receive payments',
-    icon:  'card-outline',
-    screen: null,
-  },
-  {
-    title: 'Verified Supplier Badge',
-    desc:  'Get verified to build buyer trust',
-    icon:  'shield-checkmark-outline',
-    screen: null,
-  },
-  {
-    title: 'Promote Listings',
-    desc:  'Boost your products to reach more buyers',
-    icon:  'trending-up-outline',
-    screen: null,
-  },
-  {
-    title: 'Invite Retailers',
-    desc:  'Earn rewards by inviting shopkeepers',
-    icon:  'person-add-outline',
-    screen: null,
-  },
+const getMenuItems = (t) => [
+  { titleKey: 'myListings',    descKey: 'myListingsDesc',    icon: 'cube-outline',             screen: 'Sell'          },
+  { titleKey: 'incomingOrders',descKey: 'incomingOrdersDesc',icon: 'receipt-outline',          screen: 'IncomingOrders', badge: 'New' },
+  { titleKey: 'businessProfile',descKey:'businessProfileDesc',icon:'business-outline',         screen: 'EditProfile'   },
+  { titleKey: 'payoutBanking', descKey: 'payoutDesc',         icon: 'card-outline',             screen: null            },
+  { titleKey: 'verifiedBadge', descKey: 'verifiedBadgeDesc',  icon: 'shield-checkmark-outline', screen: null            },
+  { titleKey: 'promoteListings',descKey:'promoteDesc',         icon: 'trending-up-outline',      screen: null            },
+  { titleKey: 'inviteRetailers',descKey:'inviteDesc',          icon: 'person-add-outline',       screen: null            },
 ];
 
 export default function SupplierAccountScreen() {
   const { colors, isDark, toggleTheme } = useTheme();
+  const { t, isUrdu, toggleLanguage } = useLanguage();
   const styles = makeStyles(colors, isDark);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -108,7 +73,7 @@ export default function SupplierAccountScreen() {
     if (item.screen) {
       navigation.navigate(item.screen);
     } else {
-      Alert.alert(item.title, 'This feature is coming soon!');
+      Alert.alert(t.supplierAccount[item.titleKey], t.common.comingSoon);
     }
   };
 
@@ -134,7 +99,7 @@ export default function SupplierAccountScreen() {
             <Text style={styles.role}>Supplier Account</Text>
             <View style={styles.verifiedRow}>
               <Ionicons name="checkmark-circle" size={14} color={colors.green} />
-              <Text style={styles.verifiedText}>Verified</Text>
+              <Text style={styles.verifiedText}>{t.supplierAccount.verified}</Text>
             </View>
           </View>
         </View>
@@ -149,7 +114,7 @@ export default function SupplierAccountScreen() {
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
         {/* Performance stats */}
-        <Text style={styles.sectionLabel}>Performance</Text>
+        <Text style={styles.sectionLabel}>{t.supplierAccount.performance}</Text>
         {loading ? (
           <View style={styles.loadingRow}>
             <ActivityIndicator size="small" color={colors.primary} />
@@ -176,7 +141,7 @@ export default function SupplierAccountScreen() {
         {inquiries.length > 0 && (
           <>
             <View style={styles.inquiriesHeader}>
-              <Text style={styles.sectionLabel}>Recent Inquiries</Text>
+              <Text style={styles.sectionLabel}>{t.supplierAccount.recentInquiries}</Text>
             </View>
             <View style={styles.menuSection}>
               {inquiries.map((inq, i) => (
@@ -208,20 +173,20 @@ export default function SupplierAccountScreen() {
         )}
 
         {/* Menu items */}
-        <Text style={styles.sectionLabel}>Manage</Text>
+        <Text style={styles.sectionLabel}>{t.supplierAccount.manage}</Text>
         <View style={styles.menuSection}>
-          {MENU_ITEMS.map((item, i) => (
+          {getMenuItems(t).map((item, i, arr) => (
             <TouchableOpacity
               key={i}
-              style={[styles.menuRow, i < MENU_ITEMS.length - 1 && styles.menuRowBorder]}
+              style={[styles.menuRow, i < arr.length - 1 && styles.menuRowBorder]}
               onPress={() => handleMenuPress(item)}
             >
               <View style={[styles.menuIcon, { backgroundColor: `${colors.primary}18` }]}>
                 <Ionicons name={item.icon} size={18} color={colors.primary} />
               </View>
               <View style={styles.menuText}>
-                <Text style={styles.menuTitle}>{item.title}</Text>
-                <Text style={styles.menuDesc}>{item.desc}</Text>
+                <Text style={styles.menuTitle}>{t.supplierAccount[item.titleKey]}</Text>
+                <Text style={styles.menuDesc}>{t.supplierAccount[item.descKey]}</Text>
               </View>
               {item.badge && (
                 <View style={styles.newBadge}>
@@ -242,8 +207,8 @@ export default function SupplierAccountScreen() {
           <View style={styles.themeLeft}>
             <Ionicons name="swap-horizontal-outline" size={20} color={colors.primary} />
             <View>
-              <Text style={styles.themeLabel}>Shopkeeper View</Text>
-              <Text style={styles.switchSubLabel}>Browse & order from marketplace</Text>
+              <Text style={styles.themeLabel}>{t.supplierAccount.shopkeeperView}</Text>
+              <Text style={styles.switchSubLabel}>{t.supplierAccount.shopkeeperViewDesc}</Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.primary} />
@@ -257,7 +222,7 @@ export default function SupplierAccountScreen() {
               size={20}
               color={colors.primary}
             />
-            <Text style={styles.themeLabel}>{isDark ? 'Dark Mode' : 'Light Mode'}</Text>
+            <Text style={styles.themeLabel}>{isDark ? t.supplierAccount.darkMode : t.supplierAccount.lightMode}</Text>
           </View>
           <Switch
             value={isDark}
@@ -268,10 +233,25 @@ export default function SupplierAccountScreen() {
           />
         </View>
 
+        {/* Language toggle */}
+        <View style={styles.themeRow}>
+          <View style={styles.themeLeft}>
+            <Ionicons name="globe-outline" size={20} color={colors.primary} />
+            <Text style={styles.themeLabel}>{isUrdu ? t.supplierAccount.urdu : t.supplierAccount.english}</Text>
+          </View>
+          <Switch
+            value={isUrdu}
+            onValueChange={toggleLanguage}
+            trackColor={{ false: colors.border, true: `${colors.primary}80` }}
+            thumbColor={isUrdu ? colors.primary : colors.surface}
+            ios_backgroundColor={colors.border}
+          />
+        </View>
+
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={18} color={isDark ? '#000000' : '#EF4444'} />
-          <Text style={styles.logoutText}>Log Out</Text>
+          <Text style={styles.logoutText}>{t.supplierAccount.logOut}</Text>
         </TouchableOpacity>
 
       </ScrollView>

@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import {
   getNotifications,
   markNotificationRead,
@@ -19,6 +20,7 @@ const FILTER_TABS = ['All', 'Unread', 'Inquiries', 'Alerts'];
 
 export default function NotificationsScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -93,6 +95,13 @@ export default function NotificationsScreen() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  const TAB_LABELS = {
+    'All': t.notifications.all,
+    'Unread': t.notifications.unread,
+    'Inquiries': t.notifications.inquiries,
+    'Alerts': t.notifications.alerts,
+  };
+
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
@@ -102,10 +111,10 @@ export default function NotificationsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={styles.headerTitle}>{t.notifications.title}</Text>
         {unreadCount > 0 ? (
           <TouchableOpacity onPress={handleMarkAllRead} style={styles.markAllBtn}>
-            <Text style={styles.markAllText}>Mark all read</Text>
+            <Text style={styles.markAllText}>{t.notifications.markAllRead}</Text>
           </TouchableOpacity>
         ) : (
           <View style={{ width: 80 }} />
@@ -120,7 +129,7 @@ export default function NotificationsScreen() {
             style={[styles.tab, activeTab === tab && styles.tabActive]}
             onPress={() => setActiveTab(tab)}
           >
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{TAB_LABELS[tab] || tab}</Text>
             {tab === 'Unread' && unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{unreadCount}</Text>
@@ -139,7 +148,7 @@ export default function NotificationsScreen() {
           <Ionicons name="cloud-offline-outline" size={48} color={colors.border} />
           <Text style={styles.emptyText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={fetchNotifications}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t.common.retry}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -169,7 +178,7 @@ export default function NotificationsScreen() {
           ListEmptyComponent={
             <View style={styles.center}>
               <Ionicons name="notifications-off-outline" size={52} color={colors.border} />
-              <Text style={styles.emptyText}>No notifications here</Text>
+              <Text style={styles.emptyText}>{t.notifications.none}</Text>
             </View>
           }
           contentContainerStyle={{ paddingBottom: 24 }}

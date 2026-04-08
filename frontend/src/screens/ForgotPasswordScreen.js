@@ -6,9 +6,11 @@ import ScreenHeader from '../components/ScreenHeader';
 import { forgotPasswordWithBackend } from '../services/authApi';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 
 export default function ForgotPasswordScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -16,7 +18,7 @@ export default function ForgotPasswordScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleReset = async () => {
-    if (!email) { Alert.alert('Error', 'Please enter your email.'); return; }
+    if (!email) { Alert.alert(t.forgotPassword.failed, t.forgotPassword.fillEmail); return; }
 
     try {
       setLoading(true);
@@ -25,24 +27,24 @@ export default function ForgotPasswordScreen() {
       navigation.navigate('OTPVerification', { email: email.trim().toLowerCase(), flow: 'reset' });
     } catch (err) {
       setLoading(false);
-      Alert.alert('Request Failed', err?.message || 'Could not send OTP right now.');
+      Alert.alert(t.forgotPassword.failed, err?.message || t.forgotPassword.failedMsg);
     }
   };
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title="Reset Password" showBack />
+      <ScreenHeader title={t.forgotPassword.title} showBack />
       <View style={styles.body}>
-        <Text style={styles.message}>Enter your email address to receive a password reset OTP.</Text>
-        <Text style={styles.label}>Email *</Text>
-        <TextInput style={styles.input} placeholder="your.email@example.com" placeholderTextColor={colors.textLight} keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
+        <Text style={styles.message}>{t.forgotPassword.subtitle}</Text>
+        <Text style={styles.label}>{t.forgotPassword.email}</Text>
+        <TextInput style={styles.input} placeholder={t.forgotPassword.emailPlaceholder} placeholderTextColor={colors.textLight} keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
         <View style={styles.btnRow}>
           <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.backBtnText}>Back</Text>
+            <Text style={styles.backBtnText}>{t.forgotPassword.back}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.resetBtn, loading && styles.resetBtnDisabled]} onPress={handleReset} disabled={loading}>
-            <Text style={styles.resetBtnText}>{loading ? 'Sending...' : 'Send OTP'}</Text>
+            <Text style={styles.resetBtnText}>{loading ? t.forgotPassword.sending : t.forgotPassword.sendOtp}</Text>
           </TouchableOpacity>
         </View>
       </View>

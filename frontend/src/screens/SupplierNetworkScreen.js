@@ -20,10 +20,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { useUser } from '../context/UserContext';
 import { getSupplierNetwork, toggleFavouriteSupplier } from '../services/marketplaceApi';
 
 function SupplierCard({ supplier, onRemove, removing, onPress, colors, styles }) {
+  const { t } = useLanguage();
   const initials = supplier.initials
     || (supplier.name || 'S').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
@@ -36,7 +38,7 @@ function SupplierCard({ supplier, onRemove, removing, onPress, colors, styles })
       <View style={styles.cardInfo}>
         <Text style={styles.cardName} numberOfLines={1}>{supplier.name}</Text>
         <Text style={styles.cardMeta}>
-          {supplier.totalListings ?? 0} active listing{supplier.totalListings !== 1 ? 's' : ''}
+          {supplier.totalListings ?? 0} {t.supplierNetwork.activeListings}
         </Text>
       </View>
 
@@ -59,6 +61,7 @@ function SupplierCard({ supplier, onRemove, removing, onPress, colors, styles })
 
 export default function SupplierNetworkScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
   const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -119,15 +122,15 @@ export default function SupplierNetworkScreen() {
   const renderEmpty = () => (
     <View style={styles.emptyWrap}>
       <Ionicons name="people-outline" size={56} color={colors.textLight} />
-      <Text style={styles.emptyTitle}>No suppliers saved yet</Text>
+      <Text style={styles.emptyTitle}>{t.supplierNetwork.none}</Text>
       <Text style={styles.emptySub}>
-        Browse the marketplace, find suppliers you trust, and save them here for quick access.
+        {t.supplierNetwork.noneSubtext}
       </Text>
       <TouchableOpacity
         style={styles.browseBtn}
         onPress={() => navigation.navigate('MarketplaceBrowsing')}
       >
-        <Text style={styles.browseBtnText}>Browse Marketplace</Text>
+        <Text style={styles.browseBtnText}>{t.supplierNetwork.browse}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -141,7 +144,7 @@ export default function SupplierNetworkScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Supplier Network</Text>
+        <Text style={styles.headerTitle}>{t.supplierNetwork.title}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -154,7 +157,7 @@ export default function SupplierNetworkScreen() {
           <Ionicons name="alert-circle-outline" size={40} color={colors.accent} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={fetchNetwork}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t.supplierNetwork.retry}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -169,7 +172,7 @@ export default function SupplierNetworkScreen() {
           ListHeaderComponent={
             suppliers.length > 0 ? (
               <Text style={styles.countLabel}>
-                {suppliers.length} supplier{suppliers.length !== 1 ? 's' : ''} in your network
+                {suppliers.length} {t.supplierNetwork.supplierCount}
               </Text>
             ) : null
           }

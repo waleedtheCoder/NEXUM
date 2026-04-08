@@ -9,23 +9,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getMessages, sendMessage, sendTypingSignal } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
 const POLL_INTERVAL_MS = 3000;
 
-const QUICK_REPLIES = [
-  'What is the price?',
-  'Minimum order?',
-  'Delivery available?',
-  'Send photos',
-];
+// Translated quick replies are computed inside the component using t
+const QUICK_REPLY_KEYS = ['whatIsPrice', 'minOrder', 'deliveryAvail', 'sendPhotos'];
 
 export default function ChatConversationScreen() {
   const navigation = useNavigation();
   const route      = useRoute();
   const insets     = useSafeAreaInsets();
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
   const { idToken, sessionId, refreshToken, updateUser } = useUser();
 
   const chat   = route.params?.chat;
@@ -123,6 +121,8 @@ export default function ChatConversationScreen() {
     }
   }, [input, sending, convId, fetchMessages]);
 
+  const QUICK_REPLIES = QUICK_REPLY_KEYS.map((key) => t.chatConversation[key]);
+
   const styles = makeStyles(colors);
 
   const renderMessage = ({ item }) => (
@@ -158,7 +158,7 @@ export default function ChatConversationScreen() {
           <View style={styles.headerText}>
             <Text style={styles.headerName} numberOfLines={1}>{chat?.username || 'Seller'}</Text>
             <Text style={styles.headerProduct} numberOfLines={1}>
-              {chat?.productTitle || 'Product inquiry'}
+              {chat?.productTitle || t.chatConversation.productInquiry}
             </Text>
           </View>
         </TouchableOpacity>
@@ -191,7 +191,7 @@ export default function ChatConversationScreen() {
           <Ionicons name="cloud-offline-outline" size={48} color={colors.textLight} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchMessages(true)}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t.common.retry}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -210,7 +210,7 @@ export default function ChatConversationScreen() {
       {otherIsTyping && (
         <View style={styles.typingRow}>
           <View style={styles.typingBubble}>
-            <Text style={styles.typingText}>{chat?.username || 'Seller'} is typing…</Text>
+            <Text style={styles.typingText}>{chat?.username || 'Seller'} {t.chatConversation.isTyping}</Text>
           </View>
         </View>
       )}
@@ -241,7 +241,7 @@ export default function ChatConversationScreen() {
           style={styles.textInput}
           value={input}
           onChangeText={handleTyping}
-          placeholder="Message..."
+          placeholder={t.chatConversation.messagePlaceholder}
           placeholderTextColor={colors.textLight}
           multiline
           returnKeyType="default"

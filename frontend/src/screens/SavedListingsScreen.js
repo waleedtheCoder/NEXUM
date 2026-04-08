@@ -25,11 +25,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getSavedListings, toggleSaveListing } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
 export default function SavedListingsScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -128,7 +130,7 @@ export default function SavedListingsScreen() {
         {/* Featured badge */}
         {item.isFeatured && (
           <View style={styles.featuredBadge}>
-            <Text style={styles.featuredText}>Featured</Text>
+            <Text style={styles.featuredText}>{t.common.featured}</Text>
           </View>
         )}
 
@@ -169,7 +171,7 @@ export default function SavedListingsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Saved Listings</Text>
+        <Text style={styles.headerTitle}>{t.savedListings.title}</Text>
         {listings.length > 0 && (
           <View style={styles.countBadge}>
             <Text style={styles.countText}>{listings.length}</Text>
@@ -190,7 +192,7 @@ export default function SavedListingsScreen() {
           <Ionicons name="cloud-offline-outline" size={48} color={colors.textLight} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchSaved()}>
-            <Text style={styles.retryText}>Try Again</Text>
+            <Text style={styles.retryText}>{t.savedListings.tryAgain}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -214,15 +216,15 @@ export default function SavedListingsScreen() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="heart-outline" size={56} color={colors.textLight} />
-              <Text style={styles.emptyTitle}>No saved listings yet</Text>
+              <Text style={styles.emptyTitle}>{t.savedListings.none}</Text>
               <Text style={styles.emptySubtitle}>
-                Tap the heart on any product to save it here for later.
+                {t.savedListings.noneSubtext}
               </Text>
               <TouchableOpacity
                 style={styles.browseBtn}
                 onPress={() => navigation.navigate('MarketplaceBrowsing')}
               >
-                <Text style={styles.browseBtnText}>Browse Marketplace</Text>
+                <Text style={styles.browseBtnText}>{t.savedListings.browse}</Text>
               </TouchableOpacity>
             </View>
           }

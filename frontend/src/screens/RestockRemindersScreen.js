@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { useUser } from '../context/UserContext';
 import { getReminders, createReminder, updateReminder, deleteReminder } from '../services/marketplaceApi';
 
@@ -31,6 +32,7 @@ const SUGGESTIONS = [
 
 export default function RestockRemindersScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
   const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -68,9 +70,9 @@ export default function RestockRemindersScreen() {
   const handleAdd = async () => {
     const trimProduct = product.trim();
     const trimQty = quantity.trim();
-    if (!trimProduct) { Alert.alert('Required', 'Enter a product name.'); return; }
+    if (!trimProduct) { Alert.alert(t.restockReminders.required, t.restockReminders.enterProductName); return; }
     if (!trimQty || isNaN(Number(trimQty)) || Number(trimQty) <= 0) {
-      Alert.alert('Required', 'Enter a valid quantity.');
+      Alert.alert(t.restockReminders.required, t.restockReminders.enterValidQty);
       return;
     }
     setSaving(true);
@@ -85,7 +87,7 @@ export default function RestockRemindersScreen() {
       setUnit('kg');
       setModalOpen(false);
     } catch (err) {
-      Alert.alert('Error', err.message || 'Could not save reminder.');
+      Alert.alert(t.restockReminders.required, err.message || t.restockReminders.saveFailed);
     } finally {
       setSaving(false);
     }
@@ -103,10 +105,10 @@ export default function RestockRemindersScreen() {
   };
 
   const handleDelete = (item) => {
-    Alert.alert('Delete Reminder', 'Remove this restock reminder?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t.restockReminders.deleteTitle, t.restockReminders.deleteMsg, [
+      { text: t.common.cancel, style: 'cancel' },
       {
-        text: 'Delete',
+        text: t.restockReminders.delete,
         style: 'destructive',
         onPress: async () => {
           setReminders((prev) => prev.filter((r) => r.id !== item.id));
@@ -114,7 +116,7 @@ export default function RestockRemindersScreen() {
             await deleteReminder(item.id, authArgs);
           } catch {
             setReminders((prev) => [item, ...prev]);
-            Alert.alert('Error', 'Could not delete reminder.');
+            Alert.alert(t.restockReminders.deleteTitle, t.restockReminders.deleteFailed);
           }
         },
       },
@@ -151,7 +153,7 @@ export default function RestockRemindersScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Restock Reminders</Text>
+        <Text style={styles.headerTitle}>{t.restockReminders.title}</Text>
         <TouchableOpacity onPress={() => setModalOpen(true)} style={styles.addBtn}>
           <Ionicons name="add" size={24} color="#fff" />
         </TouchableOpacity>
@@ -171,13 +173,13 @@ export default function RestockRemindersScreen() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="repeat-outline" size={52} color={colors.textLight} />
-              <Text style={styles.emptyTitle}>No reminders yet</Text>
+              <Text style={styles.emptyTitle}>{t.restockReminders.none}</Text>
               <Text style={styles.emptySub}>
-                Add reminders for products you frequently restock so you never run out.
+                {t.restockReminders.noneSubtext}
               </Text>
               <TouchableOpacity style={styles.emptyBtn} onPress={() => setModalOpen(true)}>
                 <Ionicons name="add" size={18} color="#fff" />
-                <Text style={styles.emptyBtnText}>Add First Reminder</Text>
+                <Text style={styles.emptyBtnText}>{t.restockReminders.addFirst}</Text>
               </TouchableOpacity>
             </View>
           }
@@ -202,18 +204,18 @@ export default function RestockRemindersScreen() {
         <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 16 }]}>
 
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>New Reminder</Text>
+            <Text style={styles.modalTitle}>{t.restockReminders.newReminder}</Text>
             <TouchableOpacity onPress={() => setModalOpen(false)}>
               <Ionicons name="close" size={22} color={colors.text} />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.inputLabel}>Product Name</Text>
+          <Text style={styles.inputLabel}>{t.restockReminders.productName}</Text>
           <TextInput
             style={styles.textInput}
             value={product}
             onChangeText={setProduct}
-            placeholder="e.g. Basmati Rice"
+            placeholder={t.restockReminders.productPlaceholder}
             placeholderTextColor={colors.textLight}
             autoCorrect={false}
           />
@@ -226,7 +228,7 @@ export default function RestockRemindersScreen() {
             ))}
           </View>
 
-          <Text style={styles.inputLabel}>Remind when stock falls below</Text>
+          <Text style={styles.inputLabel}>{t.restockReminders.remindBelow}</Text>
           <View style={styles.qtyRow}>
             <TextInput
               style={[styles.textInput, styles.qtyInput]}
@@ -260,7 +262,7 @@ export default function RestockRemindersScreen() {
           <TouchableOpacity style={[styles.addButton, saving && { opacity: 0.6 }]} onPress={handleAdd} disabled={saving}>
             {saving
               ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={styles.addButtonText}>Add Reminder</Text>
+              : <Text style={styles.addButtonText}>{t.restockReminders.addReminder}</Text>
             }
           </TouchableOpacity>
         </View>

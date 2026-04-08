@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getIncomingOrders, updateOrderStatus } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
@@ -56,15 +57,30 @@ const STATUS_ACTIONS = {
 };
 
 function StatusBadge({ status, colors, styles }) {
+  const { t } = useLanguage();
+  const STATUS_LABELS = {
+    pending: t.incomingOrders.pending,
+    confirmed: t.incomingOrders.confirmed,
+    shipped: t.incomingOrders.shipped,
+    delivered: t.incomingOrders.delivered,
+    cancelled: t.incomingOrders.cancelled,
+  };
   const cfg = STATUS_CONFIG[status] || { label: status, color: colors.textSecondary, bg: colors.surface };
   return (
     <View style={[styles.badge, { backgroundColor: cfg.bg }]}>
-      <Text style={[styles.badgeText, { color: cfg.color }]}>{cfg.label}</Text>
+      <Text style={[styles.badgeText, { color: cfg.color }]}>{STATUS_LABELS[status] || cfg.label}</Text>
     </View>
   );
 }
 
 function OrderCard({ order, onStatusUpdate, updatingId, colors, styles }) {
+  const { t } = useLanguage();
+  const ACTION_LABELS = {
+    Confirm: t.incomingOrders.confirmBtn,
+    Cancel: t.incomingOrders.cancelBtn,
+    'Mark Shipped': t.incomingOrders.markShipped,
+    'Mark Delivered': t.incomingOrders.markDelivered,
+  };
   const actions    = STATUS_ACTIONS[order.status] || [];
   const isUpdating = updatingId === order.id;
 
@@ -80,7 +96,7 @@ function OrderCard({ order, onStatusUpdate, updatingId, colors, styles }) {
             {order.productName || '—'}
           </Text>
           <Text style={styles.buyerName}>
-            from {order.buyerName || 'Buyer'}
+            {t.incomingOrders.from} {order.buyerName || t.incomingOrders.buyer}
           </Text>
         </View>
         <StatusBadge status={order.status} colors={colors} styles={styles} />
@@ -89,19 +105,19 @@ function OrderCard({ order, onStatusUpdate, updatingId, colors, styles }) {
       {/* Details row */}
       <View style={styles.detailsRow}>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Quantity</Text>
+          <Text style={styles.detailLabel}>{t.incomingOrders.quantity}</Text>
           {/* FIX: order.unit now returned by updated serializer */}
           <Text style={styles.detailValue}>{order.quantity} {order.unit || 'units'}</Text>
         </View>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Total</Text>
+          <Text style={styles.detailLabel}>{t.incomingOrders.total}</Text>
           {/* FIX: was order.total_price */}
           <Text style={styles.detailValue}>
             Rs {order.totalPrice ? Number(order.totalPrice).toLocaleString() : '—'}
           </Text>
         </View>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Ordered</Text>
+          <Text style={styles.detailLabel}>{t.incomingOrders.ordered}</Text>
           {/* FIX: was order.created_at_display */}
           <Text style={styles.detailValue}>{order.orderDate || '—'}</Text>
         </View>
@@ -131,7 +147,7 @@ function OrderCard({ order, onStatusUpdate, updatingId, colors, styles }) {
                   styles.actionBtnText,
                   action.style === 'danger' && styles.actionBtnTextDanger,
                 ]}>
-                  {action.label}
+                  {ACTION_LABELS[action.label] || action.label}
                 </Text>
               </TouchableOpacity>
             ))
@@ -144,6 +160,7 @@ function OrderCard({ order, onStatusUpdate, updatingId, colors, styles }) {
 
 export default function IncomingOrdersScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets     = useSafeAreaInsets();
@@ -205,7 +222,7 @@ export default function IncomingOrdersScreen() {
       setOrders((prev) =>
         prev.map((o) => (o.id === order.id ? { ...o, status: prevStatus } : o))
       );
-      Alert.alert('Update Failed', err.message || 'Could not update order status.');
+      Alert.alert(t.common.updateFailed, err.message || t.common.couldNotUpdateStatus);
     } finally {
       setUpdatingId(null);
     }
@@ -225,12 +242,12 @@ export default function IncomingOrdersScreen() {
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Incoming Orders</Text>
+          <Text style={styles.headerTitle}>{t.incomingOrders.title}</Text>
           {!loading && orders.length > 0 && (
             <Text style={styles.headerSub}>
               {pendingCount > 0
-                ? `${pendingCount} pending action`
-                : `${activeCount} in progress`}
+                ? `${pendingCount} ${t.incomingOrders.pendingAction}`
+                : `${activeCount} ${t.incomingOrders.inProgress}`}
             </Text>
           )}
         </View>
@@ -249,7 +266,7 @@ export default function IncomingOrdersScreen() {
           <Ionicons name="cloud-offline-outline" size={48} color={colors.textLight} />
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchOrders()}>
-            <Text style={styles.retryText}>Try Again</Text>
+            <Text style={styles.retryText}>{t.incomingOrders.tryAgain}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -271,9 +288,9 @@ export default function IncomingOrdersScreen() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="receipt-outline" size={56} color={colors.textLight} />
-              <Text style={styles.emptyTitle}>No orders yet</Text>
+              <Text style={styles.emptyTitle}>{t.incomingOrders.none}</Text>
               <Text style={styles.emptySubtitle}>
-                When shopkeepers order from your listings, they'll appear here.
+                {t.incomingOrders.noneSubtext}
               </Text>
             </View>
           }

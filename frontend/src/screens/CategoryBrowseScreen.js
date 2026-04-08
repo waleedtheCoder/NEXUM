@@ -9,10 +9,12 @@ import { useNavigation } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { getCategories } from '../services/marketplaceApi';
 
 export default function CategoryBrowseScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -40,7 +42,7 @@ export default function CategoryBrowseScreen() {
           Object.entries(grouped).map(([title, items]) => ({ title, data: items }))
         );
       } catch (err) {
-        if (!cancelled) setError(err.message || 'Failed to load categories.');
+        if (!cancelled) setError(t.categoryBrowse.failedLoad);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -51,7 +53,7 @@ export default function CategoryBrowseScreen() {
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title="Categories" showBack />
+      <ScreenHeader title={t.categoryBrowse.title} showBack />
 
       {loading && (
         <View style={styles.center}>
@@ -62,12 +64,12 @@ export default function CategoryBrowseScreen() {
       {!!error && !loading && (
         <View style={styles.center}>
           <Ionicons name="cloud-offline-outline" size={48} color={colors.textLight} />
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>{error || t.categoryBrowse.failedLoad}</Text>
           <TouchableOpacity
             style={styles.retryBtn}
             onPress={() => { setError(null); setLoading(true); }}
           >
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={styles.retryText}>{t.categoryBrowse.retry}</Text>
           </TouchableOpacity>
         </View>
       )}

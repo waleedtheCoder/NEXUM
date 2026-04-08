@@ -10,6 +10,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { deleteListing, updateListing, setListingPromotion, removeListingPromotion } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
@@ -18,6 +19,7 @@ export default function MyListingsManagementScreen() {
   const route       = useRoute();
   const insets      = useSafeAreaInsets();
   const { colors }  = useTheme();
+  const { t, isUrdu } = useLanguage();
   const { idToken, sessionId, refreshToken, updateUser } = useUser();
 
   const listing = route.params?.listing;
@@ -44,7 +46,7 @@ export default function MyListingsManagementScreen() {
     await updateListing(listing.id, { status: 'active' }, authArgs);
     setStatus('active');
   } catch (err) {
-    Alert.alert('Error', err.message || 'Could not publish listing. Please try again.');
+    Alert.alert(t.manageListings.title, err.message || t.common.comingSoon);
   } finally {
     setPublishing(false);
   }
@@ -54,7 +56,7 @@ export default function MyListingsManagementScreen() {
   const handleSavePromotion = async () => {
     const pct = parseInt(promoInput, 10);
     if (isNaN(pct) || pct < 1 || pct > 99) {
-      Alert.alert('Invalid discount', 'Enter a number between 1 and 99.');
+      Alert.alert(t.manageListings.invalidDiscount, t.manageListings.invalidDiscountMsg);
       return;
     }
     setPromoSaving(true);
@@ -64,17 +66,17 @@ export default function MyListingsManagementScreen() {
       setShowPromoModal(false);
       setPromoInput('');
     } catch (err) {
-      Alert.alert('Error', err.message || 'Could not save promotion.');
+      Alert.alert(t.manageListings.setPromo, err.message || t.common.comingSoon);
     } finally {
       setPromoSaving(false);
     }
   };
 
   const handleRemovePromotion = () => {
-    Alert.alert('Remove Promotion', 'Remove the discount from this listing?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t.manageListings.removePromo, t.manageListings.removePromoMsg, [
+      { text: t.manageListings.cancel, style: 'cancel' },
       {
-        text: 'Remove',
+        text: t.manageListings.remove,
         style: 'destructive',
         onPress: async () => {
           setPromoRemoving(true);
@@ -82,7 +84,7 @@ export default function MyListingsManagementScreen() {
             await removeListingPromotion(listing.id, authArgs);
             setPromotion(null);
           } catch (err) {
-            Alert.alert('Error', err.message || 'Could not remove promotion.');
+            Alert.alert(t.manageListings.removePromo, err.message || t.common.comingSoon);
           } finally {
             setPromoRemoving(false);
           }
@@ -103,24 +105,24 @@ export default function MyListingsManagementScreen() {
   // ── Delete (soft) ─────────────────────────────────────────────────────────
   const handleDelete = () => {
     Alert.alert(
-      'Remove Listing',
-      'Are you sure you want to remove this listing? This action cannot be undone.',
+      t.manageListings.removeListing,
+      t.manageListings.removeListingMsg,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t.manageListings.cancel, style: 'cancel' },
         {
-          text: 'Remove',
+          text: t.manageListings.remove,
           style: 'destructive',
           onPress: async () => {
             setDeleting(true);
             try {
               await deleteListing(listing.id, authArgs);
               setStatus('removed');
-              Alert.alert('Done', 'Listing has been removed.', [
-                { text: 'OK', onPress: () => navigation.goBack() },
+              Alert.alert(t.manageListings.removeListingDone, t.manageListings.removeListingDoneMsg, [
+                { text: t.common.confirm, onPress: () => navigation.goBack() },
               ]);
             } catch (err) {
               setDeleting(false);
-              Alert.alert('Error', err.message || 'Could not remove the listing. Please try again.');
+              Alert.alert(t.manageListings.removeListing, err.message || t.common.comingSoon);
             }
           },
         },
@@ -145,7 +147,7 @@ export default function MyListingsManagementScreen() {
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <ScreenHeader
-        title="Manage Listing"
+        title={t.manageListings.title}
         showBack
         rightElement={
           <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} disabled={deleting}>
@@ -188,7 +190,7 @@ export default function MyListingsManagementScreen() {
           <View style={[styles.statusPill, { backgroundColor: sc.bg, borderColor: sc.border }]}>
             <View style={[styles.statusDot, { backgroundColor: sc.text }]} />
             <Text style={[styles.statusText, { color: sc.text }]}>
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {t.manageListings[status] || status.charAt(0).toUpperCase() + status.slice(1)}
             </Text>
           </View>
         </View>
@@ -196,9 +198,9 @@ export default function MyListingsManagementScreen() {
         {/* ── Stats row ───────────────────────────────────────────────── */}
         <View style={styles.statsRow}>
           {[
-            { icon: 'eye-outline',       color: colors.primary, value: listing?.views     ?? 0,   label: 'Views'     },
-            { icon: 'chatbubble-outline', color: colors.accent,  value: listing?.inquiries ?? 0,   label: 'Inquiries' },
-            { icon: 'cube-outline',       color: colors.green,   value: listing?.quantity  ?? '—', label: listing?.unit || 'qty' },
+            { icon: 'eye-outline',       color: colors.primary, value: listing?.views     ?? 0,   label: t.manageListings.views     },
+            { icon: 'chatbubble-outline', color: colors.accent,  value: listing?.inquiries ?? 0,   label: t.manageListings.inquiries },
+            { icon: 'cube-outline',       color: colors.green,   value: listing?.quantity  ?? '—', label: listing?.unit || t.manageListings.qty },
           ].map((s) => (
             <View key={s.label} style={styles.statBox}>
               <Ionicons name={s.icon} size={20} color={s.color} />
@@ -211,9 +213,9 @@ export default function MyListingsManagementScreen() {
         {/* ── Info card ───────────────────────────────────────────────── */}
         <View style={styles.infoCard}>
           {[
-            { label: 'Location',  value: listing?.location   || '—' },
-            { label: 'Condition', value: listing?.condition  || '—' },
-            { label: 'Posted',    value: listing?.postedDate || '—' },
+            { label: t.manageListings.location,  value: listing?.location   || '—' },
+            { label: t.manageListings.condition, value: listing?.condition  || '—' },
+            { label: t.manageListings.posted,    value: listing?.postedDate || '—' },
           ].map((row, i, arr) => (
             <View key={row.label}>
               <View style={styles.infoRow}>
@@ -228,7 +230,7 @@ export default function MyListingsManagementScreen() {
         {/* ── Description ─────────────────────────────────────────────── */}
         {!!listing?.description && (
           <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Description</Text>
+            <Text style={styles.infoLabel}>{t.manageListings.description}</Text>
             <Text style={[styles.infoValue, styles.descriptionText]}>
               {listing.description}
             </Text>
@@ -242,7 +244,7 @@ export default function MyListingsManagementScreen() {
               <View style={styles.promoCardHeader}>
                 <View style={styles.promoCardLeft}>
                   <Ionicons name="pricetag" size={18} color={colors.accent} />
-                  <Text style={styles.promoCardTitle}>Active Promotion</Text>
+                  <Text style={styles.promoCardTitle}>{t.manageListings.activePromo}</Text>
                 </View>
                 <TouchableOpacity onPress={handleRemovePromotion} disabled={promoRemoving}>
                   {promoRemoving
@@ -254,21 +256,21 @@ export default function MyListingsManagementScreen() {
               <View style={styles.promoRow}>
                 <View style={styles.promoStat}>
                   <Text style={styles.promoStatValue}>{promotion.discountPercent}%</Text>
-                  <Text style={styles.promoStatLabel}>Discount</Text>
+                  <Text style={styles.promoStatLabel}>{t.manageListings.discount}</Text>
                 </View>
                 <View style={styles.promoStatDivider} />
                 <View style={styles.promoStat}>
                   <Text style={styles.promoStatValue}>
                     Rs {parseFloat(promotion.discountedPrice).toLocaleString()}
                   </Text>
-                  <Text style={styles.promoStatLabel}>Promo price / {listing?.unit || 'unit'}</Text>
+                  <Text style={styles.promoStatLabel}>{t.manageListings.promoPrice} {listing?.unit || ''}</Text>
                 </View>
                 <View style={styles.promoStatDivider} />
                 <View style={styles.promoStat}>
                   <Text style={[styles.promoStatValue, styles.promoOldPrice]}>
                     Rs {parseFloat(listing?.pricePerUnit || 0).toLocaleString()}
                   </Text>
-                  <Text style={styles.promoStatLabel}>Original</Text>
+                  <Text style={styles.promoStatLabel}>{t.manageListings.original}</Text>
                 </View>
               </View>
             </View>
@@ -278,7 +280,7 @@ export default function MyListingsManagementScreen() {
               onPress={() => { setPromoInput(''); setShowPromoModal(true); }}
             >
               <Ionicons name="pricetag-outline" size={18} color={colors.accent} />
-              <Text style={styles.promoAddBtnText}>Put on Promotion</Text>
+              <Text style={styles.promoAddBtnText}>{t.manageListings.putOnPromo}</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.accent} />
             </TouchableOpacity>
           )
@@ -298,7 +300,7 @@ export default function MyListingsManagementScreen() {
                 ? <ActivityIndicator size="small" color="#fff" />
                 : <>
                     <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
-                    <Text style={styles.actionBtnText}>Publish Listing</Text>
+                    <Text style={styles.actionBtnText}>{t.manageListings.publish}</Text>
                   </>
               }
             </TouchableOpacity>
@@ -308,7 +310,7 @@ export default function MyListingsManagementScreen() {
           {status !== 'removed' && (
             <TouchableOpacity style={styles.editBtn} onPress={handleEdit}>
               <Ionicons name="create-outline" size={18} color="#fff" />
-              <Text style={styles.actionBtnText}>Edit Listing</Text>
+              <Text style={styles.actionBtnText}>{t.manageListings.editListing}</Text>
             </TouchableOpacity>
           )}
 
@@ -319,7 +321,7 @@ export default function MyListingsManagementScreen() {
           >
             <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
             <Text style={[styles.actionBtnText, { color: colors.primary }]}>
-              View Inquiries
+              {t.manageListings.viewInquiries}
             </Text>
           </TouchableOpacity>
 
@@ -340,16 +342,13 @@ export default function MyListingsManagementScreen() {
         >
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Set Promotion</Text>
-            <Text style={styles.modalSub}>
-              Enter the discount percentage for "{listing?.productName}".
-              Shopkeepers will see the reduced price on the home screen.
-            </Text>
+            <Text style={styles.modalTitle}>{t.manageListings.setPromo}</Text>
+            <Text style={styles.modalSub}>{t.manageListings.promoDesc}</Text>
 
             <View style={styles.modalInputWrap}>
               <TextInput
                 style={styles.modalInput}
-                placeholder="e.g. 20"
+                placeholder={t.manageListings.eg}
                 placeholderTextColor={colors.textLight}
                 keyboardType="number-pad"
                 value={promoInput}
@@ -362,10 +361,10 @@ export default function MyListingsManagementScreen() {
 
             {promoInput !== '' && !isNaN(parseInt(promoInput, 10)) && (
               <View style={styles.modalPreview}>
-                <Text style={styles.modalPreviewLabel}>New price</Text>
+                <Text style={styles.modalPreviewLabel}>{t.manageListings.newPrice}</Text>
                 <Text style={styles.modalPreviewPrice}>
                   Rs {(parseFloat(listing?.pricePerUnit || 0) * (1 - parseInt(promoInput, 10) / 100)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                  {' '}/{' '}{listing?.unit || 'unit'}
+                  {' '}/{' '}{listing?.unit || ''}
                 </Text>
               </View>
             )}
@@ -377,12 +376,12 @@ export default function MyListingsManagementScreen() {
             >
               {promoSaving
                 ? <ActivityIndicator color="#fff" />
-                : <Text style={styles.modalSaveBtnText}>Activate Promotion</Text>
+                : <Text style={styles.modalSaveBtnText}>{t.manageListings.activatePromo}</Text>
               }
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowPromoModal(false)}>
-              <Text style={styles.modalCancelText}>Cancel</Text>
+              <Text style={styles.modalCancelText}>{t.manageListings.cancel}</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>

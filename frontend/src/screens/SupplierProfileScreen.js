@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 import { useUser } from '../context/UserContext';
 import { getSupplierProfile, getSupplierReviews } from '../services/marketplaceApi';
 
@@ -39,6 +40,7 @@ function StarRating({ rating = 0, accentColor }) {
 }
 
 function ListingCard({ item, onPress, colors, styles }) {
+  const { t } = useLanguage();
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       {item.imageUrl ? (
@@ -50,7 +52,7 @@ function ListingCard({ item, onPress, colors, styles }) {
       )}
       {item.isFeatured && (
         <View style={styles.featuredBadge}>
-          <Text style={styles.featuredText}>Featured</Text>
+          <Text style={styles.featuredText}>{t.common.featured}</Text>
         </View>
       )}
       <View style={styles.cardBody}>
@@ -67,6 +69,7 @@ function ListingCard({ item, onPress, colors, styles }) {
 
 export default function SupplierProfileScreen() {
   const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
   const styles = makeStyles(colors);
   const navigation = useNavigation();
   const route = useRoute();
@@ -130,9 +133,9 @@ export default function SupplierProfileScreen() {
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
         <Ionicons name="person-circle-outline" size={56} color={colors.textLight} />
-        <Text style={styles.errorText}>{error || 'Supplier not found.'}</Text>
+        <Text style={styles.errorText}>{error || t.supplierProfile.notFound}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.retryText}>Go Back</Text>
+          <Text style={styles.retryText}>{t.supplierProfile.goBack}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -148,7 +151,7 @@ export default function SupplierProfileScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Supplier Profile</Text>
+        <Text style={styles.headerTitle}>{t.supplierProfile.title}</Text>
         <View style={{ width: 38 }} />
       </View>
 
@@ -167,39 +170,39 @@ export default function SupplierProfileScreen() {
               <Text style={styles.ratingCount}>({supplier.totalReviews ?? 0} reviews)</Text>
             </>
           ) : (
-            <Text style={styles.ratingCount}>No reviews yet</Text>
+            <Text style={styles.ratingCount}>{t.supplierProfile.noReviews}</Text>
           )}
         </View>
 
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statNum}>{supplier.totalListings ?? listings.length}</Text>
-            <Text style={styles.statLabel}>Listings</Text>
+            <Text style={styles.statLabel}>{t.supplierProfile.listings}</Text>
           </View>
           {supplier.joinedDate && (
             <View style={[styles.statItem, styles.statItemBorder]}>
               <Text style={styles.statNum}>{supplier.joinedDate}</Text>
-              <Text style={styles.statLabel}>Member since</Text>
+              <Text style={styles.statLabel}>{t.supplierProfile.memberSince}</Text>
             </View>
           )}
           {supplier.totalSales != null && (
             <View style={styles.statItem}>
               <Text style={styles.statNum}>{supplier.totalSales}</Text>
-              <Text style={styles.statLabel}>Sales</Text>
+              <Text style={styles.statLabel}>{t.supplierProfile.sales}</Text>
             </View>
           )}
         </View>
 
         <View style={styles.verifiedBadge}>
           <Ionicons name="checkmark-circle" size={14} color={colors.primary} />
-          <Text style={styles.verifiedText}>Verified Supplier</Text>
+          <Text style={styles.verifiedText}>{t.supplierProfile.verifiedSupplier}</Text>
         </View>
       </View>
 
       {/* Reviews section */}
       {reviews.length > 0 && (
         <View style={styles.reviewsSection}>
-          <Text style={styles.listingsHeading}>Reviews</Text>
+          <Text style={styles.listingsHeading}>{t.supplierProfile.reviews}</Text>
           {reviews.map((r) => (
             <View key={r.id} style={styles.reviewCard}>
               <View style={styles.reviewHeader}>
@@ -219,7 +222,7 @@ export default function SupplierProfileScreen() {
       )}
 
       {listings.length > 0 && (
-        <Text style={styles.listingsHeading}>Active Listings</Text>
+        <Text style={styles.listingsHeading}>{t.supplierProfile.activeListings}</Text>
       )}
     </View>
   );
@@ -238,7 +241,7 @@ export default function SupplierProfileScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Ionicons name="cube-outline" size={48} color={colors.textLight} />
-            <Text style={styles.emptyText}>No active listings from this supplier.</Text>
+            <Text style={styles.emptyText}>{t.supplierProfile.noListings}</Text>
           </View>
         }
         renderItem={({ item }) => (
