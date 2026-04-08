@@ -6,9 +6,11 @@ import { useNavigation } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import { useUser } from '../context/UserContext';
 import { signupWithBackend } from '../services/authApi';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 
-function PasswordRule({ valid, text }) {
+function PasswordRule({ valid, text, styles }) {
   return (
     <View style={styles.ruleRow}>
       <View style={[styles.ruleDot, valid ? styles.ruleDotValid : styles.ruleDotInvalid]}>
@@ -20,6 +22,9 @@ function PasswordRule({ valid, text }) {
 }
 
 export default function SignUpScreen() {
+  const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
+  const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { role } = useUser();
@@ -41,9 +46,9 @@ export default function SignUpScreen() {
   const allValid = Object.values(rules).every(Boolean);
 
   const handleVerify = async () => {
-    if (!name || !email || !password || !confirm) { Alert.alert('Error', 'Please fill in all fields.'); return; }
-    if (!allValid) { Alert.alert('Error', 'Password does not meet requirements.'); return; }
-    if (password !== confirm) { Alert.alert('Error', 'Passwords do not match.'); return; }
+    if (!name || !email || !password || !confirm) { Alert.alert(t.common.error, t.signUp.fillFields); return; }
+    if (!allValid) { Alert.alert(t.common.error, t.signUp.reqsNotMet); return; }
+    if (password !== confirm) { Alert.alert(t.common.error, t.signUp.mismatch); return; }
 
     try {
       setLoading(true);
@@ -63,44 +68,44 @@ export default function SignUpScreen() {
       });
     } catch (err) {
       setLoading(false);
-      Alert.alert('Sign Up Failed', err?.message || 'Unable to start signup right now.');
+      Alert.alert(t.signUp.failed, err?.message || t.signUp.failedMsg);
     }
   };
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title="Create Account" showBack />
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.label}>Full Name *</Text>
-        <TextInput style={styles.input} placeholder="Your name" placeholderTextColor={colors.textLight} value={name} onChangeText={setName} />
-        <Text style={styles.label}>Email *</Text>
-        <TextInput style={styles.input} placeholder="your@email.com" placeholderTextColor={colors.textLight} keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
-        <Text style={styles.label}>Password *</Text>
+      <ScreenHeader title={t.signUp.title} showBack />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <Text style={styles.label}>{t.signUp.fullName} *</Text>
+        <TextInput style={styles.input} placeholder={t.signUp.namePlaceholder} placeholderTextColor={colors.textLight} value={name} onChangeText={setName} />
+        <Text style={styles.label}>{t.signUp.email} *</Text>
+        <TextInput style={styles.input} placeholder={t.signUp.emailPlaceholder} placeholderTextColor={colors.textLight} keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
+        <Text style={styles.label}>{t.signUp.password} *</Text>
         <View style={styles.passWrap}>
-          <TextInput style={styles.passInput} value={password} onChangeText={setPassword} secureTextEntry={!showPass} placeholder="Create password" placeholderTextColor={colors.textLight} />
+          <TextInput style={styles.passInput} value={password} onChangeText={setPassword} secureTextEntry={!showPass} placeholder={t.signUp.passwordPlaceholder} placeholderTextColor={colors.textLight} />
           <TouchableOpacity onPress={() => setShowPass(!showPass)}><Ionicons name={showPass ? 'eye-off' : 'eye'} size={20} color={colors.textSecondary} /></TouchableOpacity>
         </View>
-        <Text style={styles.label}>Confirm Password *</Text>
+        <Text style={styles.label}>{t.signUp.confirmPassword} *</Text>
         <View style={styles.passWrap}>
-          <TextInput style={styles.passInput} value={confirm} onChangeText={setConfirm} secureTextEntry={!showConfirm} placeholder="Re-enter password" placeholderTextColor={colors.textLight} />
+          <TextInput style={styles.passInput} value={confirm} onChangeText={setConfirm} secureTextEntry={!showConfirm} placeholder={t.signUp.confirmPlaceholder} placeholderTextColor={colors.textLight} />
           <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}><Ionicons name={showConfirm ? 'eye-off' : 'eye'} size={20} color={colors.textSecondary} /></TouchableOpacity>
         </View>
         <View style={styles.rulesBox}>
-          <Text style={styles.rulesTitle}>Password must contain:</Text>
-          <PasswordRule valid={rules.minLength} text="At least 8 characters" />
-          <PasswordRule valid={rules.hasUpper} text="One uppercase letter" />
-          <PasswordRule valid={rules.hasLower} text="One lowercase letter" />
-          <PasswordRule valid={rules.hasNumber} text="One number" />
-          <PasswordRule valid={rules.hasSpecial} text="One special character" />
+          <Text style={styles.rulesTitle}>{t.signUp.passwordReqs}</Text>
+          <PasswordRule valid={rules.minLength} text={t.signUp.req8chars} styles={styles} />
+          <PasswordRule valid={rules.hasUpper} text={t.signUp.reqUpper} styles={styles} />
+          <PasswordRule valid={rules.hasLower} text={t.signUp.reqLower} styles={styles} />
+          <PasswordRule valid={rules.hasNumber} text={t.signUp.reqNumber} styles={styles} />
+          <PasswordRule valid={rules.hasSpecial} text={t.signUp.reqSpecial} styles={styles} />
         </View>
         <TouchableOpacity style={[styles.ctaBtn, loading && styles.ctaBtnDisabled]} onPress={handleVerify} disabled={loading}>
-          <Text style={styles.ctaBtnText}>{loading ? 'Sending OTP...' : 'Verify with OTP'}</Text>
+          <Text style={styles.ctaBtnText}>{loading ? t.signUp.sendingOtp : t.signUp.verifyOtp}</Text>
         </TouchableOpacity>
         <View style={styles.loginRow}>
-          <Text style={styles.loginText}>Already have an account?</Text>
+          <Text style={styles.loginText}>{t.signUp.alreadyAccount}</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text style={styles.loginLink}> Sign In</Text>
+            <Text style={styles.loginLink}> {t.signUp.signIn}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -108,7 +113,7 @@ export default function SignUpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: spacing.lg, paddingBottom: 32 },
   label: { color: colors.primary, fontSize: 13, fontFamily: fonts.medium, marginBottom: 6, marginTop: 14 },

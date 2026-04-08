@@ -2,28 +2,23 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '../context/UserContext';
+import { useTheme } from '../hooks/useTheme';
 
-export default function LogoScreen() {
+export default function SplashScreen() {
+  const { colors } = useTheme();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { isLoggedIn, isLoading } = useUser();
+  const { isLoading } = useUser();
 
   useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (isLoading) return;
-      const hasSeenOnboarding = await AsyncStorage.getItem('has_seen_onboarding');
-
-      if (isLoggedIn) {
-        navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
-      } else {
-        // Always go through AuthStack first
-        navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
-      }
-    }, 2000);
+    if (isLoading) return;
+    const timer = setTimeout(() => {
+      navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
+    }, 1500);
     return () => clearTimeout(timer);
-  }, [isLoading, isLoggedIn]);
+  }, [isLoading]);
 
   // ✅ You must return the JSX
   return (
@@ -36,10 +31,10 @@ export default function LogoScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#00A859',
+    backgroundColor: colors.splash,
     justifyContent: 'space-between',
     alignItems: 'center',
   },

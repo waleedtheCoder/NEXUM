@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts, radii, shadows } from '../constants/theme';
+import { fonts, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 export default function ProductCard({ product, viewMode = 'grid', onPress }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
   const [liked, setLiked] = useState(false);
   const price = `Rs ${product.price?.toLocaleString()}`;
 
@@ -59,7 +62,7 @@ export default function ProductCard({ product, viewMode = 'grid', onPress }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   gridCard: {
     backgroundColor: colors.surface,
     borderRadius: radii.lg,

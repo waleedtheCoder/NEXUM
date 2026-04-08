@@ -3,14 +3,16 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, fonts, spacing } from '../constants/theme';
+import { fonts, spacing } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 export default function HomeTopBar() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
+    <View style={[styles.container, { paddingTop: insets.top + 8, backgroundColor: colors.primary }]}>
       <View style={styles.left}>
         <Text style={styles.logo}>NEXUM</Text>
         <View style={styles.locationRow}>
@@ -21,7 +23,7 @@ export default function HomeTopBar() {
       <View style={styles.right}>
         <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Notifications')}>
           <Ionicons name="notifications-outline" size={22} color="#fff" />
-          <View style={styles.badge} />
+          <View style={[styles.badge, { backgroundColor: colors.accent, borderColor: colors.primary }]} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Search')}>
           <Ionicons name="search-outline" size={22} color="#fff" />
@@ -33,7 +35,6 @@ export default function HomeTopBar() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.primary,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -53,8 +54,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.accent,
     borderWidth: 1,
-    borderColor: colors.primary,
   },
 });

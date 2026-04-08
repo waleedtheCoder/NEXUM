@@ -4,11 +4,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 
 const CITIES = ['Lahore', 'Islamabad', 'Karachi', 'Quetta', 'Peshawar', 'Faisalabad', 'Bahawalpur', 'Sialkot', 'Gujranwala', 'Sargodha'];
 
 export default function LocationsScreen() {
+  const { colors } = useTheme();
+  const { t } = useLanguage();
+    const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState([]);
@@ -22,7 +27,7 @@ export default function LocationsScreen() {
 
   const handleContinue = async () => {
     if (selected.length) await AsyncStorage.setItem('selected_locations', JSON.stringify(selected));
-    navigation.navigate('LoginSignupOption');
+    navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
   };
 
   return (
@@ -32,21 +37,21 @@ export default function LocationsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Select your city</Text>
+        <Text style={styles.title}>{t.locations.title}</Text>
       </View>
 
       <View style={styles.searchWrap}>
         <Ionicons name="search" size={16} color={colors.textSecondary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search cities..."
+          placeholder={t.locations.searchPlaceholder}
           placeholderTextColor={colors.textLight}
           value={query}
           onChangeText={setQuery}
         />
       </View>
 
-      <ScrollView contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.grid} showsVerticalScrollIndicator={false}>
         {filtered.map((city) => (
           <TouchableOpacity
             key={city}
@@ -60,19 +65,19 @@ export default function LocationsScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity style={styles.skipBtn} onPress={() => navigation.navigate('LoginSignupOption')}>
-          <Text style={styles.skipText}>Skip</Text>
+        <TouchableOpacity style={styles.skipBtn} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] })}>
+          <Text style={styles.skipText}>{t.locations.skip}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.continueBtn} onPress={handleContinue}>
-          <Text style={styles.continueText}>Continue{selected.length ? ` (${selected.length})` : ''}</Text>
+          <Text style={styles.continueText}>{t.locations.continue}{selected.length ? ` (${selected.length})` : ''}</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+const makeStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingBottom: 12, gap: 12 },
   backBtn: { padding: 4 },
   title: { fontSize: 18, fontFamily: fonts.semiBold, color: colors.text },

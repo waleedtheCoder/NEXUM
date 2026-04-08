@@ -1,9 +1,13 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fonts, radii, shadows } from '../constants/theme';
+import { fonts, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 export default function ListingCard({ listing, onPress, onMenuPress }) {
+  const { colors } = useTheme();
+  const styles = makeStyles(colors);
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.row}>
@@ -11,7 +15,7 @@ export default function ListingCard({ listing, onPress, onMenuPress }) {
         <View style={styles.details}>
           <View style={styles.titleRow}>
             <Text style={styles.title} numberOfLines={1}>{listing.productName}</Text>
-            <TouchableOpacity onPress={onMenuPress}>
+            <TouchableOpacity onPress={onMenuPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Ionicons name="ellipsis-vertical" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -46,7 +50,7 @@ export default function ListingCard({ listing, onPress, onMenuPress }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radii.md,
