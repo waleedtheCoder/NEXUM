@@ -19,13 +19,26 @@ class ListingCardSerializer(serializers.ModelSerializer):
     isFeatured = serializers.BooleanField(source='is_featured')
     imageUrl  = serializers.URLField(source='image_url')
     category  = serializers.CharField()
+    promotion = serializers.SerializerMethodField()
 
     class Meta:
         model  = Listing
-        fields = ['id', 'title', 'price', 'location', 'time', 'isFeatured', 'imageUrl', 'category']
+        fields = ['id', 'title', 'price', 'location', 'time', 'isFeatured', 'imageUrl', 'category', 'promotion']
 
     def get_time(self, obj):
         return time_ago(obj.created_at)
+
+    def get_promotion(self, obj):
+        try:
+            p = obj.promotion
+            if p.is_active:
+                return {
+                    'discountPercent': p.discount_percent,
+                    'discountedPrice': str(round(p.discounted_price, 2)),
+                }
+        except ListingPromotion.DoesNotExist:
+            pass
+        return None
 
 
 class ListingDetailSerializer(serializers.ModelSerializer):
@@ -43,12 +56,13 @@ class ListingDetailSerializer(serializers.ModelSerializer):
     details    = serializers.SerializerMethodField()
     description = serializers.CharField()
     seller     = serializers.SerializerMethodField()
+    promotion  = serializers.SerializerMethodField()
 
     class Meta:
         model  = Listing
         fields = [
             'id', 'title', 'price', 'location', 'timePosted',
-            'isFeatured', 'images', 'details', 'description', 'seller',
+            'isFeatured', 'images', 'details', 'description', 'seller', 'promotion',
         ]
 
     def get_timePosted(self, obj):
@@ -84,6 +98,19 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             'sales':        sales,
             'phone':        (profile.phone_number or '') if profile else '',
         }
+
+    def get_promotion(self, obj):
+        try:
+            p = obj.promotion
+            if p.is_active:
+                return {
+                    'discountPercent': p.discount_percent,
+                    'discountedPrice': str(round(p.discounted_price, 2)),
+                    'endsAt':          p.ends_at.isoformat() if p.ends_at else None,
+                }
+        except ListingPromotion.DoesNotExist:
+            pass
+        return None
 
 
 class MyListingSerializer(serializers.ModelSerializer):

@@ -194,7 +194,11 @@ const makeStyles = (colors) => StyleSheet.create({
 
   header: {
     backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.md, paddingBottom: 12, gap: 8,
+    paddingHorizontal: spacing.md, paddingBottom: 16, gap: 8,
+    borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25, shadowRadius: 14, elevation: 10,
   },
   backBtn: { padding: 4 },
   headerTitle: { flex: 1, fontSize: 18, fontFamily: fonts.semiBold, color: '#fff', textAlign: 'center' },
@@ -217,7 +221,7 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: 14, backgroundColor: colors.surface,
   },
   notifRowUnread: { backgroundColor: colors.primaryLight },
-  notifIcon: { width: 46, height: 46, borderRadius: radii.lg, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  notifIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   notifContent: { flex: 1 },
   notifTitle: { fontSize: 13, fontFamily: fonts.medium, color: colors.text, marginBottom: 3 },
   notifTitleUnread: { fontFamily: fonts.semiBold },

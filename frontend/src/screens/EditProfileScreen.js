@@ -254,6 +254,11 @@ const makeStyles = (colors) => StyleSheet.create({
   header: {
     backgroundColor: colors.primary, flexDirection: 'row',
     alignItems: 'center', paddingHorizontal: spacing.md, paddingBottom: 14,
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25, shadowRadius: 14, elevation: 10,
   },
   backBtn:         { padding: 4, marginRight: 4 },
   headerTitle:     { flex: 1, fontSize: 18, fontFamily: fonts.semiBold, color: '#fff', textAlign: 'center' },
@@ -283,7 +288,11 @@ const makeStyles = (colors) => StyleSheet.create({
   section:      { marginBottom: spacing.md },
   sectionTitle: { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
 
-  fieldCard:   { backgroundColor: colors.surface, borderRadius: radii.xl, overflow: 'hidden', ...shadows.sm },
+  fieldCard: {
+    backgroundColor: colors.surface, borderRadius: radii.xl, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.10, shadowRadius: 12, elevation: 8,
+  },
   field:       { paddingHorizontal: spacing.md, paddingVertical: 14 },
   fieldBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   fieldLabel:  { fontSize: 11, fontFamily: fonts.medium, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 },
@@ -314,6 +323,8 @@ const makeStyles = (colors) => StyleSheet.create({
   saveButtonLarge: {
     backgroundColor: colors.primary, borderRadius: radii.xl,
     paddingVertical: 15, alignItems: 'center', marginTop: 8,
+    borderBottomWidth: 4, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   saveButtonLargeDisabled: { backgroundColor: colors.border },
   saveButtonLargeText:     { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },

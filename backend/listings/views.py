@@ -80,6 +80,10 @@ class ListingsView(APIView):
         if featured == 'true':
             qs = qs.filter(is_featured=True)
 
+        on_promo = request.query_params.get('on_promo', '').lower()
+        if on_promo == 'true':
+            qs = qs.filter(promotion__isnull=False, promotion__is_active=True)
+
         sort = request.query_params.get('sort', 'newest')
         if sort == 'price_asc':
             qs = qs.order_by('price')

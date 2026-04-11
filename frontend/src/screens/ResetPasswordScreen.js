@@ -7,8 +7,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
+import BubblyButton from '../components/BubblyButton';
 import { resetPasswordWithBackend } from '../services/authApi';
-import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 
@@ -26,7 +27,7 @@ function Rule({ valid, text, styles }) {
 export default function ResetPasswordScreen() {
   const { colors } = useTheme();
   const { t } = useLanguage();
-    const styles = makeStyles(colors);
+  const styles = makeStyles(colors);
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
@@ -53,13 +54,11 @@ export default function ResetPasswordScreen() {
       navigation.reset({ index: 0, routes: [{ name: 'ForgotPassword' }] });
       return;
     }
-
     try {
       setLoading(true);
       await resetPasswordWithBackend({
         email: String(email).trim().toLowerCase(),
-        otp,
-        newPassword: newPass,
+        otp, newPassword: newPass,
       });
       setLoading(false);
       Alert.alert(t.resetPassword.success, t.resetPassword.successMsg, [
@@ -74,13 +73,12 @@ export default function ResetPasswordScreen() {
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title={t.resetPassword.title} showBack />
+      <ScreenHeader title={t.resetPassword.title} subtitle={t.resetPassword.subtitle} showBack />
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.message}>{t.resetPassword.subtitle}</Text>
 
         <Text style={styles.label}>{t.resetPassword.newPassword} *</Text>
-        <View style={styles.passWrap}>
+        <View style={styles.inputTile}>
           <TextInput
             style={styles.passInput} value={newPass} onChangeText={setNewPass}
             secureTextEntry={!showNew} placeholder={t.resetPassword.newPasswordPlaceholder}
@@ -92,7 +90,7 @@ export default function ResetPasswordScreen() {
         </View>
 
         <Text style={styles.label}>{t.resetPassword.confirmPassword} *</Text>
-        <View style={styles.passWrap}>
+        <View style={styles.inputTile}>
           <TextInput
             style={styles.passInput} value={confirm} onChangeText={setConfirm}
             secureTextEntry={!showConfirm} placeholder={t.resetPassword.confirmPlaceholder}
@@ -111,12 +109,15 @@ export default function ResetPasswordScreen() {
           <Rule valid={rules.hasSpecial} text={t.resetPassword.reqSpecial} styles={styles} />
         </View>
 
-        <TouchableOpacity
-          style={[styles.verifyBtn, (!allValid || loading) && styles.verifyBtnDisabled]}
-          onPress={handleVerify} disabled={!allValid || loading}
-        >
-          <Text style={styles.verifyBtnText}>{loading ? t.resetPassword.resetting : t.resetPassword.reset}</Text>
-        </TouchableOpacity>
+        <BubblyButton
+          label={loading ? t.resetPassword.resetting : t.resetPassword.reset}
+          onPress={handleVerify}
+          disabled={!allValid || loading}
+          loading={loading}
+          variant="accent"
+          colors={colors}
+          style={styles.verifyOverride}
+        />
       </ScrollView>
     </View>
   );
@@ -125,21 +126,32 @@ export default function ResetPasswordScreen() {
 const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: spacing.lg, paddingBottom: 32 },
-  message: {
-    textAlign: 'center', color: colors.primary, fontSize: 13,
-    fontFamily: fonts.regular, lineHeight: 20, marginBottom: spacing.lg,
-  },
   label: { color: colors.primary, fontSize: 13, fontFamily: fonts.medium, marginBottom: 6, marginTop: 14 },
-  passWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radii.md, paddingHorizontal: 14, marginBottom: 4,
+  inputTile: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  passInput: { flex: 1, paddingVertical: 12, fontSize: 14, fontFamily: fonts.regular, color: colors.text },
+  passInput: { flex: 1, paddingVertical: 13, fontSize: 14, fontFamily: fonts.regular, color: colors.text },
   rulesBox: {
-    backgroundColor: colors.surface, borderRadius: radii.md,
-    borderWidth: 1, borderColor: colors.border, padding: 14,
-    marginTop: spacing.md, gap: 8,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: 14,
+    marginTop: spacing.md,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 4,
   },
   rulesTitle: { fontSize: 13, fontFamily: fonts.medium, color: colors.text, marginBottom: 4 },
   ruleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -148,10 +160,5 @@ const makeStyles = (colors) => StyleSheet.create({
   invalid: { backgroundColor: '#E5E7EB' },
   ruleText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
   ruleTextValid: { color: colors.green },
-  verifyBtn: {
-    backgroundColor: colors.accent, borderRadius: radii.md,
-    paddingVertical: 15, alignItems: 'center', marginTop: spacing.xl,
-  },
-  verifyBtnDisabled: { opacity: 0.45 },
-  verifyBtnText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
+  verifyOverride: { marginTop: spacing.xl },
 });

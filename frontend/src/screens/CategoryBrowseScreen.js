@@ -126,7 +126,7 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   iconWrap: {
-    width: 38, height: 38, borderRadius: radii.md,
+    width: 44, height: 44, borderRadius: 14,
     backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center',
   },
   rowText: { flex: 1, fontSize: 14, fontFamily: fonts.medium, color: colors.text },

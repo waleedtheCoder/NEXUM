@@ -148,12 +148,13 @@ async function _fetchWithRefresh(path, options = {}) {
  * Returns active listing cards.
  * Public.
  */
-export async function getListings({ category, q, sort, featured } = {}) {
+export async function getListings({ category, q, sort, featured, on_promo } = {}) {
   const params = new URLSearchParams();
   if (category) params.set('category', category);
   if (q)        params.set('q', q);
   if (sort)     params.set('sort', sort);
   if (featured) params.set('featured', 'true');
+  if (on_promo) params.set('on_promo', 'true');
   const qs = params.toString();
   return _fetch(`/api/listings/${qs ? `?${qs}` : ''}`);
 }

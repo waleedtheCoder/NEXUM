@@ -355,7 +355,11 @@ const makeStyles = (colors) => StyleSheet.create({
     borderRadius: radii.xl,
     padding: spacing.md,
     alignItems: 'center',
-    ...shadows.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    elevation: 8,
   },
   heroImage: { width: 80, height: 80, borderRadius: radii.lg },
   heroImagePlaceholder: {
@@ -386,7 +390,11 @@ const makeStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radii.xl,
     padding: spacing.md,
-    ...shadows.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    elevation: 8,
   },
   infoRow: {
     flexDirection: 'row',
@@ -464,8 +472,10 @@ const makeStyles = (colors) => StyleSheet.create({
   // Review modal
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   modalSheet: {
-    backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
     padding: spacing.lg,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.12, shadowRadius: 16, elevation: 20,
   },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   modalTitle:  { fontSize: 18, fontFamily: fonts.semiBold, color: colors.text },
@@ -481,6 +491,8 @@ const makeStyles = (colors) => StyleSheet.create({
   submitReviewBtn: {
     backgroundColor: colors.primary, borderRadius: radii.xl,
     paddingVertical: 15, alignItems: 'center',
+    borderBottomWidth: 4, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   submitReviewText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
 });

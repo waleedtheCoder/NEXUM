@@ -254,12 +254,30 @@ export default function ProductDetailScreen() {
 
         {/* Price + title */}
         <View style={styles.card}>
-          {product.isFeatured && (
-            <View style={styles.featuredBadge}>
-              <Text style={styles.featuredText}>{t.common.featured}</Text>
+          <View style={styles.badgeRowTop}>
+            {product.isFeatured && (
+              <View style={styles.featuredBadge}>
+                <Text style={styles.featuredText}>{t.common.featured}</Text>
+              </View>
+            )}
+            {product.promotion && (
+              <View style={styles.promoBadge}>
+                <Text style={styles.promoBadgeText}>{product.promotion.discountPercent}% OFF</Text>
+              </View>
+            )}
+          </View>
+          {product.promotion ? (
+            <View style={styles.priceRow}>
+              <Text style={styles.price}>
+                Rs {parseFloat(product.promotion.discountedPrice).toLocaleString()}
+              </Text>
+              <Text style={styles.originalPrice}>
+                Rs {parseFloat(product.price).toLocaleString()}
+              </Text>
             </View>
+          ) : (
+            <Text style={styles.price}>Rs {parseFloat(product.price).toLocaleString()}</Text>
           )}
-          <Text style={styles.price}>Rs {product.price}</Text>
           <Text style={styles.title}>{product.title}</Text>
           <View style={styles.metaRow}>
             <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
@@ -490,11 +508,13 @@ const makeStyles = (colors) => StyleSheet.create({
 
   backBtn: {
     position: 'absolute', top: 16, left: 16,
-    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 20, padding: 8,
+    backgroundColor: 'rgba(0,0,0,0.38)', borderRadius: 22, padding: 9,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
   },
   saveBtn: {
     position: 'absolute', top: 16, right: 16,
-    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 20, padding: 8,
+    backgroundColor: 'rgba(0,0,0,0.38)', borderRadius: 22, padding: 9,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
   },
   dots: {
     position: 'absolute', bottom: 10, width: '100%',
@@ -507,14 +527,33 @@ const makeStyles = (colors) => StyleSheet.create({
   scroll: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
   card: {
     backgroundColor: colors.surface, borderRadius: radii.xl,
-    padding: spacing.md, marginBottom: 12, ...shadows.sm,
+    padding: spacing.md, marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.10,
+    shadowRadius: 12,
+    elevation: 8,
   },
 
   featuredBadge: {
     alignSelf: 'flex-start', backgroundColor: colors.accent,
-    borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 8,
+    borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 4,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   featuredText: { color: '#fff', fontSize: 10, fontFamily: fonts.semiBold },
+
+  badgeRowTop: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  promoBadge: {
+    alignSelf: 'flex-start', backgroundColor: colors.primary,
+    borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 4,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
+  },
+  promoBadgeText: { color: '#fff', fontSize: 10, fontFamily: fonts.semiBold },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 4 },
+  originalPrice: {
+    fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary,
+    textDecorationLine: 'line-through',
+  },
 
   price:   { fontSize: 22, fontFamily: fonts.bold, color: colors.accent, marginBottom: 4 },
   title:   { fontSize: 16, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 8 },
@@ -538,6 +577,7 @@ const makeStyles = (colors) => StyleSheet.create({
   sellerAvatar: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: `${colors.primary}20`, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: `${colors.primary}30`,
   },
   sellerInitials:  { fontSize: 16, fontFamily: fonts.bold, color: colors.primary },
   sellerInfo:      { flex: 1 },
@@ -559,11 +599,16 @@ const makeStyles = (colors) => StyleSheet.create({
   // Action bar (3-button layout)
   actionBar: {
     paddingHorizontal: spacing.md,
-    paddingTop: 12,
-    gap: 8,
+    paddingTop: 14,
+    gap: 10,
     backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 14,
   },
   actionRowTop: {
     flexDirection: 'row',
@@ -573,22 +618,36 @@ const makeStyles = (colors) => StyleSheet.create({
     flex: 1,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     borderWidth: 1.5, borderColor: colors.primary,
-    borderRadius: radii.xl, paddingVertical: 10,
+    borderRadius: radii.xl, paddingVertical: 11,
     backgroundColor: colors.surface,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    elevation: 2,
   },
   callBtnText: { color: colors.primary, fontSize: 13, fontFamily: fonts.semiBold },
   chatBtn: {
     flex: 1,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     borderWidth: 1.5, borderColor: colors.accent,
-    borderRadius: radii.xl, paddingVertical: 10,
+    borderRadius: radii.xl, paddingVertical: 11,
     backgroundColor: colors.surface,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    elevation: 2,
   },
   chatBtnText: { color: colors.accent, fontSize: 13, fontFamily: fonts.semiBold },
   orderBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: colors.primary,
     borderRadius: radii.xl, paddingVertical: 14,
+    borderBottomWidth: 4,
+    borderBottomColor: '#0a524d',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.35)',
   },
   orderBtnText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
 
@@ -605,11 +664,16 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   modalSheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: spacing.lg,
     paddingBottom: 36,
     gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 20,
   },
   modalHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -655,6 +719,8 @@ const makeStyles = (colors) => StyleSheet.create({
   orderConfirmBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: colors.primary, borderRadius: radii.xl, paddingVertical: 14, marginTop: 4,
+    borderBottomWidth: 4, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   orderConfirmText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
   orderCancelBtn:   { alignItems: 'center', paddingVertical: 10 },

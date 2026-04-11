@@ -191,6 +191,11 @@ const makeStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingBottom: 14,
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25, shadowRadius: 14, elevation: 10,
   },
   backBtn:     { padding: 4, width: 36 },
   headerTitle: { flex: 1, textAlign: 'center', color: '#fff', fontSize: 18, fontFamily: fonts.semiBold },
@@ -214,7 +219,8 @@ const makeStyles = (colors) => StyleSheet.create({
     borderRadius: radii.xl,
     padding: spacing.md,
     gap: 12,
-    ...shadows.sm,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.10, shadowRadius: 12, elevation: 8,
   },
   avatar: {
     width: 48, height: 48, borderRadius: 24,
@@ -232,6 +238,8 @@ const makeStyles = (colors) => StyleSheet.create({
   browseBtn: {
     marginTop: 8, backgroundColor: colors.primary,
     borderRadius: radii.xl, paddingHorizontal: 24, paddingVertical: 12,
+    borderBottomWidth: 4, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   browseBtnText: { color: '#fff', fontFamily: fonts.semiBold, fontSize: 14 },
 

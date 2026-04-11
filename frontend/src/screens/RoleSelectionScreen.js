@@ -3,9 +3,11 @@ import { View, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import ProgressIndicator from '../components/ProgressIndicator';
+import PressableBounce from '../components/PressableBounce';
+import BubblyButton from '../components/BubblyButton';
 import { useUser } from '../context/UserContext';
-import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
+import { fonts, spacing, radii } from '../constants/theme';
 
 export default function RoleSelectionScreen() {
   const { colors } = useTheme();
@@ -22,13 +24,13 @@ export default function RoleSelectionScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16 }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
       <ProgressIndicator totalSteps={3} currentStep={1} />
       <View style={styles.body}>
         <Text style={styles.heading}>Are you a shopkeeper or supplier?</Text>
         <View style={styles.options}>
           {['shopkeeper', 'supplier'].map((role) => (
-            <TouchableOpacity
+            <PressableBounce
               key={role}
               style={[styles.option, selected === role && styles.optionSelected]}
               onPress={() => setSelected(role)}
@@ -36,17 +38,21 @@ export default function RoleSelectionScreen() {
               <Text style={[styles.optionText, selected === role && styles.optionTextSelected]}>
                 {role.charAt(0).toUpperCase() + role.slice(1)}
               </Text>
-            </TouchableOpacity>
+            </PressableBounce>
           ))}
         </View>
       </View>
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.skipBtn} onPress={() => navigation.navigate('Locations')}>
+        <PressableBounce style={styles.skipBtn} onPress={() => navigation.navigate('Locations')}>
           <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
-          <Text style={styles.nextText}>Next</Text>
-        </TouchableOpacity>
+        </PressableBounce>
+        <BubblyButton
+          label="Next"
+          onPress={handleNext}
+          variant="primary"
+          colors={colors}
+          style={styles.nextBtnOverride}
+        />
       </View>
     </View>
   );
@@ -58,16 +64,30 @@ const makeStyles = (colors) => StyleSheet.create({
   heading: { fontSize: 20, fontFamily: fonts.semiBold, color: colors.text, textAlign: 'center' },
   options: { flexDirection: 'row', gap: 16, width: '100%' },
   option: {
-    flex: 1, paddingVertical: 20, borderRadius: radii.xl,
-    borderWidth: 2, borderColor: colors.border, alignItems: 'center',
+    flex: 1, paddingVertical: 24, borderRadius: radii.xl,
+    alignItems: 'center', backgroundColor: colors.surface,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  optionSelected: {
+    backgroundColor: colors.primaryLight,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.20,
+    elevation: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.6)',
+  },
+  optionText: { fontSize: 16, fontFamily: fonts.medium, color: colors.textSecondary },
+  optionTextSelected: { color: colors.primary, fontFamily: fonts.semiBold },
+  footer: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  skipBtn: {
+    flex: 1, paddingVertical: 14, borderRadius: radii.lg,
+    borderWidth: 1.5, borderColor: colors.border, alignItems: 'center',
     backgroundColor: colors.surface,
   },
-  optionSelected: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
-  optionText: { fontSize: 16, fontFamily: fonts.medium, color: colors.textSecondary },
-  optionTextSelected: { color: colors.primary },
-  footer: { flexDirection: 'row', gap: 12 },
-  skipBtn: { flex: 1, paddingVertical: 14, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
   skipText: { fontSize: 15, fontFamily: fonts.medium, color: colors.textSecondary },
-  nextBtn: { flex: 2, paddingVertical: 14, borderRadius: radii.md, backgroundColor: colors.primary, alignItems: 'center' },
-  nextText: { fontSize: 15, fontFamily: fonts.semiBold, color: '#fff' },
+  nextBtnOverride: { flex: 2 },
 });

@@ -327,7 +327,8 @@ const makeStyles = (colors) => StyleSheet.create({
   quickReply: {
     paddingHorizontal: 14, paddingVertical: 7,
     backgroundColor: colors.surfaceAlt, borderRadius: radii.full,
-    borderWidth: 1, borderColor: colors.border,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
   },
   quickReplyText: { fontSize: 12, fontFamily: fonts.medium, color: colors.textSecondary },
 
@@ -342,12 +343,16 @@ const makeStyles = (colors) => StyleSheet.create({
     flex: 1, backgroundColor: colors.surfaceAlt, borderRadius: 22,
     paddingHorizontal: 16, paddingVertical: 10,
     color: colors.text, fontSize: 14, fontFamily: fonts.regular,
-    maxHeight: 120, borderWidth: 1, borderColor: colors.border,
+    maxHeight: 120,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 6, elevation: 3,
   },
   sendBtn: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
     marginBottom: 2,
+    borderBottomWidth: 3, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   sendBtnDisabled: { backgroundColor: colors.border },
 });
