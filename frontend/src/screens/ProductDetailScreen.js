@@ -202,9 +202,13 @@ export default function ProductDetailScreen() {
 
   const images = product.images?.length ? product.images : [product.imageUrl].filter(Boolean);
 
-  // Live total price for the modal
-  const modalTotal = product?.price && parseInt(orderQty, 10)
-    ? (parseFloat(product.price) * parseInt(orderQty, 10)).toLocaleString()
+  // Promotion info (if any active promo on this listing)
+  const promo        = product.promotion || null;
+  const displayPrice = promo ? promo.discountedPrice : product.price;
+
+  // Live total price for the modal (use discounted price if promo active)
+  const modalTotal = displayPrice && parseInt(orderQty, 10)
+    ? (parseFloat(displayPrice) * parseInt(orderQty, 10)).toLocaleString()
     : null;
 
   return (
@@ -254,12 +258,24 @@ export default function ProductDetailScreen() {
 
         {/* Price + title */}
         <View style={styles.card}>
-          {product.isFeatured && (
-            <View style={styles.featuredBadge}>
-              <Text style={styles.featuredText}>{t.common.featured}</Text>
-            </View>
-          )}
-          <Text style={styles.price}>Rs {product.price}</Text>
+          <View style={styles.badgeRow}>
+            {product.isFeatured && (
+              <View style={styles.featuredBadge}>
+                <Text style={styles.featuredText}>{t.common.featured}</Text>
+              </View>
+            )}
+            {promo && (
+              <View style={styles.promoBadge}>
+                <Text style={styles.promoBadgeText}>{promo.discountPercent}% OFF</Text>
+              </View>
+            )}
+          </View>
+          <View style={styles.priceRow}>
+            <Text style={styles.price}>Rs {parseFloat(displayPrice).toLocaleString()}</Text>
+            {promo && (
+              <Text style={styles.originalPrice}>Rs {parseFloat(product.price).toLocaleString()}</Text>
+            )}
+          </View>
           <Text style={styles.title}>{product.title}</Text>
           <View style={styles.metaRow}>
             <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
@@ -393,7 +409,8 @@ export default function ProductDetailScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.modalProductName} numberOfLines={2}>{product.title}</Text>
                 <Text style={styles.modalUnitPrice}>
-                  Rs {product.price} / {product.unit || 'unit'}
+                  Rs {parseFloat(displayPrice).toLocaleString()} / {product.unit || 'unit'}
+                  {promo ? ` (${promo.discountPercent}% off)` : ''}
                 </Text>
               </View>
             </View>
@@ -510,13 +527,21 @@ const makeStyles = (colors) => StyleSheet.create({
     padding: spacing.md, marginBottom: 12, ...shadows.sm,
   },
 
+  badgeRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   featuredBadge: {
     alignSelf: 'flex-start', backgroundColor: colors.accent,
-    borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 8,
+    borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3,
   },
   featuredText: { color: '#fff', fontSize: 10, fontFamily: fonts.semiBold },
+  promoBadge: {
+    alignSelf: 'flex-start', backgroundColor: '#16a34a',
+    borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3,
+  },
+  promoBadgeText: { color: '#fff', fontSize: 10, fontFamily: fonts.semiBold },
 
-  price:   { fontSize: 22, fontFamily: fonts.bold, color: colors.accent, marginBottom: 4 },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
+  price:         { fontSize: 22, fontFamily: fonts.bold, color: colors.accent },
+  originalPrice: { fontSize: 15, fontFamily: fonts.regular, color: colors.textSecondary, textDecorationLine: 'line-through' },
   title:   { fontSize: 16, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 8 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },

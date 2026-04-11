@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import FilterChip from '../components/FilterChip';
 import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
@@ -20,12 +20,17 @@ const SORT_OPTIONS = [
 ];
 
 export default function MarketplaceBrowsingScreen() {
-  
+
   const navigation = useNavigation();
+  const route      = useRoute();
   const insets     = useSafeAreaInsets();
   const { colors } = useTheme();
   const { t } = useLanguage();
   const { idToken, sessionId, refreshToken, updateUser } = useUser();
+
+  // Route params: category name (string) or offersOnly (bool)
+  const paramCategory  = route.params?.category  || null;
+  const paramOffersOnly = route.params?.offersOnly || false;
 
   const [products, setProducts]   = useState([]);
   const [loading, setLoading]     = useState(true);
@@ -42,15 +47,20 @@ export default function MarketplaceBrowsingScreen() {
       setLoading(true);
       setError(null);
       try {
-        const data = await getListings({ sort, q: q.trim() || undefined });
-        setProducts(data);
+        const data = await getListings({
+          sort,
+          q: q.trim() || undefined,
+          category: paramCategory || undefined,
+          on_promo: paramOffersOnly || undefined,
+        });
+        setProducts(Array.isArray(data) ? data : data.results || []);
       } catch (err) {
         setError(err.message || 'Failed to load listings.');
       } finally {
         setLoading(false);
       }
     },
-    [activeSort, searchText]
+    [activeSort, searchText, paramCategory, paramOffersOnly]
   );
 
   useEffect(() => {
@@ -91,8 +101,11 @@ export default function MarketplaceBrowsingScreen() {
   const styles = makeStyles(colors);
 
   const renderCard = ({ item }) => {
-    const price   = parseFloat(item.price).toLocaleString();
-    const isSaved = saved.has(item.id);
+    const promo       = item.promotion || null;
+    const priceStr    = parseFloat(promo ? promo.discountedPrice : item.price).toLocaleString();
+    const origPriceStr = promo ? parseFloat(item.price).toLocaleString() : null;
+    const price       = priceStr; // kept for existing references below
+    const isSaved     = saved.has(item.id);
 
     if (viewMode === 'list') {
       return (
@@ -126,7 +139,12 @@ export default function MarketplaceBrowsingScreen() {
               </View>
               <Text style={styles.timeText}>{item.time}</Text>
             </View>
-            <Text style={styles.listPrice}>Rs {price}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.listPrice}>Rs {price}</Text>
+              {origPriceStr && (
+                <Text style={styles.origPrice}>Rs {origPriceStr}</Text>
+              )}
+            </View>
             <Text style={styles.listTitle} numberOfLines={2}>{item.title}</Text>
             <View style={styles.metaRow}>
               <Ionicons name="location-outline" size={11} color={colors.textSecondary} />
@@ -187,6 +205,9 @@ export default function MarketplaceBrowsingScreen() {
 
           {/* Price — prominent, primary color */}
           <Text style={styles.gridPrice}>Rs {price}</Text>
+          {origPriceStr && (
+            <Text style={styles.origPrice}>Rs {origPriceStr}</Text>
+          )}
 
           {/* Title */}
           <Text style={styles.gridTitle} numberOfLines={2}>{item.title}</Text>
@@ -210,22 +231,28 @@ export default function MarketplaceBrowsingScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={16} color={colors.textSecondary} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder={t.marketplace.searchPlaceholder}
-            placeholderTextColor={colors.textLight}
-            value={searchText}
-            onChangeText={handleSearchChange}
-            returnKeyType="search"
-          />
-          {searchText.length > 0 && (
-            <TouchableOpacity onPress={() => { setSearchText(''); fetchProducts({ sort: activeSort, q: '' }); }}>
-              <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
-            </TouchableOpacity>
-          )}
-        </View>
+        {(paramCategory || paramOffersOnly) ? (
+          <Text style={styles.topBarTitle} numberOfLines={1}>
+            {paramOffersOnly ? t.home.offers : paramCategory}
+          </Text>
+        ) : (
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={16} color={colors.textSecondary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t.marketplace.searchPlaceholder}
+              placeholderTextColor={colors.textLight}
+              value={searchText}
+              onChangeText={handleSearchChange}
+              returnKeyType="search"
+            />
+            {searchText.length > 0 && (
+              <TouchableOpacity onPress={() => { setSearchText(''); fetchProducts({ sort: activeSort, q: '' }); }}>
+                <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
 
       {/* Sort chips */}
@@ -307,6 +334,10 @@ const makeStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
+  topBarTitle: {
+    flex: 1, fontSize: 16, fontFamily: fonts.semiBold, color: colors.text,
+    paddingHorizontal: 4,
+  },
   searchBar: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: colors.backgroundAlt, borderRadius: radii.full,
@@ -357,6 +388,10 @@ const makeStyles = (colors) => StyleSheet.create({
   gridPrice: {
     fontSize: 16, fontFamily: fonts.bold,
     color: colors.primary,   // teal (light) / rust-orange (dark)
+  },
+  origPrice: {
+    fontSize: 11, fontFamily: fonts.regular,
+    color: colors.textSecondary, textDecorationLine: 'line-through',
   },
   gridTitle: {
     fontSize: 11, fontFamily: fonts.medium,

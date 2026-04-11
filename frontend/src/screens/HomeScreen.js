@@ -142,7 +142,9 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={i}
                 style={styles.quickItem}
-                onPress={() => navigation.navigate('MarketplaceBrowsing')}
+                onPress={() => navigation.navigate('MarketplaceBrowsing',
+                  item.labelKey === 'offers' ? { offersOnly: true } : {}
+                )}
               >
                 <View style={styles.quickIcon}>
                   <Ionicons name={`${item.icon}-outline`} size={22} color={colors.primary} />

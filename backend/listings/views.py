@@ -62,7 +62,7 @@ class ListingsView(APIView):
     permission_classes = []
 
     def get(self, request):
-        qs = Listing.objects.filter(status='active').select_related('supplier__profile')
+        qs = Listing.objects.filter(status='active').select_related('supplier__profile', 'promotion')
 
         category = request.query_params.get('category', '').strip()
         if category:
@@ -79,6 +79,10 @@ class ListingsView(APIView):
         featured = request.query_params.get('featured', '').lower()
         if featured == 'true':
             qs = qs.filter(is_featured=True)
+
+        on_promo = request.query_params.get('on_promo', '').lower()
+        if on_promo == 'true':
+            qs = qs.filter(promotion__is_active=True)
 
         sort = request.query_params.get('sort', 'newest')
         if sort == 'price_asc':
@@ -103,7 +107,7 @@ class ListingDetailView(APIView):
 
     def get(self, request, pk):
         try:
-            listing = Listing.objects.select_related('supplier__profile').get(pk=pk)
+            listing = Listing.objects.select_related('supplier__profile', 'promotion').get(pk=pk)
         except Listing.DoesNotExist:
             return Response({'detail': 'Listing not found.'}, status=status.HTTP_404_NOT_FOUND)
 
