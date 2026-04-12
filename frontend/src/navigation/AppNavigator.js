@@ -21,6 +21,7 @@ import ResetPasswordScreen      from '../screens/ResetPasswordScreen';
 // ── Onboarding (post-signup) ────────────────────────────────────────────────
 import WelcomeScreen            from '../screens/WelcomeScreen';
 import RoleSelectionScreen      from '../screens/RoleSelectionScreen';
+import SupplierPhoneScreen      from '../screens/SupplierPhoneScreen';
 import LocationsScreen          from '../screens/LocationsScreen';
 
 // ── Tab Screens ─────────────────────────────────────────────────────────────
@@ -46,9 +47,6 @@ import CreateListingScreen      from '../screens/CreateListingScreen';
 
 // ── Chat ─────────────────────────────────────────────────────────────────────
 import ChatConversationScreen   from '../screens/ChatConversationScreen';
-
-// ── Notifications ─────────────────────────────────────────────────────────────
-import NotificationsScreen      from '../screens/NotificationsScreen';
 
 // ── Orders ──────────────────────────────────────────────────────────────────
 import OrderHistoryScreen       from '../screens/OrderHistoryScreen';
@@ -108,9 +106,10 @@ function RootStack() {
       <Stack.Screen name="ResetPassword"      component={ResetPasswordScreen} />
 
       {/* ── Post-signup onboarding ───────────────────────────────────────── */}
-      <Stack.Screen name="Welcome"       component={WelcomeScreen} />
-      <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
-      <Stack.Screen name="Locations"     component={LocationsScreen} />
+      <Stack.Screen name="Welcome"        component={WelcomeScreen} />
+      <Stack.Screen name="RoleSelection"  component={RoleSelectionScreen} />
+      <Stack.Screen name="SupplierPhone"  component={SupplierPhoneScreen} />
+      <Stack.Screen name="Locations"      component={LocationsScreen} />
 
       {/* ── Marketplace ─────────────────────────────────────────────────── */}
       <Stack.Screen name="Search"              component={SearchScreen} />
@@ -129,9 +128,6 @@ function RootStack() {
 
       {/* ── Chat ────────────────────────────────────────────────────────── */}
       <Stack.Screen name="ChatConversation" component={ChatConversationScreen} />
-
-      {/* ── Notifications ───────────────────────────────────────────────── */}
-      <Stack.Screen name="Notifications" component={NotificationsScreen} />
 
       {/* ── Orders ──────────────────────────────────────────────────────── */}
       <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />

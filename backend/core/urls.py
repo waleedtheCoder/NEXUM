@@ -8,7 +8,6 @@ urlpatterns = [
     path('api/users/',         include('users.urls')),
     path('api/listings/',      include('listings.urls')),
     path('api/chat/',          include('chat.urls')),
-    path('api/notifications/', include('notifications.urls')),
     path('api/orders/',        include('orders.urls')),
     path('api/promotions/',    include('promotions.urls')),
 ]

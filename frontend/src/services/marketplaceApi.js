@@ -456,40 +456,6 @@ export async function sendMessage(convId, text, { idToken, sessionId, refreshTok
   });
 }
 
-// ─── Notifications ────────────────────────────────────────────────────────────
-
-/**
- * GET /api/notifications/
- * Returns notifications for the authenticated user. Protected.
- */
-export async function getNotifications({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
-  return _fetchWithRefresh('/api/notifications/', {
-    idToken, sessionId, refreshToken, onTokenRefreshed,
-  });
-}
-
-/**
- * PATCH /api/notifications/<id>/read/
- * Marks a single notification as read. Protected.
- */
-export async function markNotificationRead(id, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
-  return _fetchWithRefresh(`/api/notifications/${id}/read/`, {
-    method: 'PATCH',
-    idToken, sessionId, refreshToken, onTokenRefreshed,
-  });
-}
-
-/**
- * POST /api/notifications/mark-all-read/
- * Marks all notifications as read. Protected.
- */
-export async function markAllNotificationsRead({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
-  return _fetchWithRefresh('/api/notifications/mark-all-read/', {
-    method: 'POST',
-    idToken, sessionId, refreshToken, onTokenRefreshed,
-  });
-}
-
 // ─── Orders ───────────────────────────────────────────────────────────────────
 
 /**

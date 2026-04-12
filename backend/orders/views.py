@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from listings.models import Listing
-from notifications.models import Notification
 from .models import Order
 from .serializers import OrderSerializer, OrderCreateSerializer
 
@@ -73,15 +72,6 @@ class OrderPlaceView(APIView):
         listing.quantity = listing.quantity - qty
         listing.save(update_fields=['quantity'])
 
-        # Notify the supplier
-        Notification.objects.create(
-            user_id=listing.supplier_id,
-            type='order',
-            title='New order received',
-            body=f'{request.user.get_full_name() or request.user.username} ordered {qty} {listing.unit} of {listing.product_name}.',
-            listing_id=listing.id,
-        )
-
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
 
@@ -135,21 +125,6 @@ class OrderDetailView(APIView):
             ListingModel.objects.filter(pk=order.listing_id).update(
                 quantity=django_models.F('quantity') + order.quantity
             )
-
-        # Notify the buyer
-        labels = {
-            'confirmed': 'Order confirmed',
-            'shipped':   'Order shipped',
-            'delivered': 'Order delivered',
-            'cancelled': 'Order cancelled',
-        }
-        Notification.objects.create(
-            user_id=order.buyer_id,
-            type='order',
-            title=labels[new_status],
-            body=f'Your order for {order.listing.product_name if order.listing else "a listing"} has been {new_status}.',
-            listing_id=order.listing_id,
-        )
 
         return Response(OrderSerializer(order).data)
 

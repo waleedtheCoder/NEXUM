@@ -33,7 +33,7 @@ class PromotionListView(APIView):
         now = timezone.now()
         promos = (
             ListingPromotion.objects
-            .filter(is_active=True)
+            .filter(is_active=True, listing__status='active')
             .filter(Q(ends_at__isnull=True) | Q(ends_at__gte=now))
             .select_related('listing', 'listing__supplier')
             .order_by('-created_at')

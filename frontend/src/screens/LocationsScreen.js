@@ -7,15 +7,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
+import { useUser } from '../context/UserContext';
 
 const CITIES = ['Lahore', 'Islamabad', 'Karachi', 'Quetta', 'Peshawar', 'Faisalabad', 'Bahawalpur', 'Sialkot', 'Gujranwala', 'Sargodha'];
 
 export default function LocationsScreen() {
   const { colors } = useTheme();
   const { t } = useLanguage();
-    const styles = makeStyles(colors);
+  const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  const { role } = useUser();
+  const isSupplier = role === 'supplier' || role === 'SUPPLIER';
   const [selected, setSelected] = useState([]);
   const [query, setQuery] = useState('');
 
@@ -65,10 +68,12 @@ export default function LocationsScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <TouchableOpacity style={styles.skipBtn} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] })}>
-          <Text style={styles.skipText}>{t.locations.skip}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.continueBtn} onPress={handleContinue}>
+        {!isSupplier && (
+          <TouchableOpacity style={styles.skipBtn} onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] })}>
+            <Text style={styles.skipText}>{t.locations.skip}</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity style={[styles.continueBtn, isSupplier && styles.continueBtnFull]} onPress={handleContinue}>
           <Text style={styles.continueText}>{t.locations.continue}{selected.length ? ` (${selected.length})` : ''}</Text>
         </TouchableOpacity>
       </View>
@@ -92,5 +97,6 @@ const makeStyles = (colors) => StyleSheet.create({
   skipBtn: { flex: 1, paddingVertical: 14, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
   skipText: { fontSize: 15, fontFamily: fonts.medium, color: colors.textSecondary },
   continueBtn: { flex: 2, paddingVertical: 14, borderRadius: radii.md, backgroundColor: colors.primary, alignItems: 'center', borderBottomWidth: 4, borderBottomColor: '#0a524d', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)' },
+  continueBtnFull: { flex: 1 },
   continueText: { fontSize: 15, fontFamily: fonts.semiBold, color: '#fff' },
 });

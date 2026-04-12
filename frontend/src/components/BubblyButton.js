@@ -59,6 +59,7 @@ export default function BubblyButton({
       onPressOut={pressOut}
       disabled={disabled || loading}
       activeOpacity={1}
+      style={style}
     >
       <Animated.View
         style={[
@@ -70,7 +71,6 @@ export default function BubblyButton({
             transform: [{ translateY }],
             opacity: disabled ? 0.55 : 1,
           },
-          style,
         ]}
       >
         {loading ? (

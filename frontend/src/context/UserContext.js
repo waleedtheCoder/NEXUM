@@ -1,40 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
-import { Platform } from 'react-native';
-import { registerFCMToken } from '../services/marketplaceApi';
-
 const UserContext = createContext(null);
-
-// ─── FCM token registration helper ───────────────────────────────────────────
-async function _registerPushToken(idToken, sessionId) {
-  try {
-    if (!Device.isDevice) return;
-
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') return;
-
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-      });
-    }
-
-    const tokenData = await Notifications.getExpoPushTokenAsync();
-    await registerFCMToken(tokenData.data, { idToken, sessionId });
-  } catch (err) {
-    console.warn('[FCM] Failed to register push token:', err?.message || err);
-  }
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -130,7 +96,6 @@ export function UserProvider({ children }) {
       setIdToken(tokens.idToken || null);
       setRefreshToken(tokens.refreshToken || null);
 
-      _registerPushToken(tokens.idToken, sid);
     } catch (e) {
       console.error('Failed to save session:', e);
     }

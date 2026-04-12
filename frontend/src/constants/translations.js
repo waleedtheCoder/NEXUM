@@ -215,11 +215,6 @@ export const translations = {
       isTyping: 'is typing…',
       noMessages: 'Start the conversation', sendFirstMessage: 'Send a quick reply below to get started.',
     },
-    notifications: {
-      title: 'Notifications', markAllRead: 'Mark all read',
-      all: 'All', unread: 'Unread', inquiries: 'Inquiries', alerts: 'Alerts',
-      none: 'No notifications here',
-    },
     orderHistory: {
       title: 'My Orders', pending: 'Pending', confirmed: 'Confirmed',
       shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled',
@@ -675,11 +670,6 @@ export const translations = {
       productInquiry: 'مصنوع کی پوچھ گچھ', messagePlaceholder: 'پیغام…',
       isTyping: 'ٹائپ کر رہا ہے…',
       noMessages: 'گفتگو شروع کریں', sendFirstMessage: 'نیچے ایک فوری جواب بھیج کر شروعات کریں۔',
-    },
-    notifications: {
-      title: 'اطلاعات', markAllRead: 'سب پڑھا ہوا نشان کریں',
-      all: 'سب', unread: 'نہ پڑھی ہوئی', inquiries: 'پوچھ گچھ', alerts: 'الرٹس',
-      none: 'یہاں کوئی اطلاع نہیں',
     },
     orderHistory: {
       title: 'میرے آرڈرز', pending: 'زیر التواء', confirmed: 'تصدیق شدہ',

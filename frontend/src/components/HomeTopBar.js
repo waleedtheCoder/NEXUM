@@ -47,15 +47,6 @@ export default function HomeTopBar({ onSearchPress }) {
         </View>
 
         <View style={styles.topRight}>
-          {/* Notification bell */}
-          <TouchableOpacity
-            style={styles.notifBtn}
-            onPress={() => navigation.navigate('Notifications')}
-          >
-            <Ionicons name="notifications-outline" size={22} color="#fff" />
-            <View style={[styles.badge, { backgroundColor: colors.accent, borderColor: colors.primary }]} />
-          </TouchableOpacity>
-
           {/* Avatar circle */}
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initial}</Text>
@@ -123,19 +114,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     marginTop: 2,
-  },
-  notifBtn: {
-    padding: 5,
-    position: 'relative',
-  },
-  badge: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 1.5,
   },
   avatar: {
     width: 38,

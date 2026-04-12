@@ -13,7 +13,7 @@ import { useLanguage } from '../hooks/useLanguage';
 import { getConversations } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
-const CATEGORY_CHIPS = ['All', 'Buying', 'Selling', 'Favourites'];
+const CATEGORY_CHIPS = ['All', 'Buying', 'Selling'];
 
 function ChatItem({ chat, onPress, styles, colors }) {
   return (
@@ -91,14 +91,12 @@ export default function ChatListScreen() {
     'All': t.chatList.all,
     'Buying': t.chatList.buying,
     'Selling': t.chatList.selling,
-    'Favourites': t.chatList.favourites,
   };
 
   const chipFilter = activeChip.toLowerCase();
   const filtered = conversations.filter((c) => {
     const matchesChip =
-      chipFilter === 'all'        ? true :
-      chipFilter === 'favourites' ? c.isFavourite :
+      chipFilter === 'all' ? true :
       c.type === chipFilter;
     const matchesSearch =
       !search ||

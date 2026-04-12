@@ -54,7 +54,6 @@ INSTALLED_APPS = [
     'users',
     'listings',
     'chat',
-    'notifications',
     'orders',
     'promotions',
 ]

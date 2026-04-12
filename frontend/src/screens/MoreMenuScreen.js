@@ -46,19 +46,24 @@ export default function MoreMenuScreen() {
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Feature grid */}
+        {/* Feature grid — 2 cards per row, each flex: 1 */}
         <View style={styles.grid}>
-          {FEATURE_META.map((card, i) => (
-            <PressableBounce
-              key={i}
-              style={styles.featureCard}
-              onPress={() => handleFeatureCard(card)}
-            >
-              <View style={[styles.featureIconWrap, { backgroundColor: card.iconBg }]}>
-                <Ionicons name={`${card.icon}-outline`} size={22} color={card.iconColor} />
-              </View>
-              <Text style={styles.featureCardText}>{t.moreMenu[card.titleKey]}</Text>
-            </PressableBounce>
+          {[0, 2, 4].map((rowStart) => (
+            <View key={rowStart} style={styles.gridRow}>
+              {FEATURE_META.slice(rowStart, rowStart + 2).map((card, i) => (
+                <View key={i} style={styles.featureCardWrap}>
+                  <PressableBounce
+                    style={styles.featureCard}
+                    onPress={() => handleFeatureCard(card)}
+                  >
+                    <View style={[styles.featureIconWrap, { backgroundColor: card.iconBg }]}>
+                      <Ionicons name={`${card.icon}-outline`} size={22} color={card.iconColor} />
+                    </View>
+                    <Text style={styles.featureCardText}>{t.moreMenu[card.titleKey]}</Text>
+                  </PressableBounce>
+                </View>
+              ))}
+            </View>
           ))}
         </View>
 
@@ -178,13 +183,15 @@ const makeStyles = (colors) => StyleSheet.create({
 
   // Feature grid
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 10,
     marginBottom: spacing.md,
   },
+  gridRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  featureCardWrap: { flex: 1 },
   featureCard: {
-    width: '47%',
     backgroundColor: colors.surface,
     borderRadius: radii.xl,
     padding: 14,
