@@ -23,7 +23,7 @@ const STATUS_CONFIG = {
   cancelled: { color: '#EF4444', icon: 'close-circle-outline',     label: 'Cancelled' },
 };
 
-function InfoRow({ label, value }) {
+function InfoRow({ label, value, styles }) {
   return (
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
@@ -32,7 +32,7 @@ function InfoRow({ label, value }) {
   );
 }
 
-function StatusTimeline({ currentStatus }) {
+function StatusTimeline({ currentStatus, styles }) {
   const { colors } = useTheme();
   const { t } = useLanguage();
   const isCancelled    = currentStatus === 'cancelled';
@@ -234,13 +234,13 @@ export default function OrderDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t.orderDetail.summary}</Text>
           <View style={styles.infoCard}>
-            <InfoRow label={t.orderDetail.orderId}   value={`#${order.id}`} />
+            <InfoRow label={t.orderDetail.orderId}   value={`#${order.id}`} styles={styles} />
             <View style={styles.hairline} />
-            <InfoRow label={t.orderDetail.quantity}  value={`${order.quantity} ${t.orderDetail.units}`} />
+            <InfoRow label={t.orderDetail.quantity}  value={`${order.quantity} ${t.orderDetail.units}`} styles={styles} />
             <View style={styles.hairline} />
-            <InfoRow label={t.orderDetail.unitPrice} value={`Rs ${Number(order.unitPrice).toLocaleString()}`} />
+            <InfoRow label={t.orderDetail.unitPrice} value={`Rs ${Number(order.unitPrice).toLocaleString()}`} styles={styles} />
             <View style={styles.hairline} />
-            <InfoRow label={t.orderDetail.orderDate} value={order.orderDate} />
+            <InfoRow label={t.orderDetail.orderDate} value={order.orderDate} styles={styles} />
             <View style={styles.hairline} />
             <View style={[styles.infoRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>{t.orderDetail.total}</Text>
@@ -253,7 +253,7 @@ export default function OrderDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t.orderDetail.orderStatus}</Text>
           <View style={styles.infoCard}>
-            <StatusTimeline currentStatus={statusKey} />
+            <StatusTimeline currentStatus={statusKey} styles={styles} />
           </View>
         </View>
 
