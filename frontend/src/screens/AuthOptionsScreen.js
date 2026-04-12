@@ -31,7 +31,7 @@ export default function AuthOptionsScreen() {
 
         <BubblyButton
           label={t.authOptions.continueEmail}
-          icon="mail-outline"
+          icon={<Ionicons name="mail-outline" size={18} color="#fff" />}
           onPress={() => navigation.navigate('Login')}
           variant="primary"
           colors={colors}

@@ -338,9 +338,7 @@ export default function CreateListingScreen() {
         </ScrollView>
 
         {/* Delivery Cities */}
-        <Text style={styles.label}>
-          Delivery Cities <Text style={styles.labelHint}>(select cities you deliver to)</Text>
-        </Text>
+        <Text style={styles.label}>Delivery Cities</Text>
         {cities.length > 0 && (
           <View style={styles.selectedCitiesRow}>
             {cities.map((c) => (

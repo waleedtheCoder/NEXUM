@@ -46,7 +46,6 @@ export default function HomeTopBar({ onSearchPress }) {
   };
 
   return (
-    <>
     <View style={[styles.hero, {
       paddingTop: insets.top + 14,
       backgroundColor: colors.primary,
@@ -89,10 +88,8 @@ export default function HomeTopBar({ onSearchPress }) {
         <Ionicons name="options-outline" size={16} color="rgba(255,255,255,0.55)" />
       </TouchableOpacity>
 
-    </View>
-
-    {/* ── City picker modal ────────────────────────────────────────────── */}
-    <Modal
+      {/* ── City picker modal ────────────────────────────────────────────── */}
+      <Modal
       visible={modalVisible}
       transparent
       animationType="slide"
@@ -143,8 +140,8 @@ export default function HomeTopBar({ onSearchPress }) {
           </ScrollView>
         </Pressable>
       </Pressable>
-    </Modal>
-    </>
+      </Modal>
+    </View>
   );
 }
 
