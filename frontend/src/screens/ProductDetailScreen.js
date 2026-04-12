@@ -206,9 +206,13 @@ export default function ProductDetailScreen() {
 
   const images = product.images?.length ? product.images : [product.imageUrl].filter(Boolean);
 
-  // Live total price for the modal
-  const modalTotal = product?.price && parseInt(orderQty, 10)
-    ? (parseFloat(product.price) * parseInt(orderQty, 10)).toLocaleString()
+  // Promotion info (if any active promo on this listing)
+  const promo        = product.promotion || null;
+  const displayPrice = promo ? promo.discountedPrice : product.price;
+
+  // Live total price for the modal (use discounted price if promo active)
+  const modalTotal = displayPrice && parseInt(orderQty, 10)
+    ? (parseFloat(displayPrice) * parseInt(orderQty, 10)).toLocaleString()
     : null;
 
   return (
@@ -418,7 +422,8 @@ export default function ProductDetailScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.modalProductName} numberOfLines={2}>{product.title}</Text>
                 <Text style={styles.modalUnitPrice}>
-                  Rs {product.price} / {product.unit || 'unit'}
+                  Rs {parseFloat(displayPrice).toLocaleString()} / {product.unit || 'unit'}
+                  {promo ? ` (${promo.discountPercent}% off)` : ''}
                 </Text>
               </View>
             </View>
@@ -542,12 +547,18 @@ const makeStyles = (colors) => StyleSheet.create({
     elevation: 8,
   },
 
+  badgeRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   featuredBadge: {
     alignSelf: 'flex-start', backgroundColor: colors.accent,
     borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 4,
     borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   featuredText: { color: '#fff', fontSize: 10, fontFamily: fonts.semiBold },
+  promoBadge: {
+    alignSelf: 'flex-start', backgroundColor: '#16a34a',
+    borderRadius: 4, paddingHorizontal: 8, paddingVertical: 3,
+  },
+  promoBadgeText: { color: '#fff', fontSize: 10, fontFamily: fonts.semiBold },
 
   badgeRowTop: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   promoBadge: {

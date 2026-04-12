@@ -376,6 +376,10 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 4,
     minWidth: 80,
   },
+  topBarTitle: {
+    flex: 1, fontSize: 16, fontFamily: fonts.semiBold, color: colors.text,
+    paddingHorizontal: 4,
+  },
   searchBar: {
     flex: 1,
     flexDirection: 'row',
