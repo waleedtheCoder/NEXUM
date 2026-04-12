@@ -26,7 +26,6 @@ export default function SplashScreen() {
       <View style={styles.center}>
         <Text style={styles.logo}>NEXUM</Text>
       </View>
-      <View style={styles.indicator} />
     </View>
   );
 }
@@ -35,16 +34,9 @@ const makeStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.splash,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
   },
   center: { flex: 1, justifyContent: 'center' },
   logo: { color: '#fff', fontSize: 48, fontWeight: '700', letterSpacing: 3 },
-  indicator: {
-    width: 128,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    marginBottom: 8,
-  },
 });
