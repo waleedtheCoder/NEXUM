@@ -108,9 +108,19 @@ export default function ShopkeeperDashboardScreen() {
     }, [idToken, sessionId])
   );
 
-  const handleLogout = async () => {
-    await logout();
-    navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
+  const handleLogout = () => {
+    Alert.alert(
+      t.shopkeeperDashboard.logOut,
+      t.common.logoutConfirm || 'Are you sure you want to log out?',
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        { text: t.shopkeeperDashboard.logOut, style: 'destructive', onPress: async () => {
+            await logout();
+            navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
+          }
+        },
+      ]
+    );
   };
 
   const renderOrder = (order, i, arr) => {

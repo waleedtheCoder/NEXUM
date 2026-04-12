@@ -19,20 +19,12 @@ import { formatPrice } from '../utils/format';
 
 const QUICK_CATEGORIES = [
   { icon: 'pricetag',    labelKey: 'offers'        },
-  { icon: 'people',      labelKey: 'newSuppliers'   },
-  { icon: 'trending-up', labelKey: 'restockDeals'  },
-  { icon: 'cube',        labelKey: 'bulkEssentials' },
-  { icon: 'location',    labelKey: 'localFavorites' },
 ];
 
 const CATEGORY_ICON_FALLBACK = 'pricetag-outline';
 
 const QUICK_COLORS = [
   { bg: '#FFF1E6', icon: '#F97316' },
-  { bg: '#E6F4FF', icon: '#0F766E' },
-  { bg: '#F0FDF4', icon: '#22C55E' },
-  { bg: '#FEF9C3', icon: '#CA8A04' },
-  { bg: '#F3E8FF', icon: '#9333EA' },
 ];
 
 export default function HomeScreen() {

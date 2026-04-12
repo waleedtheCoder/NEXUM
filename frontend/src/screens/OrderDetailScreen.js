@@ -33,6 +33,7 @@ function InfoRow({ label, value }) {
 }
 
 function StatusTimeline({ currentStatus }) {
+  const { colors } = useTheme();
   const { t } = useLanguage();
   const isCancelled    = currentStatus === 'cancelled';
   const currentIndex   = STATUS_STEPS.indexOf(currentStatus);

@@ -227,7 +227,14 @@ export default function ChatConversationScreen() {
           renderSectionHeader={renderDaySeparator}
           contentContainerStyle={[styles.messageList, groupedMessages.length === 0 && styles.messageListEmpty]}
           showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+          onScrollToIndexFailed={() => {}}
+          onContentSizeChange={() => {
+            if (listRef.current && groupedMessages.length > 0) {
+              const lastSection = groupedMessages.length - 1;
+              const lastItem = groupedMessages[lastSection].data.length - 1;
+              listRef.current.scrollToLocation({ sectionIndex: lastSection, itemIndex: lastItem, animated: false });
+            }
+          }}
           ListEmptyComponent={
             <View style={styles.emptyChat}>
               <View style={styles.emptyChatIcon}>

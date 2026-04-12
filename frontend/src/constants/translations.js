@@ -2,7 +2,7 @@ export const translations = {
   en: {
     common: {
       account: 'Account', signIn: 'Sign In', signUp: 'Sign Up',
-      createAccount: 'Create an Account', logOut: 'Log Out',
+      createAccount: 'Create an Account', logOut: 'Log Out', logoutConfirm: 'Are you sure you want to log out?',
       cancel: 'Cancel', save: 'Save', back: 'Back', next: 'Next',
       continue: 'Continue', skip: 'Skip', retry: 'Retry',
       loading: 'Loading…', submit: 'Submit', add: 'Add', edit: 'Edit',
@@ -467,7 +467,7 @@ export const translations = {
   ur: {
     common: {
       account: 'اکاؤنٹ', signIn: 'سائن ان', signUp: 'سائن اپ',
-      createAccount: 'اکاؤنٹ بنائیں', logOut: 'لاگ آؤٹ',
+      createAccount: 'اکاؤنٹ بنائیں', logOut: 'لاگ آؤٹ', logoutConfirm: 'کیا آپ واقعی لاگ آؤٹ کرنا چاہتے ہیں؟',
       cancel: 'منسوخ', save: 'محفوظ کریں', back: 'واپس', next: 'اگلا',
       continue: 'جاری رکھیں', skip: 'چھوڑیں', retry: 'دوبارہ کوشش کریں',
       loading: 'لوڈ ہو رہا ہے…', submit: 'جمع کریں', add: 'شامل کریں',

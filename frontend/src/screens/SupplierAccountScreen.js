@@ -58,9 +58,19 @@ export default function SupplierAccountScreen() {
 
   const markRead = (id) => setInquiries((prev) => prev.map((i) => (i.id === id ? { ...i, read: true } : i)));
 
-  const handleLogout = async () => {
-    await logout();
-    navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
+  const handleLogout = () => {
+    Alert.alert(
+      t.supplierAccount.logOut,
+      t.common.logoutConfirm || 'Are you sure you want to log out?',
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        { text: t.supplierAccount.logOut, style: 'destructive', onPress: async () => {
+            await logout();
+            navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
+          }
+        },
+      ]
+    );
   };
 
   const handleMenuPress = (item) => {

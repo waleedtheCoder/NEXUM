@@ -67,9 +67,19 @@ export default function AccountSettingsScreen() {
     }, [idToken, sessionId, isShopkeeper])
   );
 
-  const handleLogout = async () => {
-    await logout();
-    navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
+  const handleLogout = () => {
+    Alert.alert(
+      t.accountSettings.logOut,
+      t.common.logoutConfirm || 'Are you sure you want to log out?',
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        { text: t.accountSettings.logOut, style: 'destructive', onPress: async () => {
+            await logout();
+            navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
+          }
+        },
+      ]
+    );
   };
 
   const handleMenuPress = (item) => {

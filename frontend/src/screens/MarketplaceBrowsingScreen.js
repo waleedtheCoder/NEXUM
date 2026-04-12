@@ -457,10 +457,11 @@ const makeStyles = (colors) => StyleSheet.create({
   // ── List card ─────────────────────────────────────────────────────────────
   listCard: {
     flexDirection: 'row',
+    height: 96,
     backgroundColor: colors.surface,
     borderRadius: radii.xl,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.09,
@@ -468,8 +469,8 @@ const makeStyles = (colors) => StyleSheet.create({
     elevation: 6,
   },
   listAccentBar:      { width: 4 },
-  listImgWrap:        { width: 100, position: 'relative' },
-  listImg:            { width: 100, height: '100%', minHeight: 100 },
+  listImgWrap:        { width: 96 },
+  listImg:            { width: 96, height: 96 },
   listImgPlaceholder: { backgroundColor: colors.backgroundAlt, alignItems: 'center', justifyContent: 'center' },
   listInfo:           { flex: 1, padding: 12, gap: 3, justifyContent: 'center' },
   listCategoryRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 },
