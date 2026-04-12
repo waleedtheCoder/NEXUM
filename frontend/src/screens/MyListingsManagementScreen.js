@@ -401,7 +401,8 @@ const makeStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radii.xl,
     padding: spacing.md,
-    ...shadows.sm,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.10, shadowRadius: 12, elevation: 8,
   },
   cardRow:          { flexDirection: 'row', gap: 14, alignItems: 'flex-start', marginBottom: 12 },
   thumb:            { width: 80, height: 80, borderRadius: radii.lg },
@@ -422,13 +423,19 @@ const makeStyles = (colors) => StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: 10 },
   statBox: {
     flex: 1, backgroundColor: colors.surface, borderRadius: radii.xl,
-    padding: spacing.sm, alignItems: 'center', gap: 4, ...shadows.sm,
+    padding: spacing.sm, alignItems: 'center', gap: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 10, elevation: 6,
   },
   statValue: { fontSize: 16, fontFamily: fonts.bold,    color: colors.text          },
   statLabel: { fontSize: 10, fontFamily: fonts.regular, color: colors.textSecondary },
 
   // Info card
-  infoCard:        { backgroundColor: colors.surface, borderRadius: radii.xl, padding: spacing.md },
+  infoCard: {
+    backgroundColor: colors.surface, borderRadius: radii.xl, padding: spacing.md,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 10, elevation: 6,
+  },
   infoRow:         { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
   hairline:        { height: 1, backgroundColor: colors.border },
   infoLabel:       { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
@@ -440,15 +447,20 @@ const makeStyles = (colors) => StyleSheet.create({
   publishBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: colors.green, borderRadius: radii.xl, paddingVertical: 14,
+    borderBottomWidth: 4, borderBottomColor: '#0a7040',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   editBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: colors.primary, borderRadius: radii.xl, paddingVertical: 14,
+    borderBottomWidth: 4, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   chatBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: `${colors.primary}12`, borderRadius: radii.xl, paddingVertical: 14,
-    borderWidth: 1, borderColor: `${colors.primary}40`,
+    shadowColor: colors.primary, shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12, shadowRadius: 8, elevation: 4,
   },
   actionBtnText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
 
@@ -478,16 +490,20 @@ const makeStyles = (colors) => StyleSheet.create({
   // Modal
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalSheet: {
-    backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
     padding: spacing.lg, paddingBottom: 36, gap: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.12, shadowRadius: 16, elevation: 20,
   },
   modalHandle:  { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 4 },
   modalTitle:   { fontSize: 18, fontFamily: fonts.bold, color: colors.text },
   modalSub:     { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 20 },
   modalInputWrap: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface,
     borderRadius: radii.lg, paddingHorizontal: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07, shadowRadius: 8, elevation: 4,
   },
   modalInput: {
     flex: 1, paddingVertical: 14, fontSize: 28, fontFamily: fonts.bold, color: colors.text,
@@ -503,6 +519,8 @@ const makeStyles = (colors) => StyleSheet.create({
   modalSaveBtn: {
     backgroundColor: colors.accent, borderRadius: radii.xl, paddingVertical: 16,
     alignItems: 'center', justifyContent: 'center',
+    borderBottomWidth: 4, borderBottomColor: '#C2520A',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   modalSaveBtnText: { color: '#fff', fontSize: 16, fontFamily: fonts.semiBold },
   modalCancelBtn:   { alignItems: 'center', paddingVertical: 8 },

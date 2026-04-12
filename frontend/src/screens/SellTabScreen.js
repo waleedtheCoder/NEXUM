@@ -11,6 +11,7 @@ import { useUser } from '../context/UserContext';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 import { fonts, spacing, radii } from '../constants/theme';
+import BubblyButton from '../components/BubblyButton';
 import MyListingsScreen from './MyListingsScreen';
 import BottomNav from '../components/BottomNav';
 
@@ -22,6 +23,12 @@ export default function SellTabScreen() {
 
   return <SellPrompt isLoggedIn={isLoggedIn} />;
 }
+
+const PERKS = (t) => [
+  { icon: 'trending-up-outline',      text: t.sellTab.benefit1, bg: '#E6F4FF', color: '#0F766E' },
+  { icon: 'people-outline',           text: t.sellTab.benefit2, bg: '#F3E8FF', color: '#9333EA' },
+  { icon: 'shield-checkmark-outline', text: t.sellTab.benefit3, bg: '#F0FDF4', color: '#22C55E' },
+];
 
 function SellPrompt({ isLoggedIn }) {
   const navigation = useNavigation();
@@ -44,31 +51,26 @@ function SellPrompt({ isLoggedIn }) {
         </View>
 
         <Text style={styles.heading}>{t.sellTab.becomeSupplier}</Text>
-        <Text style={styles.subheading}>
-          {t.sellTab.subtitle}
-        </Text>
+        <Text style={styles.subheading}>{t.sellTab.subtitle}</Text>
 
         <View style={styles.perks}>
-          {[
-            { icon: 'trending-up-outline', text: t.sellTab.benefit1 },
-            { icon: 'people-outline',      text: t.sellTab.benefit2 },
-            { icon: 'shield-checkmark-outline', text: t.sellTab.benefit3 },
-          ].map((p) => (
+          {PERKS(t).map((p) => (
             <View key={p.text} style={styles.perkRow}>
-              <Ionicons name={p.icon} size={18} color={colors.primary} />
+              <View style={[styles.perkIconWrap, { backgroundColor: p.bg }]}>
+                <Ionicons name={p.icon} size={18} color={p.color} />
+              </View>
               <Text style={styles.perkText}>{p.text}</Text>
             </View>
           ))}
         </View>
 
-        <TouchableOpacity
-          style={styles.primaryBtn}
+        <BubblyButton
+          label={isLoggedIn ? t.sellTab.apply : t.sellTab.signUpToSell}
           onPress={() => navigation.navigate(isLoggedIn ? 'BecomeSupplier' : 'SignUp')}
-        >
-          <Text style={styles.primaryBtnText}>
-            {isLoggedIn ? t.sellTab.apply : t.sellTab.signUpToSell}
-          </Text>
-        </TouchableOpacity>
+          variant="primary"
+          colors={colors}
+          style={styles.btnOverride}
+        />
 
         {!isLoggedIn && (
           <TouchableOpacity
@@ -90,7 +92,16 @@ const makeStyles = (colors) => StyleSheet.create({
   topBar: {
     backgroundColor: colors.primary,
     alignItems: 'center',
-    paddingBottom: 14,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 14,
+    elevation: 10,
   },
   topBarTitle: { color: '#fff', fontSize: 18, fontFamily: fonts.semiBold },
   body: {
@@ -101,13 +112,18 @@ const makeStyles = (colors) => StyleSheet.create({
     gap: 16,
   },
   iconCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: `${colors.primary}15`,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 8,
   },
   heading: {
     fontSize: 22,
@@ -128,29 +144,29 @@ const makeStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: 12,
+    borderRadius: radii.xl,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  perkIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   perkText: {
     fontSize: 13,
     fontFamily: fonts.medium,
     color: colors.text,
+    flex: 1,
   },
-  primaryBtn: {
-    width: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: radii.md,
-    paddingVertical: 15,
-    alignItems: 'center',
-  },
-  primaryBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontFamily: fonts.semiBold,
-  },
-  secondaryBtn: {
-    paddingVertical: 8,
-  },
+  btnOverride: { width: '100%' },
+  secondaryBtn: { paddingVertical: 8 },
   secondaryBtnText: {
     fontSize: 13,
     fontFamily: fonts.medium,

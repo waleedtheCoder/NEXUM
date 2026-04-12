@@ -57,14 +57,12 @@ class ListingDetailSerializer(serializers.ModelSerializer):
     description = serializers.CharField()
     seller     = serializers.SerializerMethodField()
     promotion  = serializers.SerializerMethodField()
-    unit       = serializers.CharField()
 
     class Meta:
         model  = Listing
         fields = [
             'id', 'title', 'price', 'location', 'timePosted',
-            'isFeatured', 'images', 'details', 'description', 'seller',
-            'promotion', 'unit',
+            'isFeatured', 'images', 'details', 'description', 'seller', 'promotion',
         ]
 
     def get_timePosted(self, obj):
@@ -106,9 +104,9 @@ class ListingDetailSerializer(serializers.ModelSerializer):
             p = obj.promotion
             if p.is_active:
                 return {
-                    'discountPercent':  p.discount_percent,
-                    'discountedPrice':  str(round(p.discounted_price, 2)),
-                    'endsAt':           p.ends_at.isoformat() if p.ends_at else None,
+                    'discountPercent': p.discount_percent,
+                    'discountedPrice': str(round(p.discounted_price, 2)),
+                    'endsAt':          p.ends_at.isoformat() if p.ends_at else None,
                 }
         except ListingPromotion.DoesNotExist:
             pass

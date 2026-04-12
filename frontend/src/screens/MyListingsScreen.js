@@ -167,12 +167,19 @@ export default function MyListingsScreen() {
 
 const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { backgroundColor: '#0D0F12', paddingHorizontal: spacing.md },
+  header: {
+    backgroundColor: '#0D0F12', paddingHorizontal: spacing.md,
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.30, shadowRadius: 14, elevation: 10,
+  },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   headerTitle: { fontSize: 20, fontFamily: fonts.bold, color: '#fff' },
   addBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: colors.primary, borderRadius: radii.lg, paddingHorizontal: 14, paddingVertical: 7,
+    borderBottomWidth: 3, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   addBtnText: { color: '#fff', fontSize: 13, fontFamily: fonts.semiBold },
   tabRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)' },
@@ -187,6 +194,10 @@ const makeStyles = (colors) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: colors.accent, margin: spacing.md, borderRadius: radii.xl,
     paddingHorizontal: spacing.md, paddingVertical: 12,
+    borderBottomWidth: 4, borderBottomColor: '#C2520A',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
+    shadowColor: colors.accent, shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.30, shadowRadius: 12, elevation: 8,
   },
   promoteBannerIcon: {
     width: 32, height: 32, borderRadius: 16,

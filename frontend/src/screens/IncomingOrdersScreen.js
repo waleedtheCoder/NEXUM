@@ -21,6 +21,8 @@ import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, StatusBar, ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { SkeletonCardRow } from '../components/SkeletonLoader';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -207,6 +209,7 @@ export default function IncomingOrdersScreen() {
 
   // ── Status update (optimistic) ────────────────────────────────────────────
   const handleStatusUpdate = async (order, newStatus) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setUpdatingId(order.id);
     const prevStatus = order.status;
 
@@ -255,8 +258,10 @@ export default function IncomingOrdersScreen() {
 
       {/* Loading */}
       {loading && (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={{ padding: spacing.md }}>
+          {[1, 2, 3].map((i) => (
+            <SkeletonCardRow key={i} />
+          ))}
         </View>
       )}
 
@@ -321,6 +326,11 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingBottom: 16,
     gap: 12,
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25, shadowRadius: 14, elevation: 10,
   },
   backBtn:     { padding: 4 },
   headerText:  { flex: 1 },
@@ -335,11 +345,12 @@ const makeStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radii.xl,
     padding: spacing.md,
-    ...shadows.sm,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.10, shadowRadius: 12, elevation: 8,
   },
   cardTop:      { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
   orderIconWrap: {
-    width: 38, height: 38, borderRadius: radii.md,
+    width: 44, height: 44, borderRadius: 14,
     backgroundColor: `${colors.primary}15`,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -381,7 +392,11 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingVertical: 9,
     alignItems: 'center',
   },
-  actionBtnPrimary: { backgroundColor: colors.primary },
+  actionBtnPrimary: {
+    backgroundColor: colors.primary,
+    borderBottomWidth: 4, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
+  },
   actionBtnDanger:  { backgroundColor: colors.surface, borderWidth: 1, borderColor: '#EF4444' },
   actionBtnText:     { fontSize: 13, fontFamily: fonts.semiBold, color: '#fff' },
   actionBtnTextDanger: { color: '#EF4444' },

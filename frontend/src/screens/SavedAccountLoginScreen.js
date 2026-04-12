@@ -84,7 +84,7 @@ export default function SavedAccountLoginScreen() {
 
         {/* Top row */}
         <View style={styles.topRow}>
-          <TouchableOpacity onPress={() => navigation.navigate('AuthOptions')}>
+          <TouchableOpacity onPress={() => navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] })}>
             <Text style={styles.closeBtn}>✕</Text>
           </TouchableOpacity>
         </View>
@@ -224,6 +224,8 @@ const makeStyles = (colors) => StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     marginBottom: 2,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.10, shadowRadius: 12, elevation: 8,
   },
   accountCardActive: {
     borderBottomLeftRadius: 0,
@@ -253,11 +255,11 @@ const makeStyles = (colors) => StyleSheet.create({
   passWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surface,
     borderRadius: radii.md,
     paddingHorizontal: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08, shadowRadius: 8, elevation: 4,
   },
   passInput: {
     flex: 1,
@@ -267,7 +269,11 @@ const makeStyles = (colors) => StyleSheet.create({
     color: colors.text,
   },
   errorText:        { fontSize: 12, fontFamily: fonts.medium, color: '#EF4444' },
-  loginBtn:         { backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: 14, alignItems: 'center' },
+  loginBtn: {
+    backgroundColor: colors.primary, borderRadius: radii.md, paddingVertical: 14, alignItems: 'center',
+    borderBottomWidth: 4, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
+  },
   loginBtnDisabled: { opacity: 0.6 },
   loginBtnText:     { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
   forgotWrap:       { alignItems: 'center' },

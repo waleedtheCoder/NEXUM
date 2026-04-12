@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CityIllustration from '../components/CityIllustration';
-import { fonts, spacing, radii, shadows } from '../constants/theme';
+import BubblyButton from '../components/BubblyButton';
+import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 
@@ -22,7 +23,7 @@ export default function WelcomeScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.illustrationWrap}>
@@ -34,9 +35,13 @@ export default function WelcomeScreen() {
         <View style={styles.instructionBox}>
           <Text style={[styles.instruction, isUrdu && styles.urdu]}>{t.welcome.instruction}</Text>
         </View>
-        <TouchableOpacity style={styles.btn} onPress={handleContinue}>
-          <Text style={styles.btnText}>{t.welcome.button}</Text>
-        </TouchableOpacity>
+        <BubblyButton
+          label={t.welcome.button}
+          onPress={handleContinue}
+          variant="accent"
+          colors={colors}
+          style={styles.btnOverride}
+        />
         <Text style={[styles.footer, isUrdu && styles.urdu]}>{t.welcome.footer}</Text>
       </ScrollView>
     </View>
@@ -48,12 +53,36 @@ const makeStyles = (colors) => StyleSheet.create({
   scroll: { padding: spacing.lg, paddingTop: spacing.lg, alignItems: 'center' },
   illustrationWrap: { marginBottom: spacing.lg },
   appName: { fontSize: 28, fontFamily: fonts.bold, color: colors.primary, marginBottom: 8 },
-  headline: { fontSize: 18, fontFamily: fonts.semiBold, color: colors.text, textAlign: 'center', marginBottom: 12, lineHeight: 26 },
-  desc: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: spacing.lg },
-  instructionBox: { backgroundColor: colors.primaryLight, borderRadius: radii.md, padding: 14, marginBottom: spacing.lg, width: '100%' },
-  instruction: { fontSize: 13, fontFamily: fonts.regular, color: colors.primary, textAlign: 'center', lineHeight: 20 },
-  btn: { backgroundColor: colors.accent, borderRadius: radii.md, paddingVertical: 15, width: '100%', alignItems: 'center', marginBottom: spacing.md },
-  btnText: { color: '#fff', fontSize: 16, fontFamily: fonts.semiBold },
-  footer: { fontSize: 12, fontFamily: fonts.regular, color: colors.textLight, textAlign: 'center', lineHeight: 18 },
+  headline: {
+    fontSize: 18, fontFamily: fonts.semiBold, color: colors.text,
+    textAlign: 'center', marginBottom: 12, lineHeight: 26,
+  },
+  desc: {
+    fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary,
+    textAlign: 'center', lineHeight: 22, marginBottom: spacing.lg,
+  },
+  instructionBox: {
+    backgroundColor: colors.primaryLight,
+    borderRadius: radii.lg,
+    padding: 16,
+    marginBottom: spacing.lg,
+    width: '100%',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.5)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  instruction: {
+    fontSize: 13, fontFamily: fonts.regular, color: colors.primary,
+    textAlign: 'center', lineHeight: 20,
+  },
+  btnOverride: { width: '100%', marginBottom: spacing.md },
+  footer: {
+    fontSize: 12, fontFamily: fonts.regular, color: colors.textLight,
+    textAlign: 'center', lineHeight: 18,
+  },
   urdu: { textAlign: 'right', writingDirection: 'rtl' },
 });

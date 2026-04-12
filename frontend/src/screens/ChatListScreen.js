@@ -111,7 +111,7 @@ export default function ChatListScreen() {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -198,7 +198,7 @@ const makeStyles = (colors) => StyleSheet.create({
   container:  { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.md, paddingBottom: 12,
+    paddingHorizontal: spacing.md, paddingBottom: 14,
   },
   headerTitle:  { fontSize: 22, fontFamily: fonts.bold, color: colors.text },
   composeBtn:   { padding: 4 },
@@ -212,8 +212,16 @@ const makeStyles = (colors) => StyleSheet.create({
   chipRow: {
     flexDirection: 'row', gap: 8, paddingHorizontal: spacing.md, paddingBottom: 12,
   },
-  chip:         { paddingHorizontal: 14, paddingVertical: 7, borderRadius: radii.full, backgroundColor: colors.surfaceAlt },
-  chipActive:   { backgroundColor: colors.primary },
+  chip: {
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: radii.full,
+    backgroundColor: colors.surface,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+  },
+  chipActive: {
+    backgroundColor: colors.primary,
+    shadowColor: colors.primary, shadowOpacity: 0.25,
+  },
   chipText:     { fontSize: 13, fontFamily: fonts.medium, color: colors.textSecondary },
   chipTextActive: { color: '#fff' },
   separator:    { height: 1, backgroundColor: colors.border },
@@ -254,7 +262,12 @@ const makeStyles = (colors) => StyleSheet.create({
   guestTopBar: {
     backgroundColor: colors.primary,
     alignItems: 'center',
-    paddingBottom: 14,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25, shadowRadius: 14, elevation: 10,
   },
   guestTopBarTitle: { color: '#fff', fontSize: 18, fontFamily: fonts.semiBold },
   guestBody: {
@@ -289,9 +302,13 @@ const makeStyles = (colors) => StyleSheet.create({
   guestPrimaryBtn: {
     width: '100%',
     backgroundColor: colors.primary,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     paddingVertical: 15,
     alignItems: 'center',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0a524d',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.35)',
   },
   guestPrimaryBtnText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
   guestSecondaryBtn: { paddingVertical: 8 },

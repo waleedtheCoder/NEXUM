@@ -1,37 +1,34 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// theme.js
+// theme.js — Bubbly 3D redesign
 //
-// Two complete color palettes:
-//   lightColors — white backgrounds, teal primary
-//   darkColors  — near-black backgrounds, rust-orange primary
+// Two complete color palettes (unchanged hues from v1):
+//   lightColors — warm off-white backgrounds, teal primary, orange accent
+//   darkColors  — near-black backgrounds, rust-orange primary, teal accent
 //
-// fonts / spacing / radii / shadows are theme-independent — they never change.
-//
-// Usage in screens:
-//   import { useTheme } from '../hooks/useTheme';
-//   const { colors } = useTheme();
+// Spacing, fonts, radii, and shadows are theme-independent.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const lightColors = {
   // ── Brand ──────────────────────────────────────────────────────────────────
   primary:      '#0F766E',   // teal green — headers, buttons, labels
-  primaryDark:  '#0D6660',   // pressed state
+  primaryDark:  '#0a524d',   // 3D button bottom-edge / pressed state
   primaryLight: '#E5F5EA',   // tinted backgrounds (icon containers, pills)
 
-  // ── Accent (secondary action color) ────────────────────────────────────────
+  // ── Accent ─────────────────────────────────────────────────────────────────
   accent:       '#F97316',   // orange — secondary CTAs, highlights
-  accentDark:   '#EA580C',
+  accentDark:   '#C2520A',   // 3D button bottom-edge for accent buttons
 
   // ── Semantic ───────────────────────────────────────────────────────────────
-  green:        '#84CC16',   // lime — verified badges, new dots
+  green:        '#84CC16',
   greenDark:    '#65A30D',
   error:        '#EF4444',
 
   // ── Backgrounds ────────────────────────────────────────────────────────────
-  background:   '#FFFFFF',   // page / screen background
-  backgroundAlt:'#F9FAFB',   // subtle off-white for inner sections
-  surface:      '#FFFFFF',   // cards, modals, inputs
-  surfaceAlt:   '#F3F4F6',   // slightly darker surface (nested cards)
+  // Page background is warm off-white so pure-white cards visibly float above it
+  background:   '#F5F2EE',   // warm off-white screen / page background
+  backgroundAlt:'#EDE9E3',   // slightly deeper for nested sections
+  surface:      '#FFFFFF',   // cards, modals, inputs — always pure white
+  surfaceAlt:   '#F7F5F2',   // slightly warm surface for nested cards
 
   // ── Borders ────────────────────────────────────────────────────────────────
   border:       '#E5E7EB',
@@ -41,34 +38,34 @@ export const lightColors = {
   text:          '#111827',
   textSecondary: '#6B7280',
   textLight:     '#9CA3AF',
-  textOnPrimary: '#FFFFFF',  // text on primary-colored backgrounds
+  textOnPrimary: '#FFFFFF',
 
-  // ── Fixed (never change between themes) ────────────────────────────────────
-  splash: '#00A859',         // logo / splash screen green
+  // ── Fixed ──────────────────────────────────────────────────────────────────
+  splash: '#00A859',
 
   isDark: false,
 };
 
 export const darkColors = {
-  // ── Brand (rust orange becomes primary in dark mode) ───────────────────────
-  primary:      '#C2410C',   // rust orange — headers, buttons, labels
-  primaryDark:  '#9A3412',   // pressed state
-  primaryLight: '#3D1505',   // tinted backgrounds (low-opacity rust tint)
+  // ── Brand (rust orange is primary in dark mode) ────────────────────────────
+  primary:      '#C2410C',
+  primaryDark:  '#9A3412',   // 3D button bottom-edge in dark mode
+  primaryLight: '#3D1505',
 
-  // ── Accent (teal becomes secondary in dark mode) ───────────────────────────
-  accent:       '#0F766E',   // teal — secondary CTAs
+  // ── Accent (teal is accent in dark mode) ───────────────────────────────────
+  accent:       '#0F766E',
   accentDark:   '#0D6660',
 
   // ── Semantic ───────────────────────────────────────────────────────────────
-  green:        '#84CC16',   // same — semantic, doesn't shift with theme
+  green:        '#84CC16',
   greenDark:    '#65A30D',
-  error:        '#F87171',   // slightly lighter red for dark backgrounds
+  error:        '#F87171',
 
   // ── Backgrounds ────────────────────────────────────────────────────────────
-  background:   '#0A0A0A',   // near-black screen background
-  backgroundAlt:'#111111',   // slightly lighter inner sections
-  surface:      '#161616',   // cards, modals
-  surfaceAlt:   '#1F1F1F',   // nested cards
+  background:   '#0A0A0A',
+  backgroundAlt:'#111111',
+  surface:      '#161616',
+  surfaceAlt:   '#1F1F1F',
 
   // ── Borders ────────────────────────────────────────────────────────────────
   border:       '#2A2A2A',
@@ -86,7 +83,8 @@ export const darkColors = {
   isDark: true,
 };
 
-// ── Theme-independent tokens (never change) ───────────────────────────────────
+// ── Theme-independent design tokens ──────────────────────────────────────────
+
 export const fonts = {
   regular:  'Montserrat-Regular',
   medium:   'Montserrat-Medium',
@@ -103,31 +101,51 @@ export const spacing = {
   xxl: 48,
 };
 
+// Bubbly 3D radius scale — everything is more rounded than before
 export const radii = {
-  sm:   4,
-  md:   8,
-  lg:   12,
-  xl:   16,
-  xxl:  20,
-  full: 999,
+  sm:   8,    // small badges, chips within compact areas
+  md:   16,   // input fields, small cards
+  lg:   20,   // medium surfaces, perk rows
+  xl:   24,   // main content cards
+  xxl:  28,   // screen headers, modals, large panels
+  full: 999,  // pills, chips, avatar borders
 };
 
+// Shadow scale — three tiers for different elevations
 export const shadows = {
+  // Subtle — for small chips and inline elements
   sm: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 4,
+    elevation: 3,
   },
+  // Standard card lift — the workhorse
   md: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  // Floating panels — BottomNav, modals, hero banners
+  float: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  // Alias kept for backward compat
+  card: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    elevation: 6,
   },
 };
 
-// ── Legacy default export (backward compat — prefer useTheme() in components) ─
+// ── Legacy default export (backward compat) ───────────────────────────────────
 export const colors = lightColors;

@@ -82,7 +82,7 @@ class ListingsView(APIView):
 
         on_promo = request.query_params.get('on_promo', '').lower()
         if on_promo == 'true':
-            qs = qs.filter(promotion__is_active=True)
+            qs = qs.filter(promotion__isnull=False, promotion__is_active=True)
 
         sort = request.query_params.get('sort', 'newest')
         if sort == 'price_asc':

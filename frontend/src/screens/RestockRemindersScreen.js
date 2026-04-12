@@ -14,6 +14,8 @@ import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, StatusBar, Alert, Modal, Switch, ActivityIndicator,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { SkeletonCardRow } from '../components/SkeletonLoader';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -81,6 +83,7 @@ export default function RestockRemindersScreen() {
         { product: trimProduct, quantity: trimQty, unit, active: true },
         authArgs,
       );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setReminders((prev) => [newReminder, ...prev]);
       setProduct('');
       setQuantity('');
@@ -94,6 +97,7 @@ export default function RestockRemindersScreen() {
   };
 
   const handleToggle = async (item) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const updated = { ...item, active: !item.active };
     setReminders((prev) => prev.map((r) => r.id === item.id ? updated : r));
     try {
@@ -160,8 +164,8 @@ export default function RestockRemindersScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={{ padding: spacing.md }}>
+          {[1, 2, 3, 4].map((i) => <SkeletonCardRow key={i} />)}
         </View>
       ) : (
         <FlatList
@@ -278,6 +282,11 @@ const makeStyles = (colors) => StyleSheet.create({
   header: {
     backgroundColor: colors.primary, flexDirection: 'row',
     alignItems: 'center', paddingHorizontal: spacing.md, paddingBottom: 14,
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25, shadowRadius: 14, elevation: 10,
   },
   backBtn:     { padding: 4, marginRight: 4 },
   headerTitle: { flex: 1, fontSize: 18, fontFamily: fonts.semiBold, color: '#fff', textAlign: 'center' },
@@ -295,10 +304,12 @@ const makeStyles = (colors) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: colors.surface, borderRadius: radii.xl,
     paddingHorizontal: spacing.md, paddingVertical: 14,
-    marginBottom: 10, ...shadows.sm,
+    marginBottom: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.09, shadowRadius: 10, elevation: 6,
   },
   cardInactive: { opacity: 0.55 },
-  cardIcon:  { width: 38, height: 38, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
+  cardIcon:  { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   cardBody:  { flex: 1 },
   cardProduct: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 2 },
   cardQty:   { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
@@ -311,22 +322,27 @@ const makeStyles = (colors) => StyleSheet.create({
   emptyBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8,
     backgroundColor: colors.primary, borderRadius: radii.xl, paddingHorizontal: 20, paddingVertical: 12,
+    borderBottomWidth: 4, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   emptyBtnText: { color: '#fff', fontSize: 14, fontFamily: fonts.semiBold },
 
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   modalSheet: {
-    backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
     padding: spacing.lg,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.12, shadowRadius: 16, elevation: 20,
   },
   modalHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
   modalTitle:   { fontSize: 18, fontFamily: fonts.semiBold, color: colors.text },
   inputLabel:   { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 },
   textInput: {
-    backgroundColor: colors.background, borderRadius: radii.lg,
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderRadius: radii.lg,
     paddingHorizontal: 14, paddingVertical: 12,
     fontSize: 15, fontFamily: fonts.regular, color: colors.text, marginBottom: spacing.md,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07, shadowRadius: 8, elevation: 4,
   },
   suggestions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -8, marginBottom: spacing.md },
   chip: {
@@ -338,9 +354,10 @@ const makeStyles = (colors) => StyleSheet.create({
   qtyInput: { flex: 1, marginBottom: 0 },
   unitSelector: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: colors.background, borderRadius: radii.lg,
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderRadius: radii.lg,
     paddingHorizontal: 14, paddingVertical: 12, marginBottom: spacing.md,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07, shadowRadius: 8, elevation: 4,
   },
   unitText: { fontSize: 15, fontFamily: fonts.regular, color: colors.text },
   unitPicker: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -8, marginBottom: spacing.md },
@@ -354,6 +371,8 @@ const makeStyles = (colors) => StyleSheet.create({
   addButton: {
     backgroundColor: colors.primary, borderRadius: radii.xl,
     paddingVertical: 15, alignItems: 'center', marginTop: 8,
+    borderBottomWidth: 4, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   addButtonText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
 });

@@ -7,16 +7,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
+import BubblyButton from '../components/BubblyButton';
 import { useUser } from '../context/UserContext';
 import { loginWithBackend, normalizeRoleFromApi } from '../services/authApi';
-import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
   const { t, isUrdu } = useLanguage();
-    const styles = makeStyles(colors);
+  const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { login, role } = useUser();
@@ -57,28 +58,28 @@ export default function LoginScreen() {
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title={t.login.title} showBack />
+      <ScreenHeader title={t.login.title} subtitle={t.login.subtitle} showBack />
 
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.subtitle}>{t.login.subtitle}</Text>
-
         <Text style={styles.label}>{t.login.email} *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={t.login.emailPlaceholder}
-          placeholderTextColor={colors.textLight}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
-        />
+        <View style={styles.inputTile}>
+          <TextInput
+            style={styles.input}
+            placeholder={t.login.emailPlaceholder}
+            placeholderTextColor={colors.textLight}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+          />
+        </View>
 
         <Text style={styles.label}>{t.login.password} *</Text>
-        <View style={styles.passWrap}>
+        <View style={styles.inputTile}>
           <TextInput
             style={styles.passInput}
             placeholder={t.login.passwordPlaceholder}
@@ -103,15 +104,15 @@ export default function LoginScreen() {
           <Text style={styles.forgotText}>{t.login.forgotPassword}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
+        <BubblyButton
+          label={loading ? t.login.signingIn : t.login.signIn}
           onPress={handleLogin}
           disabled={loading}
-        >
-          <Text style={styles.loginBtnText}>
-            {loading ? t.login.signingIn : t.login.signIn}
-          </Text>
-        </TouchableOpacity>
+          loading={loading}
+          variant="accent"
+          colors={colors}
+          style={styles.loginBtnOverride}
+        />
 
         <View style={styles.signupRow}>
           <Text style={styles.signupText}>{t.login.noAccount}</Text>
@@ -126,14 +127,7 @@ export default function LoginScreen() {
 
 const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scroll: { padding: spacing.lg },
-  subtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-    lineHeight: 20,
-  },
+  scroll: { padding: spacing.lg, paddingTop: spacing.md },
   label: {
     color: colors.primary,
     fontSize: 13,
@@ -141,36 +135,35 @@ const makeStyles = (colors) => StyleSheet.create({
     marginBottom: 6,
     marginTop: 14,
   },
-  input: {
+  inputTile: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: radii.md,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 13,
     fontSize: 14,
     fontFamily: fonts.regular,
     color: colors.text,
   },
-  passWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingHorizontal: 14,
-  },
   passInput: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 13,
     fontSize: 14,
     fontFamily: fonts.regular,
     color: colors.text,
   },
   forgotWrap: {
     alignSelf: 'flex-end',
-    marginTop: 8,
+    marginTop: 10,
     marginBottom: spacing.lg,
   },
   forgotText: {
@@ -178,18 +171,8 @@ const makeStyles = (colors) => StyleSheet.create({
     fontFamily: fonts.medium,
     color: colors.primary,
   },
-  loginBtn: {
-    backgroundColor: colors.accent,
-    borderRadius: radii.md,
-    paddingVertical: 15,
-    alignItems: 'center',
+  loginBtnOverride: {
     marginBottom: spacing.md,
-  },
-  loginBtnDisabled: { opacity: 0.6 },
-  loginBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    fontFamily: fonts.semiBold,
   },
   signupRow: {
     flexDirection: 'row',

@@ -7,15 +7,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import BottomNav from '../components/BottomNav';
 import WarehouseIllustration from '../components/WarehouseIllustration';
-import { fonts, spacing, radii, shadows } from '../constants/theme';
+import BubblyButton from '../components/BubblyButton';
+import PressableBounce from '../components/PressableBounce';
+import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 
 const EXPLORE_ITEMS = [
-  { labelKey: 'viewSuppliers', icon: 'business-outline', screen: 'MarketplaceBrowsing' },
-  { labelKey: 'browseBulk', icon: 'cube-outline', screen: 'MarketplaceBrowsing' },
-  { labelKey: 'learnHow', icon: 'information-circle-outline', screen: null },
-  { labelKey: 'invite', icon: 'person-add-outline', screen: null },
+  { labelKey: 'viewSuppliers', icon: 'business-outline',           iconBg: '#E6F4FF', iconColor: '#0F766E', screen: 'MarketplaceBrowsing' },
+  { labelKey: 'browseBulk',   icon: 'cube-outline',               iconBg: '#F3E8FF', iconColor: '#9333EA', screen: 'MarketplaceBrowsing' },
+  { labelKey: 'learnHow',     icon: 'information-circle-outline', iconBg: '#FFF1E6', iconColor: '#F97316', screen: null },
+  { labelKey: 'invite',       icon: 'person-add-outline',         iconBg: '#F0FDF4', iconColor: '#22C55E', screen: null },
 ];
 
 export default function GuestAccountScreen() {
@@ -40,24 +42,27 @@ export default function GuestAccountScreen() {
 
         <Text style={styles.message}>{t.guestAccount.message}</Text>
 
-        <TouchableOpacity
-          style={styles.signInBtn}
+        <BubblyButton
+          label={t.guestAccount.signIn}
           onPress={() => navigation.navigate('SavedAccountLogin')}
-        >
-          <Text style={styles.signInBtnText}>{t.guestAccount.signIn}</Text>
-        </TouchableOpacity>
+          variant="primary"
+          colors={colors}
+          style={styles.signInOverride}
+        />
 
-        <TouchableOpacity
+        <PressableBounce
           style={styles.signUpBtn}
           onPress={() => navigation.navigate('SignUp')}
         >
           <Text style={styles.signUpBtnText}>{t.guestAccount.createAccount}</Text>
-        </TouchableOpacity>
+        </PressableBounce>
 
         {/* Dark mode toggle */}
         <View style={styles.toggleRow}>
           <View style={styles.toggleLeft}>
-            <Ionicons name={isDark ? 'moon' : 'sunny-outline'} size={20} color={colors.primary} />
+            <View style={[styles.toggleIconWrap, { backgroundColor: '#E6F4FF' }]}>
+              <Ionicons name={isDark ? 'moon' : 'sunny-outline'} size={18} color={colors.primary} />
+            </View>
             <Text style={styles.toggleLabel}>{isDark ? t.guestAccount.darkMode : t.guestAccount.lightMode}</Text>
           </View>
           <Switch
@@ -72,7 +77,9 @@ export default function GuestAccountScreen() {
         {/* Language toggle */}
         <View style={styles.toggleRow}>
           <View style={styles.toggleLeft}>
-            <Ionicons name="globe-outline" size={20} color={colors.primary} />
+            <View style={[styles.toggleIconWrap, { backgroundColor: '#E6F4FF' }]}>
+              <Ionicons name="globe-outline" size={18} color={colors.primary} />
+            </View>
             <Text style={styles.toggleLabel}>{isUrdu ? t.guestAccount.urdu : t.guestAccount.english}</Text>
           </View>
           <Switch
@@ -86,17 +93,17 @@ export default function GuestAccountScreen() {
 
         <Text style={styles.exploreLabel}>{t.guestAccount.exploreLabel}</Text>
         {EXPLORE_ITEMS.map((item, i) => (
-          <TouchableOpacity
+          <PressableBounce
             key={i}
             style={styles.exploreRow}
             onPress={() => item.screen ? navigation.navigate(item.screen) : null}
           >
-            <View style={styles.exploreIcon}>
-              <Ionicons name={item.icon} size={18} color={colors.primary} />
+            <View style={[styles.exploreIconWrap, { backgroundColor: item.iconBg }]}>
+              <Ionicons name={item.icon} size={18} color={item.iconColor} />
             </View>
             <Text style={styles.exploreText}>{t.guestAccount[item.labelKey]}</Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
+          </PressableBounce>
         ))}
       </ScrollView>
 
@@ -109,7 +116,12 @@ const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   topBar: {
     backgroundColor: colors.primary, alignItems: 'center',
-    paddingBottom: 14,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25, shadowRadius: 14, elevation: 10,
   },
   topBarTitle: { color: '#fff', fontSize: 18, fontFamily: fonts.semiBold },
   scroll: { padding: spacing.md, paddingBottom: 24 },
@@ -118,22 +130,26 @@ const makeStyles = (colors) => StyleSheet.create({
     textAlign: 'center', fontSize: 14, fontFamily: fonts.regular,
     color: colors.textSecondary, lineHeight: 22, marginBottom: spacing.lg,
   },
-  signInBtn: {
-    backgroundColor: colors.primary, borderRadius: radii.lg,
-    paddingVertical: 14, alignItems: 'center', marginBottom: 12,
-  },
-  signInBtnText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
+  signInOverride: { marginBottom: 12 },
   signUpBtn: {
-    backgroundColor: colors.surface, borderRadius: radii.lg, borderWidth: 1,
-    borderColor: colors.primary, paddingVertical: 14, alignItems: 'center', marginBottom: spacing.xl,
+    backgroundColor: colors.surface, borderRadius: radii.lg, borderWidth: 1.5,
+    borderColor: colors.primary, paddingVertical: 14, alignItems: 'center',
+    marginBottom: spacing.xl,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12, shadowRadius: 8, elevation: 3,
   },
   signUpBtnText: { color: colors.primary, fontSize: 15, fontFamily: fonts.semiBold },
   toggleRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.surface, borderRadius: radii.lg, paddingHorizontal: spacing.md,
-    paddingVertical: 14, marginBottom: 8, ...shadows.sm,
+    backgroundColor: colors.surface, borderRadius: radii.xl,
+    paddingHorizontal: spacing.md, paddingVertical: 12,
+    marginBottom: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07, shadowRadius: 8, elevation: 4,
   },
   toggleLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  toggleIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   toggleLabel: { fontSize: 14, fontFamily: fonts.medium, color: colors.text },
   exploreLabel: {
     fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary,
@@ -141,12 +157,14 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   exploreRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: colors.surface, borderRadius: radii.lg,
-    padding: 14, marginBottom: 8, ...shadows.sm,
+    backgroundColor: colors.surface, borderRadius: radii.xl,
+    padding: 14, marginBottom: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07, shadowRadius: 8, elevation: 4,
   },
-  exploreIcon: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center',
+  exploreIconWrap: {
+    width: 44, height: 44, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
   },
   exploreText: { flex: 1, fontSize: 14, fontFamily: fonts.medium, color: colors.text },
 });

@@ -6,9 +6,17 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { getCategories } from '../services/marketplaceApi';
+
+const SECTION_COLORS = {
+  'FOOD & GROCERY':    { bg: '#FEF3C7', icon: '#D97706' },
+  'SNACKS & BEVERAGES':{ bg: '#DBEAFE', icon: '#2563EB' },
+  'HOME & HYGIENE':    { bg: '#D1FAE5', icon: '#059669' },
+};
+const FALLBACK_COLOR = { bg: '#F3E8FF', icon: '#7C3AED' };
 
 // IDs of the 6 "popular" categories — matches the original POPULAR list
 const POPULAR_IDS = new Set(['1', '2', '3', '4', '5', '6']);
@@ -50,11 +58,11 @@ export default function CategorySelectionScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#0D0F12" />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn}>
-          <Ionicons name="close" size={24} color="#F9FAFB" />
+          <Ionicons name="close" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>What are you selling?</Text>
         <View style={{ width: 36 }} />
@@ -87,17 +95,21 @@ export default function CategorySelectionScreen() {
           )}
           renderItem={({ item, index, section }) => {
             const isLast = index === section.data.length - 1;
+            const sc = SECTION_COLORS[section.title] || FALLBACK_COLOR;
             return (
               <TouchableOpacity
                 style={[styles.row, !isLast && styles.rowBorder]}
-                onPress={() => handleSelect(item.name)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  handleSelect(item.name);
+                }}
                 activeOpacity={0.7}
               >
-                <View style={styles.iconTile}>
-                  <Ionicons name={item.icon || 'pricetag-outline'} size={20} color="#F9FAFB" />
+                <View style={[styles.iconTile, { backgroundColor: sc.bg }]}>
+                  <Ionicons name={item.icon || 'pricetag-outline'} size={20} color={sc.icon} />
                 </View>
                 <Text style={styles.rowText}>{item.name}</Text>
-                <Ionicons name="chevron-forward" size={16} color="#6B7280" />
+                <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
               </TouchableOpacity>
             );
           }}
@@ -113,32 +125,32 @@ const makeStyles = (colors) => StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: spacing.md, paddingBottom: 16, paddingTop: 8,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)',
+    borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   closeBtn: { padding: 4 },
-  headerTitle: { fontSize: 17, fontFamily: fonts.semiBold, color: '#F9FAFB' },
+  headerTitle: { fontSize: 17, fontFamily: fonts.semiBold, color: colors.text },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: spacing.lg },
-  errorText: { fontSize: 14, fontFamily: fonts.regular, color: '#9CA3AF', textAlign: 'center' },
+  errorText: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center' },
   retryBtn: {
     marginTop: 8, paddingHorizontal: 24, paddingVertical: 10,
     backgroundColor: colors.primary, borderRadius: radii.full,
   },
   retryText: { color: '#fff', fontSize: 14, fontFamily: fonts.semiBold },
   sectionLabel: {
-    fontSize: 11, fontFamily: fonts.semiBold, color: '#6B7280',
+    fontSize: 11, fontFamily: fonts.semiBold, color: colors.textSecondary,
     letterSpacing: 0.8, paddingHorizontal: spacing.md, paddingVertical: 10,
-    backgroundColor: '#0D0F12',
+    backgroundColor: colors.background,
   },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
     paddingHorizontal: spacing.md, paddingVertical: 14,
-    backgroundColor: '#111827',
+    backgroundColor: colors.surface,
   },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   iconTile: {
-    width: 38, height: 38, borderRadius: radii.md,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    width: 44, height: 44, borderRadius: 14,
+    backgroundColor: colors.primaryLight,
     alignItems: 'center', justifyContent: 'center',
   },
-  rowText: { flex: 1, fontSize: 14, fontFamily: fonts.medium, color: '#F9FAFB' },
+  rowText: { flex: 1, fontSize: 14, fontFamily: fonts.medium, color: colors.text },
 });

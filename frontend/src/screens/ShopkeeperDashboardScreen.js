@@ -323,7 +323,15 @@ export default function ShopkeeperDashboardScreen() {
 
 const makeStyles = (colors, isDark) => StyleSheet.create({
   container:    { flex: 1, backgroundColor: colors.background },
-  topBar:       { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingBottom: 14 },
+  topBar: {
+    backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: spacing.md, paddingBottom: 18,
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25, shadowRadius: 14, elevation: 10,
+  },
   topBarBackBtn:{ padding: 4, width: 36 },
   topBarTitle:  { flex: 1, textAlign: 'center', color: '#fff', fontSize: 18, fontFamily: fonts.semiBold },
   scroll:       { padding: spacing.md },
@@ -332,6 +340,10 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.primary, borderRadius: radii.xl,
     padding: spacing.md, marginBottom: spacing.md,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.25)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.28, shadowRadius: 12, elevation: 8,
   },
   modeBannerShopkeeper: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -348,7 +360,12 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
   greetText:     { fontSize: 20, fontFamily: fonts.bold, color: colors.text },
   greetSub:      { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 2 },
 
-  profileCard:    { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radii.xl, padding: spacing.md, marginBottom: spacing.md, ...shadows.sm },
+  profileCard: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
+    borderRadius: radii.xl, padding: spacing.md, marginBottom: spacing.md,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.10, shadowRadius: 12, elevation: 8,
+  },
   profileAvatar:  { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   profileInitials:{ color: '#fff', fontSize: 18, fontFamily: fonts.bold },
   profileInfo:    { flex: 1 },
@@ -356,7 +373,12 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
   profileRole:    { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 2 },
 
   statsRow:  { flexDirection: 'row', gap: 10, marginBottom: spacing.md },
-  statCard:  { flex: 1, backgroundColor: colors.surface, borderRadius: radii.xl, padding: 12, alignItems: 'center', gap: 4, ...shadows.sm },
+  statCard: {
+    flex: 1, backgroundColor: colors.surface, borderRadius: radii.xl, padding: 12,
+    alignItems: 'center', gap: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 10, elevation: 6,
+  },
   statValue: { fontSize: 16, fontFamily: fonts.bold, color: colors.text },
   statLabel: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
 
@@ -382,14 +404,25 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
   orderStatusBadge: { borderRadius: radii.full, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
   orderStatusText:  { fontSize: 10, fontFamily: fonts.semiBold },
 
-  menuList:      { backgroundColor: colors.surface, borderRadius: radii.xl, marginBottom: spacing.md, ...shadows.sm, overflow: 'hidden' },
+  menuList: {
+    backgroundColor: colors.surface, borderRadius: radii.xl, marginBottom: spacing.md,
+    overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 10, elevation: 6,
+  },
   menuItem:      { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: spacing.md, paddingVertical: 14 },
   menuItemBorder:{ borderBottomWidth: 1, borderBottomColor: colors.border },
-  menuIcon:      { width: 36, height: 36, borderRadius: radii.md, alignItems: 'center', justifyContent: 'center' },
+  menuIcon:      { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   menuItemText:  { flex: 1 },
   menuItemTitle: { fontSize: 14, fontFamily: fonts.medium, color: colors.text, marginBottom: 2 },
   menuItemDesc:  { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary },
 
-  logoutBtn:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: isDark ? colors.primary : '#FEF2F2', borderWidth: 1, borderColor: isDark ? colors.primaryDark : '#FECACA', borderRadius: radii.xl, paddingVertical: 14 },
+  logoutBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: isDark ? colors.primary : '#FEF2F2',
+    borderBottomWidth: 3, borderBottomColor: isDark ? colors.primaryDark : '#FECACA',
+    borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.6)',
+    borderRadius: radii.xl, paddingVertical: 14,
+  },
   logoutText: { fontSize: 14, fontFamily: fonts.semiBold, color: isDark ? '#000000' : '#EF4444' },
 });

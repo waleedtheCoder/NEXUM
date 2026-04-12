@@ -413,9 +413,11 @@ const makeStyles = (colors) => StyleSheet.create({
   label: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 6 },
   required: { color: colors.accent },
   input: {
-    backgroundColor: colors.surface, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderRadius: radii.lg,
     paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: fonts.regular,
     color: colors.text, marginBottom: spacing.md,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07, shadowRadius: 8, elevation: 4,
   },
   textarea: { height: 100 },
   row2: { flexDirection: 'row', gap: 12 },
@@ -424,16 +426,23 @@ const makeStyles = (colors) => StyleSheet.create({
   chipRow: { flexDirection: 'row', gap: 8 },
   chip: {
     paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: radii.full, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radii.full,
     backgroundColor: colors.surface,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
   },
-  chipActive: { borderColor: colors.primary, backgroundColor: `${colors.primary}18` },
+  chipActive: {
+    backgroundColor: `${colors.primary}18`,
+    shadowColor: colors.primary, shadowOpacity: 0.20,
+  },
   chipText: { fontSize: 13, fontFamily: fonts.medium, color: colors.textSecondary },
   chipTextActive: { color: colors.primary },
 
   submitBtn: {
     backgroundColor: colors.primary, borderRadius: radii.xl,
     paddingVertical: 16, alignItems: 'center', marginTop: spacing.md,
+    borderBottomWidth: 4, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   submitBtnDisabled: { opacity: 0.7 },
   submitText: { color: '#fff', fontSize: 16, fontFamily: fonts.semiBold },

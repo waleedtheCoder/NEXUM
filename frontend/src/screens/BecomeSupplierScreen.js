@@ -145,7 +145,12 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingBottom: 14,
+    paddingBottom: 18,
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25, shadowRadius: 14, elevation: 10,
   },
   backBtn:     { padding: 4, width: 36 },
   headerTitle: { flex: 1, textAlign: 'center', color: '#fff', fontSize: 18, fontFamily: fonts.semiBold },
@@ -156,9 +161,12 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
     alignItems: 'center', paddingVertical: spacing.xl, gap: 12, marginBottom: spacing.md,
   },
   heroIcon: {
-    width: 80, height: 80, borderRadius: 40,
+    width: 90, height: 90, borderRadius: 45,
     backgroundColor: `${colors.primary}15`,
     alignItems: 'center', justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18, shadowRadius: 14, elevation: 8,
   },
   heroTitle: { fontSize: 22, fontFamily: fonts.bold, color: colors.text, textAlign: 'center' },
   heroSub:   { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center', paddingHorizontal: spacing.md },
@@ -166,7 +174,10 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
   sectionLabel: { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
 
   benefitsList: {
-    backgroundColor: colors.surface, borderRadius: radii.xl, marginBottom: spacing.md, ...shadows.sm, overflow: 'hidden',
+    backgroundColor: colors.surface, borderRadius: radii.xl, marginBottom: spacing.md,
+    overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.09, shadowRadius: 12, elevation: 7,
   },
   benefitItem: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 14,
@@ -174,7 +185,7 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
   },
   benefitItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   benefitIcon: {
-    width: 38, height: 38, borderRadius: radii.md,
+    width: 44, height: 44, borderRadius: 14,
     backgroundColor: `${colors.primary}15`,
     alignItems: 'center', justifyContent: 'center',
     flexShrink: 0,
@@ -185,7 +196,9 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
 
   requirementsCard: {
     backgroundColor: colors.surface, borderRadius: radii.xl, padding: spacing.md,
-    marginBottom: spacing.md, gap: 10, ...shadows.sm,
+    marginBottom: spacing.md, gap: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 10, elevation: 6,
   },
   reqRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   reqText: { flex: 1, fontSize: 13, fontFamily: fonts.regular, color: colors.text, lineHeight: 20 },
@@ -194,6 +207,8 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 10, backgroundColor: colors.primary, borderRadius: radii.xl,
     paddingVertical: 16, marginBottom: spacing.md,
+    borderBottomWidth: 4, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
   },
   applyBtnText: { color: '#fff', fontSize: 16, fontFamily: fonts.semiBold },
 
