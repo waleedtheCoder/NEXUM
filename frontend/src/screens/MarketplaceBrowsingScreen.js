@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, StatusBar, Image, ActivityIndicator,
+  StyleSheet, StatusBar, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 import FilterChip from '../components/FilterChip';
+import { SkeletonGridCard, SkeletonListCard } from '../components/SkeletonLoader';
 import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
@@ -75,6 +77,7 @@ export default function MarketplaceBrowsingScreen() {
 
   const toggleSave = async (id) => {
     const willSave = !saved.has(id);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setSaved((prev) => {
       const next = new Set(prev);
       willSave ? next.add(id) : next.delete(id);
@@ -122,6 +125,11 @@ export default function MarketplaceBrowsingScreen() {
             )}
             {item.isFeatured && (
               <View style={styles.featBadge}><Text style={styles.featText}>{t.marketplace.featured}</Text></View>
+            )}
+            {promo && (
+              <View style={[styles.featBadge, { bottom: 8, top: 'auto', backgroundColor: '#10B981' }]}>
+                <Text style={styles.featText}>{promo.discountPercent}% OFF</Text>
+              </View>
             )}
           </View>
           <View style={styles.listInfo}>
@@ -178,6 +186,11 @@ export default function MarketplaceBrowsingScreen() {
           </TouchableOpacity>
           {item.isFeatured && (
             <View style={styles.featBadge}><Text style={styles.featText}>{t.marketplace.featured}</Text></View>
+          )}
+          {promo && (
+            <View style={styles.promoBadge}>
+              <Text style={styles.promoBadgeText}>{promo.discountPercent}% OFF</Text>
+            </View>
           )}
         </View>
         <View style={styles.gridInfo}>
@@ -285,9 +298,20 @@ export default function MarketplaceBrowsingScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
+        <FlatList
+          data={[1, 2, 3, 4, 5, 6]}
+          key={`skeleton-${viewMode}`}
+          keyExtractor={(i) => String(i)}
+          numColumns={viewMode === 'grid' ? 2 : 1}
+          columnWrapperStyle={viewMode === 'grid' ? styles.columnWrapper : undefined}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          renderItem={() =>
+            viewMode === 'grid'
+              ? <SkeletonGridCard />
+              : <SkeletonListCard />
+          }
+        />
       ) : error ? (
         <View style={styles.center}>
           <Ionicons name="cloud-offline-outline" size={48} color={colors.textLight} />
@@ -463,6 +487,18 @@ const makeStyles = (colors) => StyleSheet.create({
     borderTopColor: 'rgba(255,255,255,0.35)',
   },
   featText: { color: '#fff', fontSize: 9, fontFamily: fonts.semiBold },
+  promoBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: '#10B981',
+    borderRadius: radii.full,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.35)',
+  },
+  promoBadgeText: { color: '#fff', fontSize: 9, fontFamily: fonts.semiBold },
   categoryChip: {
     alignSelf: 'flex-start',
     backgroundColor: `${colors.primary}18`,

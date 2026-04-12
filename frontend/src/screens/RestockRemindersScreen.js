@@ -14,6 +14,8 @@ import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   StyleSheet, StatusBar, Alert, Modal, Switch, ActivityIndicator,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { SkeletonCardRow } from '../components/SkeletonLoader';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -81,6 +83,7 @@ export default function RestockRemindersScreen() {
         { product: trimProduct, quantity: trimQty, unit, active: true },
         authArgs,
       );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setReminders((prev) => [newReminder, ...prev]);
       setProduct('');
       setQuantity('');
@@ -94,6 +97,7 @@ export default function RestockRemindersScreen() {
   };
 
   const handleToggle = async (item) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const updated = { ...item, active: !item.active };
     setReminders((prev) => prev.map((r) => r.id === item.id ? updated : r));
     try {
@@ -160,8 +164,8 @@ export default function RestockRemindersScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={{ padding: spacing.md }}>
+          {[1, 2, 3, 4].map((i) => <SkeletonCardRow key={i} />)}
         </View>
       ) : (
         <FlatList

@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Image,
-  StyleSheet, StatusBar, FlatList, ActivityIndicator,
+  StyleSheet, StatusBar, FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 import BottomNav from '../components/BottomNav';
 import HomeTopBar from '../components/HomeTopBar';
 import PressableBounce from '../components/PressableBounce';
+import { SkeletonFeaturedCard } from '../components/SkeletonLoader';
 import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 import { getListings, getCategories, getPromotions } from '../services/marketplaceApi';
+import { formatPrice } from '../utils/format';
 
 const QUICK_CATEGORIES = [
   { icon: 'pricetag',    labelKey: 'offers'        },
@@ -102,6 +105,31 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: 90 }}
       >
 
+        {/* ── Fallback banner when no live promos ──────────────────────── */}
+        {promos.length === 0 && (
+          <TouchableOpacity
+            style={[styles.promoBanner, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              navigation.navigate('MarketplaceBrowsing', { offersOnly: true });
+            }}
+            activeOpacity={0.92}
+          >
+            <View style={styles.promoDecorCircle} />
+            <View style={styles.promoTextZone}>
+              <Text style={styles.promoHeadline}>{t.home.exploreDeals}</Text>
+              <Text style={styles.promoSub}>{t.home.exploreDealsSub}</Text>
+              <View style={styles.shopNowBtn}>
+                <Text style={[styles.shopNowText, { color: colors.primary }]}>{t.home.shopNow}</Text>
+                <Ionicons name="arrow-forward" size={12} color={colors.primary} />
+              </View>
+            </View>
+            <View style={styles.promoImagePlaceholder}>
+              <Ionicons name="pricetag" size={36} color="rgba(255,255,255,0.55)" />
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* ── Hero promo banner ─────────────────────────────────────────── */}
         {promos.length > 0 && (
           <TouchableOpacity
@@ -129,10 +157,10 @@ export default function HomeScreen() {
               <Text style={styles.promoSub}>{promos[0].subtitle}</Text>
               <View style={styles.promoPriceRow}>
                 <Text style={styles.promoDiscountedPrice}>
-                  Rs {parseFloat(promos[0].discountedPrice).toLocaleString()}
+                  {formatPrice(promos[0].discountedPrice)}
                 </Text>
                 <Text style={styles.promoOriginalPrice}>
-                  Rs {parseFloat(promos[0].originalPrice).toLocaleString()}
+                  {formatPrice(promos[0].originalPrice)}
                 </Text>
               </View>
               {/* 3D-style Shop Now pill — tap handled by outer TouchableOpacity */}
@@ -224,7 +252,14 @@ export default function HomeScreen() {
           </View>
         )}
         {loadingFeatured ? (
-          <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 20 }} />
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={[1, 2, 3]}
+            keyExtractor={(i) => String(i)}
+            contentContainerStyle={{ paddingHorizontal: spacing.md, gap: 12, paddingVertical: 4 }}
+            renderItem={() => <SkeletonFeaturedCard />}
+          />
         ) : (
           <FlatList
             horizontal
@@ -252,7 +287,7 @@ export default function HomeScreen() {
                   </View>
                 )}
                 <View style={styles.featBody}>
-                  <Text style={styles.featPrice}>Rs {parseFloat(item.price).toLocaleString()}</Text>
+                  <Text style={styles.featPrice}>{formatPrice(item.price)}</Text>
                   <Text style={styles.featTitle} numberOfLines={2}>{item.title}</Text>
                   <View style={styles.featMeta}>
                     <Ionicons name="location-outline" size={10} color={colors.textSecondary} />
@@ -301,8 +336,8 @@ export default function HomeScreen() {
                   </View>
                   <Text style={styles.promoTileTitle}>{p.title}</Text>
                   <View style={styles.promoTilePriceRow}>
-                    <Text style={styles.promoTileDiscPrice}>Rs {parseFloat(p.discountedPrice).toLocaleString()}</Text>
-                    <Text style={styles.promoTileOrigPrice}>Rs {parseFloat(p.originalPrice).toLocaleString()}</Text>
+                    <Text style={styles.promoTileDiscPrice}>{formatPrice(p.discountedPrice)}</Text>
+                    <Text style={styles.promoTileOrigPrice}>{formatPrice(p.originalPrice)}</Text>
                   </View>
                   <Text style={styles.promoTileSub}>{p.subtitle}</Text>
                 </View>

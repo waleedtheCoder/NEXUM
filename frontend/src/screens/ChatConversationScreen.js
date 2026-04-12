@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, StatusBar, KeyboardAvoidingView, Platform,
+  SectionList, StyleSheet, StatusBar, KeyboardAvoidingView, Platform,
   ActivityIndicator,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -98,6 +99,7 @@ export default function ChatConversationScreen() {
   const handleSend = useCallback(async (overrideText) => {
     const text = (overrideText ?? input).trim();
     if (!text || sending) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
     if (!overrideText) setInput('');
     setSending(true);
@@ -125,15 +127,37 @@ export default function ChatConversationScreen() {
 
   const styles = makeStyles(colors);
 
+  // Group messages by day for day-separator headers
+  const groupedMessages = (() => {
+    const groups = {};
+    messages.forEach((msg) => {
+      const day = msg.date || 'Today';
+      if (!groups[day]) groups[day] = [];
+      groups[day].push(msg);
+    });
+    return Object.entries(groups).map(([title, data]) => ({ title, data }));
+  })();
+
   const renderMessage = ({ item }) => (
-    <View style={[styles.bubble, item.mine ? styles.bubbleMine : styles.bubbleTheirs]}>
+    <View style={[
+      styles.bubble,
+      item.mine ? styles.bubbleMine : styles.bubbleTheirs,
+      item.pending && styles.bubblePending,
+    ]}>
       <Text style={[styles.bubbleText, item.mine ? styles.bubbleTextMine : styles.bubbleTextTheirs]}>
         {item.text}
       </Text>
       <Text style={[styles.bubbleTime, item.mine ? styles.bubbleTimeMine : styles.bubbleTimeTheirs]}>
-        {item.time}
-        {item.mine && <Text>  ✓✓</Text>}
+        {item.time}{item.mine ? '  ✓✓' : ''}
       </Text>
+    </View>
+  );
+
+  const renderDaySeparator = ({ section }) => (
+    <View style={styles.daySeparatorRow}>
+      <View style={styles.daySeparatorLine} />
+      <Text style={styles.daySeparatorText}>{section.title}</Text>
+      <View style={styles.daySeparatorLine} />
     </View>
   );
 
@@ -143,7 +167,7 @@ export default function ChatConversationScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      <StatusBar barStyle="light-content" backgroundColor={colors.surface} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.surface} />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -195,14 +219,24 @@ export default function ChatConversationScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
+        <SectionList
           ref={listRef}
-          data={messages}
+          sections={groupedMessages}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderMessage}
-          contentContainerStyle={styles.messageList}
+          renderSectionHeader={renderDaySeparator}
+          contentContainerStyle={[styles.messageList, groupedMessages.length === 0 && styles.messageListEmpty]}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+          ListEmptyComponent={
+            <View style={styles.emptyChat}>
+              <View style={styles.emptyChatIcon}>
+                <Ionicons name="chatbubbles-outline" size={40} color={colors.primary} />
+              </View>
+              <Text style={styles.emptyChatTitle}>{t.chatConversation.noMessages || 'Start the conversation'}</Text>
+              <Text style={styles.emptyChatSub}>{t.chatConversation.sendFirstMessage || 'Send a quick reply below to get started.'}</Text>
+            </View>
+          }
         />
       )}
 
@@ -299,19 +333,49 @@ const makeStyles = (colors) => StyleSheet.create({
   productStripText: { flex: 1, fontSize: 12, fontFamily: fonts.medium, color: colors.textSecondary },
 
   // Messages
-  messageList:    { paddingHorizontal: spacing.md, paddingTop: 16, paddingBottom: 8 },
+  messageList:      { paddingHorizontal: spacing.md, paddingTop: 16, paddingBottom: 8 },
+  messageListEmpty: { flexGrow: 1, justifyContent: 'center' },
   bubble: {
-    maxWidth: '78%', borderRadius: radii.lg,
-    paddingHorizontal: 14, paddingVertical: 9, marginBottom: 6,
+    maxWidth: '78%',
+    paddingHorizontal: 14, paddingVertical: 9, marginBottom: 4,
   },
-  bubbleMine:          { alignSelf: 'flex-end', backgroundColor: colors.primary },
-  bubbleTheirs:        { alignSelf: 'flex-start', backgroundColor: colors.surfaceAlt },
+  // "mine" bubble: rounded everywhere except top-right (creates a tail)
+  bubbleMine: {
+    alignSelf: 'flex-end', backgroundColor: colors.primary,
+    borderRadius: radii.lg, borderTopRightRadius: 4,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.18, shadowRadius: 6, elevation: 3,
+  },
+  // "theirs" bubble: rounded everywhere except top-left (creates a tail)
+  bubbleTheirs: {
+    alignSelf: 'flex-start', backgroundColor: colors.surfaceAlt,
+    borderRadius: radii.lg, borderTopLeftRadius: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 4, elevation: 2,
+  },
+  bubblePending:       { opacity: 0.7 },
   bubbleText:          { fontSize: 14, fontFamily: fonts.regular, lineHeight: 20 },
   bubbleTextMine:      { color: '#fff' },
   bubbleTextTheirs:    { color: colors.text },
   bubbleTime:          { fontSize: 10, fontFamily: fonts.regular, marginTop: 4 },
   bubbleTimeMine:      { color: 'rgba(255,255,255,0.6)', textAlign: 'right' },
   bubbleTimeTheirs:    { color: colors.textSecondary },
+
+  // Day separator
+  daySeparatorRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 12, gap: 8 },
+  daySeparatorLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  daySeparatorText: { fontSize: 11, fontFamily: fonts.medium, color: colors.textSecondary, paddingHorizontal: 4 },
+
+  // Empty chat state
+  emptyChat: { alignItems: 'center', justifyContent: 'center', gap: 10, paddingTop: 40 },
+  emptyChatIcon: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: `${colors.primary}18`,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 4,
+  },
+  emptyChatTitle: { fontSize: 16, fontFamily: fonts.semiBold, color: colors.text },
+  emptyChatSub:   { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center', paddingHorizontal: 32 },
 
   // Typing indicator
   typingRow:    { paddingHorizontal: spacing.md, paddingBottom: 4 },

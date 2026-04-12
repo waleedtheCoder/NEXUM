@@ -128,6 +128,7 @@ export const translations = {
       listings: 'listings', featuredProducts: 'Featured Products',
       noFeatured: 'No featured products right now.',
       featured: 'Featured', specialOffers: 'Special Offers',
+      exploreDeals: 'Exclusive Deals Await', exploreDealsSub: 'Browse discounted products from verified suppliers.',
     },
     marketplace: {
       newest: 'Newest', priceUp: 'Price ↑', priceDown: 'Price ↓',
@@ -212,6 +213,7 @@ export const translations = {
       deliveryAvail: 'Delivery available?', sendPhotos: 'Send photos',
       productInquiry: 'Product inquiry', messagePlaceholder: 'Message…',
       isTyping: 'is typing…',
+      noMessages: 'Start the conversation', sendFirstMessage: 'Send a quick reply below to get started.',
     },
     notifications: {
       title: 'Notifications', markAllRead: 'Mark all read',
@@ -588,6 +590,7 @@ export const translations = {
       listings: 'اشتہارات', featuredProducts: 'نمایاں مصنوعات',
       noFeatured: 'ابھی کوئی نمایاں مصنوعات نہیں۔',
       featured: 'نمایاں', specialOffers: 'خصوصی آفرز',
+      exploreDeals: 'خصوصی ڈیلز دستیاب ہیں', exploreDealsSub: 'تصدیق شدہ سپلائرز سے رعایتی مصنوعات دیکھیں۔',
     },
     marketplace: {
       newest: 'نئے', priceUp: 'قیمت ↑', priceDown: 'قیمت ↓',
@@ -671,6 +674,7 @@ export const translations = {
       deliveryAvail: 'ڈیلیوری دستیاب ہے؟', sendPhotos: 'تصاویر بھیجیں',
       productInquiry: 'مصنوع کی پوچھ گچھ', messagePlaceholder: 'پیغام…',
       isTyping: 'ٹائپ کر رہا ہے…',
+      noMessages: 'گفتگو شروع کریں', sendFirstMessage: 'نیچے ایک فوری جواب بھیج کر شروعات کریں۔',
     },
     notifications: {
       title: 'اطلاعات', markAllRead: 'سب پڑھا ہوا نشان کریں',

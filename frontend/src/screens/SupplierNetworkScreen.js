@@ -15,6 +15,8 @@ import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, StatusBar, ActivityIndicator,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { SkeletonCardRow } from '../components/SkeletonLoader';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -97,6 +99,7 @@ export default function SupplierNetworkScreen() {
   );
 
   const handleRemove = async (supplierId) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setRemovingId(supplierId);
     try {
       await toggleFavouriteSupplier(supplierId, authArgs);
@@ -149,8 +152,8 @@ export default function SupplierNetworkScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={{ padding: spacing.md, gap: 0 }}>
+          {[1, 2, 3, 4].map((i) => <SkeletonCardRow key={i} />)}
         </View>
       ) : error ? (
         <View style={styles.center}>

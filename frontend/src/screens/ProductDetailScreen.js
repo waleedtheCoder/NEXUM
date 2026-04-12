@@ -4,6 +4,7 @@ import {
   StyleSheet, StatusBar, Dimensions, Linking, Alert,
   ActivityIndicator, Modal, TextInput,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -11,6 +12,7 @@ import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 import { getListingDetail, toggleSaveListing, startConversation, placeOrder } from '../services/marketplaceApi';
+import { formatPrice } from '../utils/format';
 import { useUser } from '../context/UserContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -63,6 +65,7 @@ export default function ProductDetailScreen() {
 
   // ── Save / unsave ────────────────────────────────────────────────────────
   const handleSaveToggle = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     if (!isLoggedIn) {
       Alert.alert(t.productDetail.signInRequired, t.productDetail.signInToSave, [
         { text: t.productDetail.cancel, style: 'cancel' },
@@ -159,6 +162,7 @@ export default function ProductDetailScreen() {
         { listing_id: product.id, quantity: qty, notes: orderNotes.trim() },
         { idToken, sessionId, refreshToken, onTokenRefreshed: (t) => updateUser({ idToken: t }) },
       );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       setOrderModalVisible(false);
       Alert.alert(
         t.productDetail.orderPlaced,
@@ -269,14 +273,14 @@ export default function ProductDetailScreen() {
           {product.promotion ? (
             <View style={styles.priceRow}>
               <Text style={styles.price}>
-                Rs {parseFloat(product.promotion.discountedPrice).toLocaleString()}
+                {formatPrice(product.promotion.discountedPrice)}
               </Text>
               <Text style={styles.originalPrice}>
-                Rs {parseFloat(product.price).toLocaleString()}
+                {formatPrice(product.price)}
               </Text>
             </View>
           ) : (
-            <Text style={styles.price}>Rs {parseFloat(product.price).toLocaleString()}</Text>
+            <Text style={styles.price}>{formatPrice(product.price)}</Text>
           )}
           <Text style={styles.title}>{product.title}</Text>
           <View style={styles.metaRow}>
@@ -387,6 +391,9 @@ export default function ProductDetailScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
+
+            {/* Drag handle */}
+            <View style={styles.dragHandle} />
 
             {/* Header */}
             <View style={styles.modalHeader}>
@@ -700,8 +707,10 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   qtyInput: {
     width: 64, height: 40,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg,
+    backgroundColor: colors.surface, borderRadius: radii.lg,
     textAlign: 'center', fontSize: 16, fontFamily: fonts.semiBold, color: colors.text,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07, shadowRadius: 6, elevation: 3,
   },
   qtyUnit: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, flex: 1 },
   totalRow: {
@@ -712,9 +721,15 @@ const makeStyles = (colors) => StyleSheet.create({
   totalLabel: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textSecondary },
   totalValue: { fontSize: 16, fontFamily: fonts.bold, color: colors.primary },
   notesInput: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg,
+    backgroundColor: colors.surface, borderRadius: radii.lg,
     padding: 12, fontSize: 13, fontFamily: fonts.regular, color: colors.text,
     minHeight: 72, maxHeight: 120,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07, shadowRadius: 6, elevation: 3,
+  },
+  dragHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: colors.border, alignSelf: 'center', marginBottom: 8,
   },
   orderConfirmBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,

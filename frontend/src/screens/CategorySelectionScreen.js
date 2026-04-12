@@ -6,9 +6,17 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { getCategories } from '../services/marketplaceApi';
+
+const SECTION_COLORS = {
+  'FOOD & GROCERY':    { bg: '#FEF3C7', icon: '#D97706' },
+  'SNACKS & BEVERAGES':{ bg: '#DBEAFE', icon: '#2563EB' },
+  'HOME & HYGIENE':    { bg: '#D1FAE5', icon: '#059669' },
+};
+const FALLBACK_COLOR = { bg: '#F3E8FF', icon: '#7C3AED' };
 
 // IDs of the 6 "popular" categories — matches the original POPULAR list
 const POPULAR_IDS = new Set(['1', '2', '3', '4', '5', '6']);
@@ -87,14 +95,18 @@ export default function CategorySelectionScreen() {
           )}
           renderItem={({ item, index, section }) => {
             const isLast = index === section.data.length - 1;
+            const sc = SECTION_COLORS[section.title] || FALLBACK_COLOR;
             return (
               <TouchableOpacity
                 style={[styles.row, !isLast && styles.rowBorder]}
-                onPress={() => handleSelect(item.name)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  handleSelect(item.name);
+                }}
                 activeOpacity={0.7}
               >
-                <View style={styles.iconTile}>
-                  <Ionicons name={item.icon || 'pricetag-outline'} size={20} color={colors.primary} />
+                <View style={[styles.iconTile, { backgroundColor: sc.bg }]}>
+                  <Ionicons name={item.icon || 'pricetag-outline'} size={20} color={sc.icon} />
                 </View>
                 <Text style={styles.rowText}>{item.name}</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />

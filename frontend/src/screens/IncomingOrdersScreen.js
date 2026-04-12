@@ -21,6 +21,8 @@ import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, StatusBar, ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { SkeletonCardRow } from '../components/SkeletonLoader';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -207,6 +209,7 @@ export default function IncomingOrdersScreen() {
 
   // ── Status update (optimistic) ────────────────────────────────────────────
   const handleStatusUpdate = async (order, newStatus) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     setUpdatingId(order.id);
     const prevStatus = order.status;
 
@@ -255,8 +258,10 @@ export default function IncomingOrdersScreen() {
 
       {/* Loading */}
       {loading && (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={{ padding: spacing.md }}>
+          {[1, 2, 3].map((i) => (
+            <SkeletonCardRow key={i} />
+          ))}
         </View>
       )}
 

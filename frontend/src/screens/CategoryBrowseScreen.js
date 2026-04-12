@@ -3,6 +3,15 @@ import {
   View, Text, TouchableOpacity, SectionList, StyleSheet,
   StatusBar, ActivityIndicator,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
+
+// Accent color per section — maps section title to { bg, icon }
+const SECTION_COLORS = {
+  'FOOD & GROCERY':    { bg: '#FEF3C7', icon: '#D97706' },
+  'SNACKS & BEVERAGES':{ bg: '#DBEAFE', icon: '#2563EB' },
+  'HOME & HYGIENE':    { bg: '#D1FAE5', icon: '#059669' },
+};
+const FALLBACK_COLOR = { bg: '#F3E8FF', icon: '#7C3AED' };
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -83,14 +92,18 @@ export default function CategoryBrowseScreen() {
           )}
           renderItem={({ item, index, section }) => {
             const isLast = index === section.data.length - 1;
+            const sc = SECTION_COLORS[section.title] || FALLBACK_COLOR;
             return (
               <TouchableOpacity
                 style={[styles.row, !isLast && styles.rowBorder]}
-                onPress={() => navigation.navigate('CategoryListings', { category: item.name })}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  navigation.navigate('CategoryListings', { category: item.name });
+                }}
                 activeOpacity={0.7}
               >
-                <View style={styles.iconWrap}>
-                  <Ionicons name={item.icon || 'pricetag-outline'} size={20} color={colors.primary} />
+                <View style={[styles.iconWrap, { backgroundColor: sc.bg }]}>
+                  <Ionicons name={item.icon || 'pricetag-outline'} size={20} color={sc.icon} />
                 </View>
                 <Text style={styles.rowText}>{item.name}</Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
