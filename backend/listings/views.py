@@ -76,6 +76,15 @@ class ListingsView(APIView):
                 Q(category__icontains=q)
             )
 
+        city = request.query_params.get('city', '').strip()
+        if city:
+            # SQLite doesn't support JSONField __contains — use text search instead.
+            # Search for "City" (with quotes) to avoid substring collisions.
+            # Also include listings with no cities set (empty array = ships anywhere).
+            qs = qs.filter(
+                Q(cities__icontains=f'"{city}"') | Q(cities__icontains='[]')
+            )
+
         featured = request.query_params.get('featured', '').lower()
         if featured == 'true':
             qs = qs.filter(is_featured=True)
@@ -216,6 +225,10 @@ class CreateListingView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         d = serializer.validated_data
+        cities = d.get('cities', [])
+        # Derive a human-readable location string from the selected cities
+        location = ', '.join(cities) if cities else 'Pakistan'
+
         listing = Listing.objects.create(
             supplier=request.user,
             product_name=d['productName'],
@@ -225,8 +238,9 @@ class CreateListingView(APIView):
             min_order_qty=d.get('minOrderQty', 1),
             unit=d.get('unit', 'kg'),
             condition=d.get('condition', 'New'),
-            location=d['location'],
+            location=location,
             category=d.get('category', 'General'),
+            cities=cities,
             image_url=d.get('imageUrl', ''),
             status='pending',   # requires approval before going live
         )
@@ -273,13 +287,17 @@ class ListingManageView(APIView):
             'minOrderQty': 'min_order_qty',
             'unit': 'unit',
             'condition': 'condition',
-            'location': 'location',
+            'cities': 'cities',
             'status': 'status',
             'imageUrl': 'image_url',
         }
         for frontend_key, model_field in field_map.items():
             if frontend_key in d:
                 setattr(listing, model_field, d[frontend_key])
+
+        # Keep location in sync with cities
+        if 'cities' in d:
+            listing.location = ', '.join(d['cities']) if d['cities'] else 'Pakistan'
 
         listing.save()
         return Response(MyListingSerializer(listing).data, status=status.HTTP_200_OK)

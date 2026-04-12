@@ -39,6 +39,12 @@ class PromotionListView(APIView):
             .order_by('-created_at')
         )
 
+        city = request.query_params.get('city', '').strip()
+        if city:
+            promos = promos.filter(
+                Q(listing__cities__icontains=f'"{city}"') | Q(listing__cities__icontains='[]')
+            )
+
         result = []
         for p in promos:
             listing       = p.listing

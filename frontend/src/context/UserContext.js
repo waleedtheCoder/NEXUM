@@ -18,13 +18,16 @@ export function UserProvider({ children }) {
   // ── Language state ───────────────────────────────────────────────────────────
   const [isUrdu, setIsUrdu] = useState(false);
 
+  // ── Shopkeeper city state ────────────────────────────────────────────────────
+  const [city, setCity] = useState(null);
+
   const isLoggedIn = !!sessionId;
 
   // ── Restore session + theme on mount ────────────────────────────────────────
   useEffect(() => {
     const loadSession = async () => {
       try {
-        const [sid, userData, userRole, idTok, refreshTok, themeVal, langVal] = await Promise.all([
+        const [sid, userData, userRole, idTok, refreshTok, themeVal, langVal, cityVal] = await Promise.all([
           AsyncStorage.getItem('session_id'),
           AsyncStorage.getItem('user_data'),
           AsyncStorage.getItem('user_role'),
@@ -32,6 +35,7 @@ export function UserProvider({ children }) {
           AsyncStorage.getItem('refresh_token'),
           AsyncStorage.getItem('nexum_theme'),
           AsyncStorage.getItem('nexum_language'),
+          AsyncStorage.getItem('shopkeeper_city'),
         ]);
 
         if (sid)       setSessionId(sid);
@@ -41,6 +45,7 @@ export function UserProvider({ children }) {
         if (refreshTok) setRefreshToken(refreshTok);
         if (themeVal === 'dark') setIsDark(true);
         if (langVal === 'ur') setIsUrdu(true);
+        if (cityVal)   setCity(cityVal);
       } catch (e) {
         console.error('Failed to load session:', e);
       } finally {
@@ -101,6 +106,16 @@ export function UserProvider({ children }) {
     }
   };
 
+  // ── Set shopkeeper city ───────────────────────────────────────────────────
+  const setShopkeeperCity = async (newCity) => {
+    try {
+      await AsyncStorage.setItem('shopkeeper_city', newCity);
+      setCity(newCity);
+    } catch (e) {
+      console.error('Failed to save city:', e);
+    }
+  };
+
   // ── Logout — clears auth but intentionally keeps theme + saved account ──────
   const logout = async () => {
     try {
@@ -110,6 +125,7 @@ export function UserProvider({ children }) {
         'user_role',
         'id_token',
         'refresh_token',
+        'shopkeeper_city',
         // 'nexum_theme' is NOT removed — theme persists through logout
         // 'saved_email' and 'saved_name' are also kept for LoginSelectionScreen
       ]);
@@ -119,6 +135,7 @@ export function UserProvider({ children }) {
       setRole(null);
       setIdToken(null);
       setRefreshToken(null);
+      setCity(null);
     } catch (e) {
       console.error('Failed to clear session:', e);
     }
@@ -166,6 +183,9 @@ export function UserProvider({ children }) {
         // Language
         isUrdu,
         toggleLanguage,
+        // City (shopkeeper active city)
+        city,
+        setShopkeeperCity,
       }}
     >
       {children}

@@ -19,11 +19,12 @@ class ListingCardSerializer(serializers.ModelSerializer):
     isFeatured = serializers.BooleanField(source='is_featured')
     imageUrl  = serializers.URLField(source='image_url')
     category  = serializers.CharField()
+    cities    = serializers.JSONField()
     promotion = serializers.SerializerMethodField()
 
     class Meta:
         model  = Listing
-        fields = ['id', 'title', 'price', 'location', 'time', 'isFeatured', 'imageUrl', 'category', 'promotion']
+        fields = ['id', 'title', 'price', 'location', 'time', 'isFeatured', 'imageUrl', 'category', 'cities', 'promotion']
 
     def get_time(self, obj):
         return time_ago(obj.created_at)
@@ -134,6 +135,7 @@ class MyListingSerializer(serializers.ModelSerializer):
     imageUrl     = serializers.URLField(source='image_url')
     postedDate   = serializers.SerializerMethodField()
     location     = serializers.CharField()
+    cities       = serializers.JSONField()
     views        = serializers.IntegerField()
     inquiries    = serializers.SerializerMethodField()
     promotion    = serializers.SerializerMethodField()
@@ -143,7 +145,7 @@ class MyListingSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'productName', 'description', 'category', 'quantity', 'unit',
             'minOrderQty', 'pricePerUnit', 'totalValue', 'status', 'imageUrl',
-            'postedDate', 'location', 'views', 'inquiries', 'promotion',
+            'postedDate', 'location', 'cities', 'views', 'inquiries', 'promotion',
         ]
 
     def get_quantity(self, obj):
@@ -187,8 +189,8 @@ class CreateListingSerializer(serializers.Serializer):
         choices=['New', 'Bulk Wholesale', 'Clearance Stock'],
         default='New',
     )
-    location    = serializers.CharField(max_length=255)
     category    = serializers.CharField(max_length=100, default='General')
+    cities      = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     imageUrl    = serializers.URLField(required=False, allow_blank=True, default='')
 
 
@@ -207,7 +209,7 @@ class UpdateListingSerializer(serializers.Serializer):
         choices=['New', 'Bulk Wholesale', 'Clearance Stock'],
         required=False,
     )
-    location    = serializers.CharField(max_length=255, required=False)
+    cities      = serializers.ListField(child=serializers.CharField(), required=False)
     status      = serializers.ChoiceField(
         choices=['active', 'pending', 'removed'],
         required=False,

@@ -16,6 +16,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 import { getListings, getCategories, getPromotions } from '../services/marketplaceApi';
 import { formatPrice } from '../utils/format';
+import { useUser } from '../context/UserContext';
 
 const QUICK_CATEGORIES = [
   { icon: 'pricetag',    labelKey: 'offers'        },
@@ -34,6 +35,8 @@ export default function HomeScreen() {
   const navigation = useNavigation();
   const insets     = useSafeAreaInsets();
 
+  const { city } = useUser();
+
   const [categories,        setCategories]        = useState([]);
   const [featured,          setFeatured]          = useState([]);
   const [promos,            setPromos]            = useState([]);
@@ -44,14 +47,14 @@ export default function HomeScreen() {
     let cancelled = false;
     (async () => {
       try {
-        const data = await getPromotions();
+        const data = await getPromotions({ city: city || undefined });
         if (!cancelled) setPromos(Array.isArray(data) ? data : []);
       } catch {
         if (!cancelled) setPromos([]);
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [city]);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,7 +77,7 @@ export default function HomeScreen() {
     (async () => {
       setLoadingFeatured(true);
       try {
-        const data = await getListings({ featured: true });
+        const data = await getListings({ featured: true, city: city || undefined });
         if (!cancelled) setFeatured(Array.isArray(data) ? data : data.results || []);
       } catch {
         if (!cancelled) setFeatured([]);
@@ -83,7 +86,7 @@ export default function HomeScreen() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [city]);
 
   return (
     // HomeTopBar handles its own safe-area top padding — don't double-apply it
@@ -283,7 +286,11 @@ export default function HomeScreen() {
                   <Text style={styles.featTitle} numberOfLines={2}>{item.title}</Text>
                   <View style={styles.featMeta}>
                     <Ionicons name="location-outline" size={10} color={colors.textSecondary} />
-                    <Text style={styles.featMetaText} numberOfLines={1}>{item.location}</Text>
+                    <Text style={styles.featMetaText} numberOfLines={1}>
+                      {Array.isArray(item.cities) && item.cities.length > 0
+                        ? item.cities.slice(0, 2).join(', ') + (item.cities.length > 2 ? ` +${item.cities.length - 2}` : '')
+                        : 'Nationwide'}
+                    </Text>
                   </View>
                 </View>
                 <View style={styles.featFooter}>

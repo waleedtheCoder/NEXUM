@@ -13,6 +13,7 @@ import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 import { createListing, updateListing, uploadListingImage } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
+import { CITIES } from '../constants/cities';
 
 const UNITS = ['kg', 'liters', 'pieces', 'boxes', 'cartons', 'bags', 'bottles'];
 const CONDITIONS = ['New', 'Bulk Wholesale', 'Clearance Stock'];
@@ -38,7 +39,8 @@ export default function CreateListingScreen() {
   const [unit, setUnit] = useState(existing?.unit || 'kg');
   const [minOrderQty, setMinOrderQty] = useState(existing?.minOrderQty ? String(existing.minOrderQty) : '1');
   const [condition, setCondition] = useState(existing?.condition || 'Bulk Wholesale');
-  const [location, setLocation] = useState(existing?.location || '');
+  const [cities, setCities] = useState(existing?.cities || []);
+  const [cityQuery, setCityQuery] = useState('');
   const [loading, setLoading] = useState(false);
 
   // ── Image state ──────────────────────────────────────────────────────────
@@ -127,7 +129,7 @@ export default function CreateListingScreen() {
     if (!productName.trim()) { Alert.alert(t.createListing.required, t.createListing.enterProductName); return false; }
     if (!price.trim() || isNaN(parseFloat(price))) { Alert.alert(t.createListing.required, t.createListing.enterValidPrice); return false; }
     if (!quantity.trim() || isNaN(parseInt(quantity))) { Alert.alert(t.createListing.required, t.createListing.enterValidQty); return false; }
-    if (!location.trim()) { Alert.alert(t.createListing.required, t.createListing.enterLocation); return false; }
+    if (cities.length === 0) { Alert.alert(t.createListing.required, 'Select at least one delivery city.'); return false; }
     if (imageUri && !imageUrl) {
       Alert.alert(t.createListing.imageUploading, t.createListing.imageUploadingMsg);
       return false;
@@ -148,8 +150,8 @@ export default function CreateListingScreen() {
       unit,
       minOrderQty: parseInt(minOrderQty, 10) || 1,
       condition,
-      location: location.trim(),
       category,
+      cities,
       // Only include imageUrl if one was successfully uploaded
       ...(imageUrl ? { imageUrl } : {}),
     };
@@ -335,15 +337,53 @@ export default function CreateListingScreen() {
           </View>
         </ScrollView>
 
-        {/* Location */}
-        <Text style={styles.label}>{t.createListing.location} <Text style={styles.required}>*</Text></Text>
-        <TextInput
-          style={styles.input}
-          placeholder={t.createListing.locationPlaceholder}
-          placeholderTextColor={colors.textLight}
-          value={location}
-          onChangeText={setLocation}
-        />
+        {/* Delivery Cities */}
+        <Text style={styles.label}>
+          Delivery Cities <Text style={styles.labelHint}>(select cities you deliver to)</Text>
+        </Text>
+        {cities.length > 0 && (
+          <View style={styles.selectedCitiesRow}>
+            {cities.map((c) => (
+              <TouchableOpacity
+                key={c}
+                style={styles.selectedCityChip}
+                onPress={() => setCities((prev) => prev.filter((x) => x !== c))}
+              >
+                <Text style={styles.selectedCityText}>{c}</Text>
+                <Ionicons name="close" size={12} color={colors.primary} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+        <View style={styles.citySearchWrap}>
+          <Ionicons name="search" size={14} color={colors.textSecondary} />
+          <TextInput
+            style={styles.citySearchInput}
+            placeholder="Search cities..."
+            placeholderTextColor={colors.textLight}
+            value={cityQuery}
+            onChangeText={setCityQuery}
+          />
+        </View>
+        <View style={styles.cityGrid}>
+          {CITIES.filter((c) => c.toLowerCase().includes(cityQuery.toLowerCase())).map((c) => {
+            const active = cities.includes(c);
+            return (
+              <TouchableOpacity
+                key={c}
+                style={[styles.cityChip, active && styles.cityChipActive]}
+                onPress={() =>
+                  setCities((prev) =>
+                    prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]
+                  )
+                }
+              >
+                {active && <Ionicons name="checkmark" size={12} color={colors.primary} />}
+                <Text style={[styles.cityChipText, active && styles.cityChipTextActive]}>{c}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
         {/* Submit */}
         <TouchableOpacity
@@ -437,6 +477,39 @@ const makeStyles = (colors) => StyleSheet.create({
   },
   chipText: { fontSize: 13, fontFamily: fonts.medium, color: colors.textSecondary },
   chipTextActive: { color: colors.primary },
+
+  labelHint: { fontFamily: fonts.regular, fontSize: 12, color: colors.textSecondary },
+
+  selectedCitiesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
+  selectedCityChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: radii.full, backgroundColor: `${colors.primary}18`,
+    borderWidth: 1, borderColor: colors.primary,
+  },
+  selectedCityText: { fontSize: 12, fontFamily: fonts.medium, color: colors.primary },
+
+  citySearchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: colors.surface, borderRadius: radii.lg,
+    paddingHorizontal: 12, paddingVertical: 9,
+    marginBottom: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+  },
+  citySearchInput: { flex: 1, fontSize: 13, fontFamily: fonts.regular, color: colors.text },
+
+  cityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.md },
+  cityChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: radii.full, backgroundColor: colors.surface,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 3, elevation: 1,
+  },
+  cityChipActive: { backgroundColor: `${colors.primary}18`, borderWidth: 1, borderColor: colors.primary },
+  cityChipText: { fontSize: 13, fontFamily: fonts.medium, color: colors.textSecondary },
+  cityChipTextActive: { color: colors.primary },
 
   submitBtn: {
     backgroundColor: colors.primary, borderRadius: radii.xl,

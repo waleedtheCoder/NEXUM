@@ -35,7 +35,7 @@ export default function RoleSelectionScreen() {
 
   const handleNext = async () => {
     await setUserRole(selected);
-    navigation.navigate(selected === 'supplier' ? 'SupplierPhone' : 'Locations');
+    navigation.navigate(selected === 'supplier' ? 'SupplierPhone' : 'ShopkeeperCity');
   };
 
   return (
@@ -81,7 +81,7 @@ export default function RoleSelectionScreen() {
       </View>
 
       <View style={styles.footer}>
-        <PressableBounce style={styles.skipBtn} onPress={() => navigation.navigate('Locations')}>
+        <PressableBounce style={styles.skipBtn} onPress={() => navigation.navigate(selected === 'supplier' ? 'SupplierPhone' : 'ShopkeeperCity')}>
           <Text style={styles.skipText}>Skip</Text>
         </PressableBounce>
         <BubblyButton

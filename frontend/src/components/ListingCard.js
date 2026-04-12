@@ -52,7 +52,11 @@ export default function ListingCard({ listing, onPress, onMenuPress }) {
             </View>
             <View style={styles.stat}>
               <Ionicons name="location-outline" size={13} color={colors.textSecondary} />
-              <Text style={styles.statText}>{listing.location}</Text>
+              <Text style={styles.statText}>
+                {Array.isArray(listing.cities) && listing.cities.length > 0
+                  ? listing.cities.slice(0, 2).join(', ') + (listing.cities.length > 2 ? ` +${listing.cities.length - 2}` : '')
+                  : 'Nationwide'}
+              </Text>
             </View>
           </View>
         </View>

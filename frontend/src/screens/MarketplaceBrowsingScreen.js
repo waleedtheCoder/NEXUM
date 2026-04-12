@@ -28,7 +28,7 @@ export default function MarketplaceBrowsingScreen() {
   const insets     = useSafeAreaInsets();
   const { colors } = useTheme();
   const { t }      = useLanguage();
-  const { idToken, sessionId, refreshToken, updateUser } = useUser();
+  const { idToken, sessionId, refreshToken, updateUser, city } = useUser();
 
   const paramCategory   = route.params?.category   || null;
   const paramOffersOnly = route.params?.offersOnly  || false;
@@ -53,6 +53,7 @@ export default function MarketplaceBrowsingScreen() {
           q: q.trim() || undefined,
           category: paramCategory || undefined,
           on_promo: paramOffersOnly || undefined,
+          city: city || undefined,
         });
         setProducts(Array.isArray(data) ? data : data.results || []);
       } catch (err) {
@@ -61,12 +62,12 @@ export default function MarketplaceBrowsingScreen() {
         setLoading(false);
       }
     },
-    [activeSort, searchText, paramCategory, paramOffersOnly]
+    [activeSort, searchText, paramCategory, paramOffersOnly, city]
   );
 
   useEffect(() => {
     fetchProducts({ sort: activeSort });
-  }, [activeSort]);
+  }, [activeSort, city]);
 
   const handleSearchChange = (text) => {
     setSearchText(text);

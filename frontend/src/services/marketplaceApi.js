@@ -148,13 +148,14 @@ async function _fetchWithRefresh(path, options = {}) {
  * Returns active listing cards.
  * Public.
  */
-export async function getListings({ category, q, sort, featured, on_promo } = {}) {
+export async function getListings({ category, q, sort, featured, on_promo, city } = {}) {
   const params = new URLSearchParams();
   if (category) params.set('category', category);
   if (q)        params.set('q', q);
   if (sort)     params.set('sort', sort);
   if (featured) params.set('featured', 'true');
   if (on_promo) params.set('on_promo', 'true');
+  if (city)     params.set('city', city);
   const qs = params.toString();
   return _fetch(`/api/listings/${qs ? `?${qs}` : ''}`);
 }
@@ -265,8 +266,9 @@ export async function getSupplierDashboard({ idToken, sessionId, refreshToken, o
  * Response: [{ id, title, subtitle, imageUrl, actionUrl, badge }]
  * Public — no auth required.
  */
-export async function getPromotions() {
-  return _fetch('/api/promotions/');
+export async function getPromotions({ city } = {}) {
+  const qs = city ? `?city=${encodeURIComponent(city)}` : '';
+  return _fetch(`/api/promotions/${qs}`);
 }
 
 /**

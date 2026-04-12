@@ -23,6 +23,7 @@ import WelcomeScreen            from '../screens/WelcomeScreen';
 import RoleSelectionScreen      from '../screens/RoleSelectionScreen';
 import SupplierPhoneScreen      from '../screens/SupplierPhoneScreen';
 import LocationsScreen          from '../screens/LocationsScreen';
+import ShopkeeperCityScreen     from '../screens/ShopkeeperCityScreen';
 
 // ── Tab Screens ─────────────────────────────────────────────────────────────
 import HomeScreen               from '../screens/HomeScreen';
@@ -108,8 +109,9 @@ function RootStack() {
       {/* ── Post-signup onboarding ───────────────────────────────────────── */}
       <Stack.Screen name="Welcome"        component={WelcomeScreen} />
       <Stack.Screen name="RoleSelection"  component={RoleSelectionScreen} />
-      <Stack.Screen name="SupplierPhone"  component={SupplierPhoneScreen} />
-      <Stack.Screen name="Locations"      component={LocationsScreen} />
+      <Stack.Screen name="SupplierPhone"    component={SupplierPhoneScreen} />
+      <Stack.Screen name="Locations"        component={LocationsScreen} />
+      <Stack.Screen name="ShopkeeperCity"   component={ShopkeeperCityScreen} />
 
       {/* ── Marketplace ─────────────────────────────────────────────────── */}
       <Stack.Screen name="Search"              component={SearchScreen} />

@@ -24,7 +24,7 @@ export default function SupplierPhoneScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  const goNext = () => navigation.navigate('Locations');
+  const goNext = () => navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
 
   const handleNext = async () => {
     const trimmed = phone.trim();

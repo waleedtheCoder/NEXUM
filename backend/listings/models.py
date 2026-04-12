@@ -39,6 +39,7 @@ class Listing(models.Model):
     # Accepts a URL string — suppliers can paste a product image URL.
     # File upload can be layered on top later without a DB migration.
     image_url = models.URLField(blank=True, default='')
+    cities = models.JSONField(default=list, blank=True)
     is_featured = models.BooleanField(default=False)
     views = models.PositiveIntegerField(default=0)
     min_order_qty = models.PositiveIntegerField(default=1)

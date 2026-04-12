@@ -7,27 +7,46 @@
 // The whole zone has curved bottom corners and casts a soft primary-tinted
 // shadow onto the scroll content below.
 
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View, Text, TouchableOpacity, StyleSheet, Modal,
+  TextInput, ScrollView, Pressable,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { fonts, spacing } from '../constants/theme';
+import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 import { useUser } from '../context/UserContext';
+import { CITIES } from '../constants/cities';
 
 export default function HomeTopBar({ onSearchPress }) {
   const navigation = useNavigation();
   const insets     = useSafeAreaInsets();
   const { colors } = useTheme();
   const { t }      = useLanguage();
-  const { user }   = useUser();
+  const { user, city, setShopkeeperCity, role } = useUser();
+
+  const [modalVisible, setModalVisible] = useState(false);
+  const [query, setQuery] = useState('');
 
   const firstName = user?.name ? user.name.split(' ')[0] : 'there';
   const initial   = (user?.name || 'N').charAt(0).toUpperCase();
 
+  const isShopkeeper = role === 'shopkeeper' || role === 'SHOPKEEPER';
+  const filteredCities = CITIES.filter((c) =>
+    c.toLowerCase().includes(query.toLowerCase())
+  );
+
+  const handleSelectCity = async (selected) => {
+    await setShopkeeperCity(selected);
+    setModalVisible(false);
+    setQuery('');
+  };
+
   return (
+    <>
     <View style={[styles.hero, {
       paddingTop: insets.top + 14,
       backgroundColor: colors.primary,
@@ -40,10 +59,17 @@ export default function HomeTopBar({ onSearchPress }) {
           <Text style={styles.greeting}>
             {t.home?.greeting ? `${t.home.greeting}, ${firstName}` : `Hello, ${firstName} 👋`}
           </Text>
-          <View style={styles.locationRow}>
+          <TouchableOpacity
+            style={styles.locationRow}
+            onPress={() => isShopkeeper && setModalVisible(true)}
+            activeOpacity={isShopkeeper ? 0.7 : 1}
+          >
             <Ionicons name="location" size={12} color="rgba(255,255,255,0.75)" />
-            <Text style={styles.location}>Lahore, PK</Text>
-          </View>
+            <Text style={styles.location}>{city || 'Pakistan'}</Text>
+            {isShopkeeper && (
+              <Ionicons name="chevron-down" size={11} color="rgba(255,255,255,0.65)" />
+            )}
+          </TouchableOpacity>
         </View>
 
         <View style={styles.topRight}>
@@ -64,6 +90,61 @@ export default function HomeTopBar({ onSearchPress }) {
       </TouchableOpacity>
 
     </View>
+
+    {/* ── City picker modal ────────────────────────────────────────────── */}
+    <Modal
+      visible={modalVisible}
+      transparent
+      animationType="slide"
+      onRequestClose={() => { setModalVisible(false); setQuery(''); }}
+    >
+      <Pressable style={styles.modalBackdrop} onPress={() => { setModalVisible(false); setQuery(''); }}>
+        <Pressable style={[styles.modalSheet, { paddingBottom: insets.bottom + 16 }]} onPress={() => {}}>
+          {/* Handle */}
+          <View style={styles.modalHandle} />
+
+          <Text style={styles.modalTitle}>Switch City</Text>
+          <Text style={styles.modalSubtitle}>Products will be filtered to your selected city</Text>
+
+          {/* Search */}
+          <View style={styles.modalSearch}>
+            <Ionicons name="search" size={15} color={colors.textSecondary} />
+            <TextInput
+              style={styles.modalSearchInput}
+              placeholder="Search cities..."
+              placeholderTextColor={colors.textLight}
+              value={query}
+              onChangeText={setQuery}
+              autoCapitalize="none"
+            />
+            {query.length > 0 && (
+              <TouchableOpacity onPress={() => setQuery('')}>
+                <Ionicons name="close-circle" size={16} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <View style={styles.cityGrid}>
+              {filteredCities.map((c) => {
+                const active = c === city;
+                return (
+                  <TouchableOpacity
+                    key={c}
+                    style={[styles.cityChip, active && styles.cityChipActive]}
+                    onPress={() => handleSelectCity(c)}
+                  >
+                    {active && <Ionicons name="checkmark" size={13} color={colors.primary} />}
+                    <Text style={[styles.cityChipText, active && styles.cityChipTextActive]}>{c}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+    </>
   );
 }
 
@@ -129,6 +210,84 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontFamily: fonts.bold,
+  },
+
+  // City modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: spacing.md,
+    paddingTop: 12,
+    maxHeight: '75%',
+  },
+  modalHandle: {
+    width: 40, height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E5E7EB',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontFamily: fonts.bold,
+    color: '#111',
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    fontFamily: fonts.regular,
+    color: '#6B7280',
+    marginBottom: 14,
+  },
+  modalSearch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F3F4F6',
+    borderRadius: radii.lg,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 14,
+  },
+  modalSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: fonts.regular,
+    color: '#111',
+  },
+  cityGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingBottom: 8,
+  },
+  cityChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+    backgroundColor: '#F3F4F6',
+  },
+  cityChipActive: {
+    backgroundColor: '#E6F4EE',
+    borderWidth: 1.5,
+    borderColor: '#00A859',
+  },
+  cityChipText: {
+    fontSize: 13,
+    fontFamily: fonts.medium,
+    color: '#374151',
+  },
+  cityChipTextActive: {
+    color: '#00A859',
   },
 
   // Frosted search bar
