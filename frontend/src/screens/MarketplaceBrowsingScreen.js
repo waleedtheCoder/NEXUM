@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import BottomNav from '../components/BottomNav';
 import FilterChip from '../components/FilterChip';
 import { SkeletonGridCard, SkeletonListCard } from '../components/SkeletonLoader';
 import { fonts, spacing, radii } from '../constants/theme';
@@ -212,7 +213,7 @@ export default function MarketplaceBrowsingScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       {/* ── Top bar ─────────────────────────────────────────────────────── */}
@@ -337,6 +338,8 @@ export default function MarketplaceBrowsingScreen() {
           }
         />
       )}
+
+      {!paramCategory && !paramOffersOnly && <BottomNav activeTab="browse" />}
     </View>
   );
 }
@@ -418,7 +421,7 @@ const makeStyles = (colors) => StyleSheet.create({
   viewToggle:    { flexDirection: 'row', gap: 6 },
   viewBtn:       { padding: 7, borderRadius: radii.md, backgroundColor: colors.surface },
   viewBtnActive: { backgroundColor: colors.primary },
-  listContent:   { paddingHorizontal: spacing.md, paddingBottom: 32, paddingTop: 4 },
+  listContent:   { paddingHorizontal: spacing.md, paddingBottom: 90, paddingTop: 4 },
   columnWrapper: { gap: 12, marginBottom: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingTop: 60 },
   errorText: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.regular, textAlign: 'center' },
