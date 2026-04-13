@@ -76,7 +76,7 @@ export default function MyListingsScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0D0F12" />
 
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>

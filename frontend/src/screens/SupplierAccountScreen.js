@@ -86,7 +86,7 @@ export default function SupplierAccountScreen() {
     .toUpperCase();
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
 
       {/* ── Header ────────────────────────────────────────────────────── */}

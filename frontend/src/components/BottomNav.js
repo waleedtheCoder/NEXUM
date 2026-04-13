@@ -8,9 +8,10 @@
 // Active tab : frosted inner pill (rgba(255,255,255,0.22)).
 
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUser } from '../context/UserContext';
 import { fonts } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
@@ -44,14 +45,16 @@ export default function BottomNav({ activeTab }) {
   const { role }   = useUser();
   const { colors } = useTheme();
 
+  const insets        = useSafeAreaInsets();
   const isShopkeeper = role === 'shopkeeper' || !role;
   const tabs         = isShopkeeper ? SHOPKEEPER_TABS : SUPPLIER_TABS;
   const derived      = activeTab || TAB_MAP[route.name] || 'home';
 
-  // Pill background: teal in light, dark surface in dark
+  // Pill background: translucent teal (40% opacity) in light, dark surface in dark
   const pillBg = colors.isDark ? colors.surface : colors.primary;
 
   return (
+    <View style={[styles.floatWrapper, { paddingBottom: insets.bottom }]} pointerEvents="box-none">
     <View style={[styles.container, {
       backgroundColor: pillBg,
       // Primary-tinted or neutral shadow
@@ -91,7 +94,7 @@ export default function BottomNav({ activeTab }) {
             <Ionicons
               name={isActive ? activeIcon : tab.icon}
               size={22}
-              color={isActive ? '#fff' : 'rgba(255,255,255,0.55)'}
+              color={isActive ? '#fff' : 'rgba(255,255,255,0.6)'}
             />
             <Text style={[styles.label, isActive && styles.labelActive]}>
               {tab.label}
@@ -100,14 +103,22 @@ export default function BottomNav({ activeTab }) {
         );
       })}
     </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  floatWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 12,
+    paddingBottom: 40, // overridden inline with insets
+    backgroundColor: 'transparent',
+  },
   container: {
     flexDirection: 'row',
-    marginHorizontal: 12,
-    marginBottom: 8,
     borderRadius: 28,
     paddingVertical: 6,
     paddingHorizontal: 6,
@@ -135,7 +146,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10,
     fontFamily: fonts.medium,
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(255,255,255,0.6)',
   },
   labelActive: {
     color: '#fff',

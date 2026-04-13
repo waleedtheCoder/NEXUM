@@ -125,7 +125,7 @@ export default function AccountSettingsScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
 
       {/* ── Mini dashboard header ──────────────────────────────────────── */}

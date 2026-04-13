@@ -108,7 +108,7 @@ export default function ChatListScreen() {
   const styles = makeStyles(colors);
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       {/* Header */}
@@ -322,7 +322,7 @@ function ChatGuestPrompt({ insets, colors, navigation }) {
   const { t } = useLanguage();
   const styles = makeStyles(colors);
   return (
-    <View style={[styles.guestContainer, { paddingBottom: insets.bottom }]}>
+    <View style={styles.guestContainer}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <View style={[styles.guestTopBar, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.guestTopBarTitle}>{t.chatList.title}</Text>

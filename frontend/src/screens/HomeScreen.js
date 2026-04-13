@@ -90,7 +90,7 @@ export default function HomeScreen() {
 
   return (
     // HomeTopBar handles its own safe-area top padding — don't double-apply it
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <HomeTopBar onSearchPress={() => navigation.navigate('Search')} />
 

@@ -38,7 +38,7 @@ function SellPrompt({ isLoggedIn }) {
   const styles = makeStyles(colors);
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
 
       <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
