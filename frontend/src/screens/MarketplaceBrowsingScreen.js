@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, StatusBar, Image,
+  StyleSheet, StatusBar, Image, Modal, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,6 +22,24 @@ const SORT_OPTIONS = [
   { labelKey: 'priceDown', value: 'price_desc' },
 ];
 
+const CONDITIONS = ['New', 'Bulk Wholesale', 'Clearance Stock'];
+
+const CATEGORIES = [
+  'Rice & Grains', 'Flour & Atta', 'Pulses & Lentils', 'Cooking Oil & Ghee',
+  'Sugar & Salt', 'Spices & Masalas', 'Tea & Coffee', 'Dry Fruits & Nuts',
+  'Packaged Snacks & Biscuits', 'Beverages & Soft Drinks', 'Dairy Products',
+  'Frozen Foods', 'Cleaning & Household', 'Personal Care', 'Packaging Materials',
+];
+
+const DEFAULT_FILTERS = {
+  condition: null,
+  category: null,
+  minPrice: '',
+  maxPrice: '',
+  verifiedOnly: false,
+  onPromo: false,
+};
+
 export default function MarketplaceBrowsingScreen() {
   const navigation = useNavigation();
   const route      = useRoute();
@@ -34,28 +52,44 @@ export default function MarketplaceBrowsingScreen() {
   const paramOffersOnly = route.params?.offersOnly  || false;
   const paramFeatured   = route.params?.featured    || false;
 
-  const [products,   setProducts]   = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState(null);
-  const [activeSort, setActiveSort] = useState('newest');
-  const [viewMode,   setViewMode]   = useState('grid');
-  const [searchText, setSearchText] = useState('');
-  const [saved,      setSaved]      = useState(new Set());
+  const [products,     setProducts]     = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState(null);
+  const [activeSort,   setActiveSort]   = useState('newest');
+  const [viewMode,     setViewMode]     = useState('grid');
+  const [searchText,   setSearchText]   = useState('');
+  const [saved,        setSaved]        = useState(new Set());
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [filters,      setFilters]      = useState(DEFAULT_FILTERS);
+  const [draftFilters, setDraftFilters] = useState(DEFAULT_FILTERS);
 
   const searchTimer = useRef(null);
 
+  const activeFilterCount = [
+    filters.condition,
+    filters.category,
+    filters.minPrice,
+    filters.maxPrice,
+    filters.verifiedOnly,
+    filters.onPromo,
+  ].filter(Boolean).length;
+
   const fetchProducts = useCallback(
-    async ({ sort = activeSort, q = searchText } = {}) => {
+    async ({ sort = activeSort, q = searchText, appliedFilters = filters } = {}) => {
       setLoading(true);
       setError(null);
       try {
         const data = await getListings({
           sort,
           q: q.trim() || undefined,
-          category: paramCategory || undefined,
-          on_promo: paramOffersOnly || undefined,
+          category: paramCategory || appliedFilters.category || undefined,
+          on_promo: paramOffersOnly || appliedFilters.onPromo || undefined,
           featured: paramFeatured || undefined,
           city: city || undefined,
+          condition: appliedFilters.condition || undefined,
+          min_price: appliedFilters.minPrice || undefined,
+          max_price: appliedFilters.maxPrice || undefined,
+          verified_only: appliedFilters.verifiedOnly || undefined,
         });
         setProducts(Array.isArray(data) ? data : data.results || []);
       } catch (err) {
@@ -64,12 +98,12 @@ export default function MarketplaceBrowsingScreen() {
         setLoading(false);
       }
     },
-    [activeSort, searchText, paramCategory, paramOffersOnly, paramFeatured, city]
+    [activeSort, searchText, paramCategory, paramOffersOnly, paramFeatured, city, filters]
   );
 
   useEffect(() => {
     fetchProducts({ sort: activeSort });
-  }, [activeSort, city]);
+  }, [activeSort, city, filters]);
 
   const handleSearchChange = (text) => {
     setSearchText(text);
@@ -285,19 +319,34 @@ export default function MarketplaceBrowsingScreen() {
         <Text style={styles.resultsText}>
           {loading ? t.marketplace.loading : `${products.length} ${t.marketplace.results}`}
         </Text>
-        <View style={styles.viewToggle}>
+        <View style={styles.resultsRight}>
+          {/* Filter button */}
           <TouchableOpacity
-            onPress={() => setViewMode('grid')}
-            style={[styles.viewBtn, viewMode === 'grid' && styles.viewBtnActive]}
+            style={[styles.filterBtn, activeFilterCount > 0 && { backgroundColor: colors.primary }]}
+            onPress={() => { setDraftFilters(filters); setFilterVisible(true); }}
           >
-            <Ionicons name="grid" size={16} color={viewMode === 'grid' ? '#fff' : colors.textSecondary} />
+            <Ionicons name="options-outline" size={15} color={activeFilterCount > 0 ? '#fff' : colors.text} />
+            <Text style={[styles.filterBtnText, activeFilterCount > 0 && { color: '#fff' }]}>Filters</Text>
+            {activeFilterCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setViewMode('list')}
-            style={[styles.viewBtn, viewMode === 'list' && styles.viewBtnActive]}
-          >
-            <Ionicons name="list" size={16} color={viewMode === 'list' ? '#fff' : colors.textSecondary} />
-          </TouchableOpacity>
+          <View style={styles.viewToggle}>
+            <TouchableOpacity
+              onPress={() => setViewMode('grid')}
+              style={[styles.viewBtn, viewMode === 'grid' && styles.viewBtnActive]}
+            >
+              <Ionicons name="grid" size={16} color={viewMode === 'grid' ? '#fff' : colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setViewMode('list')}
+              style={[styles.viewBtn, viewMode === 'list' && styles.viewBtnActive]}
+            >
+              <Ionicons name="list" size={16} color={viewMode === 'list' ? '#fff' : colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -343,6 +392,137 @@ export default function MarketplaceBrowsingScreen() {
       )}
 
       {!paramCategory && !paramOffersOnly && !paramFeatured && <BottomNav activeTab="browse" />}
+
+      {/* ── Filter bottom sheet ─────────────────────────────────────────── */}
+      <Modal
+        visible={filterVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setFilterVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.filterSheet}>
+
+            <View style={styles.filterSheetHandle} />
+
+            {/* Header */}
+            <View style={styles.filterSheetHeader}>
+              <Text style={styles.filterSheetTitle}>Filters</Text>
+              <TouchableOpacity onPress={() => { setDraftFilters(DEFAULT_FILTERS); }}>
+                <Text style={styles.filterResetText}>Reset all</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+
+              {/* Condition */}
+              <Text style={styles.filterSectionLabel}>Condition</Text>
+              <View style={styles.chipWrap}>
+                {CONDITIONS.map((c) => (
+                  <TouchableOpacity
+                    key={c}
+                    style={[styles.optionChip, draftFilters.condition === c && styles.optionChipActive]}
+                    onPress={() => setDraftFilters(f => ({ ...f, condition: f.condition === c ? null : c }))}
+                  >
+                    <Text style={[styles.optionChipText, draftFilters.condition === c && styles.optionChipTextActive]}>
+                      {c}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Category (only when not locked by nav param) */}
+              {!paramCategory && (
+                <>
+                  <Text style={styles.filterSectionLabel}>Category</Text>
+                  <View style={styles.chipWrap}>
+                    {CATEGORIES.map((c) => (
+                      <TouchableOpacity
+                        key={c}
+                        style={[styles.optionChip, draftFilters.category === c && styles.optionChipActive]}
+                        onPress={() => setDraftFilters(f => ({ ...f, category: f.category === c ? null : c }))}
+                      >
+                        <Text style={[styles.optionChipText, draftFilters.category === c && styles.optionChipTextActive]}>
+                          {c}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
+
+              {/* Price range */}
+              <Text style={styles.filterSectionLabel}>Price Range (Rs)</Text>
+              <View style={styles.priceRow}>
+                <View style={styles.priceInputWrap}>
+                  <Text style={styles.priceInputLabel}>Min</Text>
+                  <TextInput
+                    style={styles.priceInput}
+                    value={draftFilters.minPrice}
+                    onChangeText={(v) => setDraftFilters(f => ({ ...f, minPrice: v.replace(/[^0-9]/g, '') }))}
+                    placeholder="0"
+                    placeholderTextColor={colors.textLight}
+                    keyboardType="number-pad"
+                  />
+                </View>
+                <View style={styles.priceDash} />
+                <View style={styles.priceInputWrap}>
+                  <Text style={styles.priceInputLabel}>Max</Text>
+                  <TextInput
+                    style={styles.priceInput}
+                    value={draftFilters.maxPrice}
+                    onChangeText={(v) => setDraftFilters(f => ({ ...f, maxPrice: v.replace(/[^0-9]/g, '') }))}
+                    placeholder="Any"
+                    placeholderTextColor={colors.textLight}
+                    keyboardType="number-pad"
+                  />
+                </View>
+              </View>
+
+              {/* Toggles */}
+              <Text style={styles.filterSectionLabel}>Special</Text>
+              <View style={styles.toggleRow}>
+                <TouchableOpacity
+                  style={[styles.toggleChip, draftFilters.verifiedOnly && styles.toggleChipActive]}
+                  onPress={() => setDraftFilters(f => ({ ...f, verifiedOnly: !f.verifiedOnly }))}
+                >
+                  <Ionicons name="shield-checkmark-outline" size={15}
+                    color={draftFilters.verifiedOnly ? '#fff' : colors.textSecondary} />
+                  <Text style={[styles.toggleChipText, draftFilters.verifiedOnly && styles.toggleChipTextActive]}>
+                    Verified Suppliers
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toggleChip, draftFilters.onPromo && styles.toggleChipActive]}
+                  onPress={() => setDraftFilters(f => ({ ...f, onPromo: !f.onPromo }))}
+                >
+                  <Ionicons name="pricetag-outline" size={15}
+                    color={draftFilters.onPromo ? '#fff' : colors.textSecondary} />
+                  <Text style={[styles.toggleChipText, draftFilters.onPromo && styles.toggleChipTextActive]}>
+                    On Sale
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ height: 16 }} />
+            </ScrollView>
+
+            {/* Apply */}
+            <TouchableOpacity
+              style={styles.applyBtn}
+              onPress={() => {
+                setFilters(draftFilters);
+                setFilterVisible(false);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+              }}
+            >
+              <Text style={styles.applyBtnText}>Apply Filters</Text>
+            </TouchableOpacity>
+
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -420,10 +600,87 @@ const makeStyles = (colors) => StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
   },
-  resultsText:   { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.regular },
+  resultsText:   { color: colors.textSecondary, fontSize: 12, fontFamily: fonts.regular, flex: 1 },
+  resultsRight:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  filterBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: colors.surface,
+    borderRadius: radii.full, paddingHorizontal: 12, paddingVertical: 7,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  filterBtnText: { fontSize: 12, fontFamily: fonts.medium, color: colors.text },
+  filterBadge: {
+    backgroundColor: '#fff', borderRadius: radii.full,
+    minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  filterBadgeText: { fontSize: 10, fontFamily: fonts.bold, color: colors.primary },
   viewToggle:    { flexDirection: 'row', gap: 6 },
   viewBtn:       { padding: 7, borderRadius: radii.md, backgroundColor: colors.surface },
   viewBtnActive: { backgroundColor: colors.primary },
+
+  // ── Filter sheet ──────────────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end',
+  },
+  filterSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    paddingHorizontal: spacing.md,
+    paddingBottom: 32,
+    maxHeight: '88%',
+    flexDirection: 'column',
+  },
+  filterSheetHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: colors.border, alignSelf: 'center', marginTop: 12, marginBottom: 16,
+  },
+  filterSheetHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16,
+  },
+  filterSheetTitle: { fontSize: 17, fontFamily: fonts.bold, color: colors.text },
+  filterResetText:  { fontSize: 13, fontFamily: fonts.medium, color: colors.accent },
+  filterSectionLabel: {
+    fontSize: 11, fontFamily: fonts.semiBold, color: colors.textSecondary,
+    textTransform: 'uppercase', letterSpacing: 0.7,
+    marginTop: 16, marginBottom: 10,
+  },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  optionChip: {
+    borderRadius: radii.full, paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: colors.background,
+    borderWidth: 1.5, borderColor: colors.border,
+  },
+  optionChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  optionChipText:   { fontSize: 12, fontFamily: fonts.medium, color: colors.textSecondary },
+  optionChipTextActive: { color: '#fff' },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  priceInputWrap: { flex: 1 },
+  priceInputLabel: { fontSize: 11, fontFamily: fonts.medium, color: colors.textSecondary, marginBottom: 6 },
+  priceInput: {
+    backgroundColor: colors.background, borderRadius: radii.md,
+    paddingHorizontal: 14, paddingVertical: 11,
+    fontSize: 14, fontFamily: fonts.medium, color: colors.text,
+    borderWidth: 1.5, borderColor: colors.border,
+  },
+  priceDash: { width: 10, height: 2, backgroundColor: colors.border, marginTop: 16 },
+  toggleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  toggleChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderRadius: radii.full, paddingHorizontal: 14, paddingVertical: 9,
+    backgroundColor: colors.background,
+    borderWidth: 1.5, borderColor: colors.border,
+  },
+  toggleChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  toggleChipText:   { fontSize: 12, fontFamily: fonts.medium, color: colors.textSecondary },
+  toggleChipTextActive: { color: '#fff' },
+  applyBtn: {
+    backgroundColor: colors.primary, borderRadius: radii.xl,
+    paddingVertical: 15, alignItems: 'center', marginTop: 16,
+    borderBottomWidth: 4, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.3)',
+  },
+  applyBtnText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
   listContent:   { paddingHorizontal: spacing.md, paddingBottom: 90, paddingTop: 4 },
   columnWrapper: { gap: 12, marginBottom: 12 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingTop: 60 },

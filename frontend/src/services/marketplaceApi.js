@@ -148,14 +148,18 @@ async function _fetchWithRefresh(path, options = {}) {
  * Returns active listing cards.
  * Public.
  */
-export async function getListings({ category, q, sort, featured, on_promo, city } = {}) {
+export async function getListings({ category, q, sort, featured, on_promo, city, condition, min_price, max_price, verified_only } = {}) {
   const params = new URLSearchParams();
-  if (category) params.set('category', category);
-  if (q)        params.set('q', q);
-  if (sort)     params.set('sort', sort);
-  if (featured) params.set('featured', 'true');
-  if (on_promo) params.set('on_promo', 'true');
-  if (city)     params.set('city', city);
+  if (category)     params.set('category', category);
+  if (q)            params.set('q', q);
+  if (sort)         params.set('sort', sort);
+  if (featured)     params.set('featured', 'true');
+  if (on_promo)     params.set('on_promo', 'true');
+  if (city)         params.set('city', city);
+  if (condition)    params.set('condition', condition);
+  if (min_price)    params.set('min_price', min_price);
+  if (max_price)    params.set('max_price', max_price);
+  if (verified_only) params.set('verified_only', 'true');
   const qs = params.toString();
   return _fetch(`/api/listings/${qs ? `?${qs}` : ''}`);
 }

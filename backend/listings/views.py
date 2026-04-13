@@ -93,6 +93,28 @@ class ListingsView(APIView):
         if on_promo == 'true':
             qs = qs.filter(promotion__isnull=False, promotion__is_active=True)
 
+        condition = request.query_params.get('condition', '').strip()
+        if condition:
+            qs = qs.filter(condition__iexact=condition)
+
+        min_price = request.query_params.get('min_price', '').strip()
+        if min_price:
+            try:
+                qs = qs.filter(price__gte=float(min_price))
+            except ValueError:
+                pass
+
+        max_price = request.query_params.get('max_price', '').strip()
+        if max_price:
+            try:
+                qs = qs.filter(price__lte=float(max_price))
+            except ValueError:
+                pass
+
+        verified_only = request.query_params.get('verified_only', '').lower()
+        if verified_only == 'true':
+            qs = qs.filter(supplier__profile__verification_status='verified')
+
         sort = request.query_params.get('sort', 'newest')
         if sort == 'price_asc':
             qs = qs.order_by('price')
