@@ -4,6 +4,8 @@ const UserContext = createContext(null);
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function UserProvider({ children }) {
   const [user, setUser]                 = useState(null);
   const [role, setRole]                 = useState(null);
@@ -21,13 +23,17 @@ export function UserProvider({ children }) {
   // ── Shopkeeper city state ────────────────────────────────────────────────────
   const [city, setCity] = useState(null);
 
+  // ── Admin state ───────────────────────────────────────────────────────────────
+  const [isAdmin, setIsAdmin]       = useState(false);
+  const [adminEmail, setAdminEmail] = useState(null);
+
   const isLoggedIn = !!sessionId;
 
   // ── Restore session + theme on mount ────────────────────────────────────────
   useEffect(() => {
     const loadSession = async () => {
       try {
-        const [sid, userData, userRole, idTok, refreshTok, themeVal, langVal, cityVal] = await Promise.all([
+        const [sid, userData, userRole, idTok, refreshTok, themeVal, langVal, cityVal, adminFlag, adminMail] = await Promise.all([
           AsyncStorage.getItem('session_id'),
           AsyncStorage.getItem('user_data'),
           AsyncStorage.getItem('user_role'),
@@ -36,6 +42,8 @@ export function UserProvider({ children }) {
           AsyncStorage.getItem('nexum_theme'),
           AsyncStorage.getItem('nexum_language'),
           AsyncStorage.getItem('shopkeeper_city'),
+          AsyncStorage.getItem('is_admin'),
+          AsyncStorage.getItem('admin_email'),
         ]);
 
         if (sid)       setSessionId(sid);
@@ -46,6 +54,7 @@ export function UserProvider({ children }) {
         if (themeVal === 'dark') setIsDark(true);
         if (langVal === 'ur') setIsUrdu(true);
         if (cityVal)   setCity(cityVal);
+        if (adminFlag === 'true') { setIsAdmin(true); setAdminEmail(adminMail); }
       } catch (e) {
         console.error('Failed to load session:', e);
       } finally {
@@ -75,6 +84,27 @@ export function UserProvider({ children }) {
       await AsyncStorage.setItem('nexum_language', next ? 'ur' : 'en');
     } catch (e) {
       console.warn('Failed to persist language preference:', e);
+    }
+  };
+
+  // ── Admin login / logout ──────────────────────────────────────────────────
+  const adminLogin = async (email) => {
+    try {
+      await AsyncStorage.multiSet([['is_admin', 'true'], ['admin_email', email]]);
+      setIsAdmin(true);
+      setAdminEmail(email);
+    } catch (e) {
+      console.error('Failed to save admin session:', e);
+    }
+  };
+
+  const adminLogout = async () => {
+    try {
+      await AsyncStorage.multiRemove(['is_admin', 'admin_email']);
+      setIsAdmin(false);
+      setAdminEmail(null);
+    } catch (e) {
+      console.error('Failed to clear admin session:', e);
     }
   };
 
@@ -177,6 +207,11 @@ export function UserProvider({ children }) {
         logout,
         updateUser,
         setUserRole,
+        // Admin
+        isAdmin,
+        adminEmail,
+        adminLogin,
+        adminLogout,
         // Theme
         isDark,
         toggleTheme,

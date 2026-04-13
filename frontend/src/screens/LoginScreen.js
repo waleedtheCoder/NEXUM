@@ -10,6 +10,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import BubblyButton from '../components/BubblyButton';
 import { useUser } from '../context/UserContext';
 import { loginWithBackend, normalizeRoleFromApi } from '../services/authApi';
+import { isAdminEmail, ADMIN_PASSWORD } from '../constants/adminConfig';
 import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
@@ -20,7 +21,7 @@ export default function LoginScreen() {
   const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { login, role } = useUser();
+  const { login, role, adminLogin } = useUser();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
@@ -32,6 +33,15 @@ export default function LoginScreen() {
       return;
     }
     setLoading(true);
+
+    // ── Admin bypass — no Firebase needed ────────────────────────────────────
+    const trimmedEmail = email.trim().toLowerCase();
+    if (isAdminEmail(trimmedEmail) && password === ADMIN_PASSWORD) {
+      await adminLogin(trimmedEmail);
+      setLoading(false);
+      navigation.reset({ index: 0, routes: [{ name: 'AdminDashboard' }] });
+      return;
+    }
 
     try {
       const response = await loginWithBackend({

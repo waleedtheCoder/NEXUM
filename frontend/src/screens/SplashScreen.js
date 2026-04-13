@@ -10,11 +10,15 @@ export default function SplashScreen() {
     const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { isLoading, isLoggedIn, role, city } = useUser();
+  const { isLoading, isLoggedIn, role, city, isAdmin } = useUser();
 
   useEffect(() => {
     if (isLoading) return;
     const timer = setTimeout(() => {
+      if (isAdmin) {
+        navigation.reset({ index: 0, routes: [{ name: 'AdminDashboard' }] });
+        return;
+      }
       const isShopkeeper = role === 'shopkeeper' || role === 'SHOPKEEPER';
       if (isLoggedIn && isShopkeeper && !city) {
         navigation.reset({ index: 0, routes: [{ name: 'ShopkeeperCity' }] });

@@ -66,6 +66,13 @@ import RestockRemindersScreen   from '../screens/RestockRemindersScreen';
 // ── Mode switching (modal) ───────────────────────────────────────────────────
 import ShopkeeperDashboardScreen from '../screens/ShopkeeperDashboardScreen';
 
+// ── Admin ─────────────────────────────────────────────────────────────────────
+import AdminDashboardScreen   from '../screens/AdminDashboardScreen';
+import AdminSuppliersScreen   from '../screens/AdminSuppliersScreen';
+import AdminShopkeepersScreen from '../screens/AdminShopkeepersScreen';
+import AdminProductsScreen    from '../screens/AdminProductsScreen';
+import AdminUserDetailScreen  from '../screens/AdminUserDetailScreen';
+
 const Stack = createStackNavigator();
 const Tab   = createBottomTabNavigator();
 
@@ -153,6 +160,13 @@ function RootStack() {
         component={ShopkeeperDashboardScreen}
         options={{ presentation: 'modal', cardOverlayEnabled: true }}
       />
+
+      {/* ── Admin ───────────────────────────────────────────────────────── */}
+      <Stack.Screen name="AdminDashboard"   component={AdminDashboardScreen}   />
+      <Stack.Screen name="AdminSuppliers"   component={AdminSuppliersScreen}   />
+      <Stack.Screen name="AdminShopkeepers" component={AdminShopkeepersScreen} />
+      <Stack.Screen name="AdminProducts"    component={AdminProductsScreen}    />
+      <Stack.Screen name="AdminUserDetail"  component={AdminUserDetailScreen}  />
 
     </Stack.Navigator>
   );

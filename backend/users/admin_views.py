@@ -1,0 +1,88 @@
+from datetime import timedelta
+
+from django.utils import timezone
+from django.contrib.auth.models import User
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+
+from .models import UserProfile
+from listings.models import Listing
+from orders.models import Order
+
+ADMIN_SECRET = 'nexum_admin_2024'
+
+
+def _is_admin(request):
+    return request.headers.get('X-Admin-Secret') == ADMIN_SECRET
+
+
+class AdminStatsView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        if not _is_admin(request):
+            return Response({'detail': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+
+        now      = timezone.now()
+        last_24h = now - timedelta(hours=24)
+        last_7d  = now - timedelta(days=7)
+        last_30d = now - timedelta(days=30)
+
+        return Response({
+            'total_suppliers':   UserProfile.objects.filter(role='SUPPLIER').count(),
+            'total_shopkeepers': UserProfile.objects.filter(role='SHOPKEEPER').count(),
+            'total_products':    Listing.objects.filter(status='active').count(),
+            'total_orders':      Order.objects.count(),
+            'new_users_24h':     User.objects.filter(date_joined__gte=last_24h).count(),
+            'new_users_7d':      User.objects.filter(date_joined__gte=last_7d).count(),
+            'new_users_30d':     User.objects.filter(date_joined__gte=last_30d).count(),
+        })
+
+
+class AdminSuppliersView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        if not _is_admin(request):
+            return Response({'detail': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+
+        profiles = UserProfile.objects.filter(role='SUPPLIER').select_related('user')
+        results = []
+        for p in profiles:
+            results.append({
+                'id':                p.user.id,
+                'name':              p.user.first_name or p.user.email,
+                'email':             p.user.email,
+                'phone':             p.phone_number or '',
+                'profile_image_url': p.profile_image_url or '',
+                'total_listings':    Listing.objects.filter(supplier=p.user, status='active').count(),
+                'joined_date':       p.user.date_joined.strftime('%b %Y'),
+            })
+        return Response(results)
+
+
+class AdminShopkeepersView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        if not _is_admin(request):
+            return Response({'detail': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+
+        profiles = UserProfile.objects.filter(role='SHOPKEEPER').select_related('user')
+        results = []
+        for p in profiles:
+            results.append({
+                'id':                p.user.id,
+                'name':              p.user.first_name or p.user.email,
+                'email':             p.user.email,
+                'phone':             p.phone_number or '',
+                'profile_image_url': p.profile_image_url or '',
+                'total_orders':      Order.objects.filter(buyer=p.user).count(),
+                'joined_date':       p.user.date_joined.strftime('%b %Y'),
+            })
+        return Response(results)
