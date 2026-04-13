@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../hooks/useTheme';
-import { getAdminStats } from '../services/adminApi';
+import { getAdminStats, getAdminVerifications } from '../services/adminApi';
 import { fonts, spacing, radii } from '../constants/theme';
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
@@ -46,7 +46,7 @@ function ActivityRow({ label, value, loading, colors }) {
 
 // ─── Action Button ────────────────────────────────────────────────────────────
 
-function ActionButton({ icon, label, subtitle, onPress, colors }) {
+function ActionButton({ icon, label, subtitle, onPress, colors, badge }) {
   return (
     <TouchableOpacity
       style={[styles.actionBtn, { backgroundColor: colors.surface }]}
@@ -60,6 +60,11 @@ function ActionButton({ icon, label, subtitle, onPress, colors }) {
         <Text style={[styles.actionLabel, { color: colors.text }]}>{label}</Text>
         <Text style={[styles.actionSub, { color: colors.textSecondary }]}>{subtitle}</Text>
       </View>
+      {badge != null && (
+        <View style={styles.badgePill}>
+          <Text style={styles.badgeText}>{badge}</Text>
+        </View>
+      )}
       <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
     </TouchableOpacity>
   );
@@ -73,16 +78,21 @@ export default function AdminDashboardScreen() {
   const insets     = useSafeAreaInsets();
   const { adminEmail, adminLogout } = useUser();
 
-  const [stats,   setStats]   = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
+  const [stats,             setStats]             = useState(null);
+  const [loading,           setLoading]           = useState(true);
+  const [error,             setError]             = useState(null);
+  const [pendingVerifCount, setPendingVerifCount] = useState(0);
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getAdminStats();
+      const [data, verifs] = await Promise.all([
+        getAdminStats(),
+        getAdminVerifications().catch(() => []),
+      ]);
       setStats(data);
+      setPendingVerifCount(Array.isArray(verifs) ? verifs.length : 0);
     } catch (err) {
       setError(err.message || 'Failed to load stats.');
     } finally {
@@ -212,6 +222,14 @@ export default function AdminDashboardScreen() {
             onPress={() => navigation.navigate('AdminProducts')}
             colors={colors}
           />
+          <ActionButton
+            icon="shield-checkmark-outline"
+            label="Pending Verifications"
+            subtitle={loading ? 'Loading...' : `${pendingVerifCount} request${pendingVerifCount !== 1 ? 's' : ''} awaiting review`}
+            badge={pendingVerifCount > 0 ? pendingVerifCount : null}
+            onPress={() => navigation.navigate('AdminVerifications')}
+            colors={colors}
+          />
         </View>
       </ScrollView>
     </View>
@@ -323,4 +341,10 @@ const styles = StyleSheet.create({
   },
   actionLabel: { fontSize: 15, fontFamily: fonts.semiBold },
   actionSub:   { fontSize: 12, fontFamily: fonts.regular, marginTop: 2 },
+  badgePill: {
+    backgroundColor: '#EF4444', borderRadius: 12,
+    minWidth: 24, height: 24, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 7,
+  },
+  badgeText: { color: '#fff', fontSize: 12, fontFamily: fonts.bold },
 });

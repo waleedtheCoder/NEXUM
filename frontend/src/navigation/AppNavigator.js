@@ -63,15 +63,16 @@ import MoreMenuScreen           from '../screens/MoreMenuScreen';
 import EditProfileScreen        from '../screens/EditProfileScreen';
 import RestockRemindersScreen   from '../screens/RestockRemindersScreen';
 
-// ── Mode switching (modal) ───────────────────────────────────────────────────
 import ShopkeeperDashboardScreen from '../screens/ShopkeeperDashboardScreen';
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
-import AdminDashboardScreen   from '../screens/AdminDashboardScreen';
-import AdminSuppliersScreen   from '../screens/AdminSuppliersScreen';
-import AdminShopkeepersScreen from '../screens/AdminShopkeepersScreen';
-import AdminProductsScreen    from '../screens/AdminProductsScreen';
-import AdminUserDetailScreen  from '../screens/AdminUserDetailScreen';
+import AdminDashboardScreen      from '../screens/AdminDashboardScreen';
+import AdminSuppliersScreen      from '../screens/AdminSuppliersScreen';
+import AdminShopkeepersScreen    from '../screens/AdminShopkeepersScreen';
+import AdminProductsScreen       from '../screens/AdminProductsScreen';
+import AdminUserDetailScreen     from '../screens/AdminUserDetailScreen';
+import AdminVerificationsScreen  from '../screens/AdminVerificationsScreen';
+import VerificationScreen        from '../screens/VerificationScreen';
 
 const Stack = createStackNavigator();
 const Tab   = createBottomTabNavigator();
@@ -154,19 +155,19 @@ function RootStack() {
       <Stack.Screen name="EditProfile"      component={EditProfileScreen} />
       <Stack.Screen name="RestockReminders" component={RestockRemindersScreen} />
 
-      {/* ── Mode switching (slides up as modal) ─────────────────────────── */}
-      <Stack.Screen
-        name="ShopkeeperDashboard"
-        component={ShopkeeperDashboardScreen}
-        options={{ presentation: 'modal', cardOverlayEnabled: true }}
-      />
+      {/* ── Mode switching ───────────────────────────────────────────────── */}
+      <Stack.Screen name="ShopkeeperDashboard" component={ShopkeeperDashboardScreen} />
+
+      {/* ── Supplier verification ───────────────────────────────────────── */}
+      <Stack.Screen name="Verification" component={VerificationScreen} />
 
       {/* ── Admin ───────────────────────────────────────────────────────── */}
-      <Stack.Screen name="AdminDashboard"   component={AdminDashboardScreen}   />
-      <Stack.Screen name="AdminSuppliers"   component={AdminSuppliersScreen}   />
-      <Stack.Screen name="AdminShopkeepers" component={AdminShopkeepersScreen} />
-      <Stack.Screen name="AdminProducts"    component={AdminProductsScreen}    />
-      <Stack.Screen name="AdminUserDetail"  component={AdminUserDetailScreen}  />
+      <Stack.Screen name="AdminDashboard"      component={AdminDashboardScreen}     />
+      <Stack.Screen name="AdminSuppliers"      component={AdminSuppliersScreen}     />
+      <Stack.Screen name="AdminShopkeepers"    component={AdminShopkeepersScreen}   />
+      <Stack.Screen name="AdminProducts"       component={AdminProductsScreen}      />
+      <Stack.Screen name="AdminUserDetail"     component={AdminUserDetailScreen}    />
+      <Stack.Screen name="AdminVerifications"  component={AdminVerificationsScreen} />
 
     </Stack.Navigator>
   );

@@ -30,13 +30,16 @@ class AuthRateThrottle(UserRateThrottle):
 
 def _build_profile_payload(user, profile):
     return {
-        'uid':               profile.firebase_uid,
-        'email':             user.email or '',
-        'name':              user.first_name or '',
-        'role':              profile.role,
-        'phone_number':      profile.phone_number,
-        'email_verified':    profile.email_verified,
-        'profile_image_url': profile.profile_image_url or '',
+        'id':                  user.pk,
+        'uid':                 profile.firebase_uid,
+        'email':               user.email or '',
+        'name':                user.first_name or '',
+        'role':                profile.role,
+        'phone_number':        profile.phone_number,
+        'email_verified':      profile.email_verified,
+        'profile_image_url':   profile.profile_image_url or '',
+        'verification_status': profile.verification_status,
+        'is_verified':         profile.verification_status == 'verified',
     }
 
 

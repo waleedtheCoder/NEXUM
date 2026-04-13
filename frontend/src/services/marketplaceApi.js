@@ -533,6 +533,15 @@ export async function updateProfile(data, { idToken, sessionId, refreshToken, on
   });
 }
 
+// ─── Supplier Verification ───────────────────────────────────────────────────
+
+export async function requestVerification({ idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  return _fetchWithRefresh('/api/users/verification/request/', {
+    method: 'POST',
+    idToken, sessionId, refreshToken, onTokenRefreshed,
+  });
+}
+
 // ─── Profile Image Upload ─────────────────────────────────────────────────────
 
 export async function uploadProfileImage(file, { idToken, sessionId } = {}) {

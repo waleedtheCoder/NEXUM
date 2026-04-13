@@ -23,6 +23,17 @@ class UserProfile(models.Model):
     )
     profile_image_url = models.URLField(blank=True, default='')
 
+    VERIFICATION_CHOICES = (
+        ('none',    'Not Requested'),
+        ('pending', 'Pending'),
+        ('verified','Verified'),
+    )
+    verification_status = models.CharField(
+        max_length=10,
+        choices=VERIFICATION_CHOICES,
+        default='none',
+    )
+
     def __str__(self):
         return f"{self.user.username} - {self.role}"
 

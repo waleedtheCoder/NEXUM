@@ -86,3 +86,55 @@ class AdminShopkeepersView(APIView):
                 'joined_date':       p.user.date_joined.strftime('%b %Y'),
             })
         return Response(results)
+
+
+class AdminVerificationsView(APIView):
+    """
+    GET  /api/users/admin/verifications/          — list pending requests
+    POST /api/users/admin/verifications/<id>/     — approve (id = user pk)
+    """
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        if not _is_admin(request):
+            return Response({'detail': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+
+        profiles = UserProfile.objects.filter(
+            role='SUPPLIER', verification_status='pending'
+        ).select_related('user')
+
+        results = []
+        for p in profiles:
+            results.append({
+                'id':                p.user.id,
+                'name':              p.user.first_name or p.user.email,
+                'email':             p.user.email,
+                'phone':             p.phone_number or '',
+                'profile_image_url': p.profile_image_url or '',
+                'total_listings':    Listing.objects.filter(supplier=p.user, status='active').count(),
+                'joined_date':       p.user.date_joined.strftime('%b %Y'),
+            })
+        return Response(results)
+
+    def post(self, request, supplier_id=None):
+        if not _is_admin(request):
+            return Response({'detail': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if not supplier_id:
+            return Response({'detail': 'supplier_id required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            profile = UserProfile.objects.select_related('user').get(
+                user__id=supplier_id, role='SUPPLIER'
+            )
+        except UserProfile.DoesNotExist:
+            return Response({'detail': 'Supplier not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        profile.verification_status = 'verified'
+        profile.save(update_fields=['verification_status'])
+
+        # Mark all their active listings as featured
+        Listing.objects.filter(supplier=profile.user, status='active').update(is_featured=True)
+
+        return Response({'detail': 'Supplier verified.', 'id': supplier_id})

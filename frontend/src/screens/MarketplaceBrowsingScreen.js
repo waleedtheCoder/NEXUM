@@ -30,8 +30,9 @@ export default function MarketplaceBrowsingScreen() {
   const { t }      = useLanguage();
   const { idToken, sessionId, refreshToken, updateUser, city } = useUser();
 
-  const paramCategory   = route.params?.category   || null;
+  const paramCategory   = route.params?.category    || null;
   const paramOffersOnly = route.params?.offersOnly  || false;
+  const paramFeatured   = route.params?.featured    || false;
 
   const [products,   setProducts]   = useState([]);
   const [loading,    setLoading]    = useState(true);
@@ -53,6 +54,7 @@ export default function MarketplaceBrowsingScreen() {
           q: q.trim() || undefined,
           category: paramCategory || undefined,
           on_promo: paramOffersOnly || undefined,
+          featured: paramFeatured || undefined,
           city: city || undefined,
         });
         setProducts(Array.isArray(data) ? data : data.results || []);
@@ -62,7 +64,7 @@ export default function MarketplaceBrowsingScreen() {
         setLoading(false);
       }
     },
-    [activeSort, searchText, paramCategory, paramOffersOnly, city]
+    [activeSort, searchText, paramCategory, paramOffersOnly, paramFeatured, city]
   );
 
   useEffect(() => {
@@ -223,10 +225,10 @@ export default function MarketplaceBrowsingScreen() {
           <Ionicons name="arrow-back" size={20} color={colors.text} />
         </TouchableOpacity>
 
-        {(paramCategory || paramOffersOnly) ? (
+        {(paramCategory || paramOffersOnly || paramFeatured) ? (
           <>
             <Text style={styles.topBarTitle} numberOfLines={1}>
-              {paramOffersOnly ? t.home.offers : paramCategory}
+              {paramOffersOnly ? t.home.offers : paramFeatured ? t.home.featured : paramCategory}
             </Text>
             {/* Search remains available on category pages */}
             <View style={styles.searchBarCompact}>
@@ -340,7 +342,7 @@ export default function MarketplaceBrowsingScreen() {
         />
       )}
 
-      {!paramCategory && !paramOffersOnly && <BottomNav activeTab="browse" />}
+      {!paramCategory && !paramOffersOnly && !paramFeatured && <BottomNav activeTab="browse" />}
     </View>
   );
 }

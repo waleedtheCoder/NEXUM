@@ -241,7 +241,7 @@ export default function HomeScreen() {
         {(!loadingFeatured || featured.length > 0) && (
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{t.home.featuredProducts}</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('MarketplaceBrowsing')}>
+            <TouchableOpacity onPress={() => navigation.navigate('MarketplaceBrowsing', { featured: true })}>
               <Text style={styles.viewAll}>{t.home.viewAll}</Text>
             </TouchableOpacity>
           </View>

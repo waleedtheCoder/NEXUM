@@ -15,7 +15,8 @@ from .supplier_profile_view import SupplierPublicProfileView
 from .network_views import SupplierNetworkView, ToggleFavouriteSupplierView
 from .reminder_views import RemindersView, ReminderDetailView
 from .profile_image_view import ProfileImageUploadView
-from .admin_views import AdminStatsView, AdminSuppliersView, AdminShopkeepersView
+from .admin_views import AdminStatsView, AdminSuppliersView, AdminShopkeepersView, AdminVerificationsView
+from .verification_view import SupplierVerificationView
 
 urlpatterns = [
     # ── Auth ─────────────────────────────────────────────────────────────
@@ -37,8 +38,12 @@ urlpatterns = [
     path('supplier/<int:supplier_id>/',  SupplierPublicProfileView.as_view(),   name='supplier-profile'),
     path('network/',                     SupplierNetworkView.as_view(),         name='supplier-network'),
     path('network/toggle/',              ToggleFavouriteSupplierView.as_view(), name='network-toggle'),
+    # ── Verification ─────────────────────────────────────────────────────
+    path('verification/request/', SupplierVerificationView.as_view(), name='verification-request'),
     # ── Admin ────────────────────────────────────────────────────────────
-    path('admin/stats/',       AdminStatsView.as_view(),       name='admin-stats'),
-    path('admin/suppliers/',   AdminSuppliersView.as_view(),   name='admin-suppliers'),
-    path('admin/shopkeepers/', AdminShopkeepersView.as_view(), name='admin-shopkeepers'),
+    path('admin/stats/',                        AdminStatsView.as_view(),          name='admin-stats'),
+    path('admin/suppliers/',                    AdminSuppliersView.as_view(),      name='admin-suppliers'),
+    path('admin/shopkeepers/',                  AdminShopkeepersView.as_view(),    name='admin-shopkeepers'),
+    path('admin/verifications/',                AdminVerificationsView.as_view(),  name='admin-verifications'),
+    path('admin/verifications/<int:supplier_id>/', AdminVerificationsView.as_view(), name='admin-verification-approve'),
 ]

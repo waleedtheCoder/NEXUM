@@ -20,7 +20,7 @@ const getMenuItems = (t) => [
   { titleKey: 'incomingOrders', descKey: 'incomingOrdersDesc',  icon: 'receipt-outline',          screen: 'IncomingOrders', iconBg: '#FFF1E6', iconColor: '#F97316', badge: 'New' },
   { titleKey: 'businessProfile',descKey: 'businessProfileDesc', icon: 'business-outline',         screen: 'EditProfile',  iconBg: '#E6F4FF', iconColor: '#0F766E' },
   { titleKey: 'payoutBanking',  descKey: 'payoutDesc',          icon: 'card-outline',             screen: null,           iconBg: '#F0FDF4', iconColor: '#22C55E' },
-  { titleKey: 'verifiedBadge',  descKey: 'verifiedBadgeDesc',   icon: 'shield-checkmark-outline', screen: null,           iconBg: '#F0FDF4', iconColor: '#22C55E' },
+  { titleKey: 'getVerified',    descKey: 'getVerifiedDesc',     icon: 'shield-checkmark-outline', screen: 'Verification', iconBg: '#F0FDF4', iconColor: '#22C55E' },
   { titleKey: 'promoteListings',descKey: 'promoteDesc',         icon: 'trending-up-outline',      screen: null,           iconBg: '#FFF1E6', iconColor: '#F97316' },
   { titleKey: 'inviteRetailers',descKey: 'inviteDesc',          icon: 'person-add-outline',       screen: null,           iconBg: '#E6F4FF', iconColor: '#0F766E' },
 ];
@@ -98,10 +98,12 @@ export default function SupplierAccountScreen() {
           <View>
             <Text style={styles.name}>{user?.name || 'Supplier'}</Text>
             <Text style={styles.role}>Supplier Account</Text>
-            <View style={styles.verifiedRow}>
-              <Ionicons name="checkmark-circle" size={14} color={colors.green} />
-              <Text style={styles.verifiedText}>{t.supplierAccount.verified}</Text>
-            </View>
+            {user?.is_verified && (
+              <View style={styles.verifiedRow}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.green} />
+                <Text style={styles.verifiedText}>{t.supplierAccount.verified}</Text>
+              </View>
+            )}
           </View>
         </View>
         <TouchableOpacity

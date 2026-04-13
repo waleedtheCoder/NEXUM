@@ -229,6 +229,13 @@ class CreateListingView(APIView):
         # Derive a human-readable location string from the selected cities
         location = ', '.join(cities) if cities else 'Pakistan'
 
+        # Auto-feature listing if supplier is verified
+        is_verified = False
+        try:
+            is_verified = request.user.profile.verification_status == 'verified'
+        except Exception:
+            pass
+
         listing = Listing.objects.create(
             supplier=request.user,
             product_name=d['productName'],
@@ -243,6 +250,7 @@ class CreateListingView(APIView):
             cities=cities,
             image_url=d.get('imageUrl', ''),
             status='pending',   # requires approval before going live
+            is_featured=is_verified,
         )
 
         # Return in the myListing shape so MyListingsScreen can show it immediately
@@ -383,12 +391,6 @@ class SupplierDashboardView(APIView):
                 'value': str(total_inquiries),
                 'icon': 'chatbubble-outline',
                 'color': '#F59E0B',
-            },
-            {
-                'label': 'Avg. Response',
-                'value': 'N/A',
-                'icon': 'time-outline',
-                'color': '#8B5CF6',
             },
         ]
 

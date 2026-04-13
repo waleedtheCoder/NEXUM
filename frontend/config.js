@@ -10,5 +10,5 @@
 // export default config;
 
 export default {
-  BACKEND_URL: 'http://10.135.84.4:8000',
+  BACKEND_URL: 'http://192.168.0.134:8000',
 };

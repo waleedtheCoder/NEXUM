@@ -24,7 +24,7 @@ export default function ProductDetailScreen() {
   const navigation = useNavigation();
   const route      = useRoute();
   const insets     = useSafeAreaInsets();
-  const { idToken, sessionId, refreshToken, isLoggedIn, updateUser } = useUser();
+  const { idToken, sessionId, refreshToken, isLoggedIn, updateUser, user } = useUser();
 
   const stub = route.params?.product;
   const [product, setProduct]           = useState(stub || null);
@@ -143,6 +143,10 @@ export default function ProductDetailScreen() {
         { text: t.productDetail.cancel, style: 'cancel' },
         { text: t.common.signIn, onPress: () => navigation.navigate('SavedAccountLogin') },
       ]);
+      return;
+    }
+    if (product?.seller?.id && user?.id && product.seller.id === user.id) {
+      Alert.alert(t.productDetail.ownListing, t.productDetail.ownListingOrder);
       return;
     }
     setOrderQty('1');
