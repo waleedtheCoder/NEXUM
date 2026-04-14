@@ -1,0 +1,378 @@
+/**
+ * RestockRemindersScreen.js
+ *
+ * Set and manage restock reminders for frequently ordered products.
+ * Route name: RestockReminders
+ * Accessible from: AccountSettingsScreen → Restock Reminders
+ *
+ * Storage: synced with backend (GET/POST/PATCH/DELETE /api/users/reminders/)
+ * Each reminder: { id, product, quantity, unit, active }
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, FlatList,
+  StyleSheet, StatusBar, Alert, Modal, Switch, ActivityIndicator,
+} from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { SkeletonCardRow } from '../components/SkeletonLoader';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { fonts, spacing, radii, shadows } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
+import { useUser } from '../context/UserContext';
+import { getReminders, createReminder, updateReminder, deleteReminder } from '../services/marketplaceApi';
+
+const UNITS = ['kg', 'bags', 'boxes', 'cartons', 'pieces', 'liters', 'bottles'];
+
+const SUGGESTIONS = [
+  'Basmati Rice', 'Wheat Flour', 'Sugar', 'Cooking Oil', 'Salt',
+  'Lentils', 'Chickpeas', 'Tea', 'Biscuits', 'Soap',
+];
+
+export default function RestockRemindersScreen() {
+  const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
+  const styles = makeStyles(colors);
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const { idToken, sessionId, refreshToken, updateUser } = useUser();
+
+  const authArgs = {
+    idToken, sessionId, refreshToken,
+    onTokenRefreshed: (t) => updateUser({ idToken: t }),
+  };
+
+  const [reminders, setReminders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [product, setProduct] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [unit, setUnit] = useState('kg');
+  const [showUnitPicker, setShowUnitPicker] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const fetchReminders = useCallback(async () => {
+    try {
+      const data = await getReminders(authArgs);
+      setReminders(Array.isArray(data) ? data : []);
+    } catch {
+      // silent — show empty list
+    } finally {
+      setLoading(false);
+    }
+  }, [idToken, sessionId]);
+
+  useFocusEffect(useCallback(() => {
+    fetchReminders();
+  }, [fetchReminders]));
+
+  const handleAdd = async () => {
+    const trimProduct = product.trim();
+    const trimQty = quantity.trim();
+    if (!trimProduct) { Alert.alert(t.restockReminders.required, t.restockReminders.enterProductName); return; }
+    if (!trimQty || isNaN(Number(trimQty)) || Number(trimQty) <= 0) {
+      Alert.alert(t.restockReminders.required, t.restockReminders.enterValidQty);
+      return;
+    }
+    setSaving(true);
+    try {
+      const newReminder = await createReminder(
+        { product: trimProduct, quantity: trimQty, unit, active: true },
+        authArgs,
+      );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setReminders((prev) => [newReminder, ...prev]);
+      setProduct('');
+      setQuantity('');
+      setUnit('kg');
+      setModalOpen(false);
+    } catch (err) {
+      Alert.alert(t.restockReminders.required, err.message || t.restockReminders.saveFailed);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggle = async (item) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const updated = { ...item, active: !item.active };
+    setReminders((prev) => prev.map((r) => r.id === item.id ? updated : r));
+    try {
+      await updateReminder(item.id, { active: updated.active }, authArgs);
+    } catch {
+      // revert
+      setReminders((prev) => prev.map((r) => r.id === item.id ? item : r));
+    }
+  };
+
+  const handleDelete = (item) => {
+    Alert.alert(t.restockReminders.deleteTitle, t.restockReminders.deleteMsg, [
+      { text: t.common.cancel, style: 'cancel' },
+      {
+        text: t.restockReminders.delete,
+        style: 'destructive',
+        onPress: async () => {
+          setReminders((prev) => prev.filter((r) => r.id !== item.id));
+          try {
+            await deleteReminder(item.id, authArgs);
+          } catch {
+            setReminders((prev) => [item, ...prev]);
+            Alert.alert(t.restockReminders.deleteTitle, t.restockReminders.deleteFailed);
+          }
+        },
+      },
+    ]);
+  };
+
+  const renderItem = ({ item }) => (
+    <View style={[styles.card, !item.active && styles.cardInactive]}>
+      <View style={[styles.cardIcon, { backgroundColor: item.active ? `${colors.primary}18` : colors.border }]}>
+        <Ionicons name="repeat-outline" size={20} color={item.active ? colors.primary : colors.textLight} />
+      </View>
+      <View style={styles.cardBody}>
+        <Text style={[styles.cardProduct, !item.active && styles.textMuted]}>{item.product}</Text>
+        <Text style={styles.cardQty}>Remind when below {item.quantity} {item.unit}</Text>
+      </View>
+      <Switch
+        value={item.active}
+        onValueChange={() => handleToggle(item)}
+        trackColor={{ false: colors.border, true: `${colors.primary}60` }}
+        thumbColor={item.active ? colors.primary : '#fff'}
+        style={{ marginRight: 8 }}
+      />
+      <TouchableOpacity onPress={() => handleDelete(item)} style={styles.deleteBtn}>
+        <Ionicons name="trash-outline" size={18} color={colors.accent} />
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={22} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t.restockReminders.title}</Text>
+        <TouchableOpacity onPress={() => setModalOpen(true)} style={styles.addBtn}>
+          <Ionicons name="add" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      {loading ? (
+        <View style={{ padding: spacing.md }}>
+          {[1, 2, 3, 4].map((i) => <SkeletonCardRow key={i} />)}
+        </View>
+      ) : (
+        <FlatList
+          data={reminders}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="repeat-outline" size={52} color={colors.textLight} />
+              <Text style={styles.emptyTitle}>{t.restockReminders.none}</Text>
+              <Text style={styles.emptySub}>
+                {t.restockReminders.noneSubtext}
+              </Text>
+              <TouchableOpacity style={styles.emptyBtn} onPress={() => setModalOpen(true)}>
+                <Ionicons name="add" size={18} color="#fff" />
+                <Text style={styles.emptyBtnText}>{t.restockReminders.addFirst}</Text>
+              </TouchableOpacity>
+            </View>
+          }
+          ListHeaderComponent={
+            reminders.length > 0 ? (
+              <View style={styles.listHeader}>
+                <Text style={styles.listHeaderText}>
+                  {reminders.filter((r) => r.active).length} active · {reminders.length} total
+                </Text>
+                <TouchableOpacity onPress={() => setModalOpen(true)} style={styles.addInlineBtn}>
+                  <Ionicons name="add" size={16} color={colors.primary} />
+                  <Text style={styles.addInlineBtnText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null
+          }
+        />
+      )}
+
+      <Modal visible={modalOpen} transparent animationType="slide" onRequestClose={() => setModalOpen(false)}>
+        <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setModalOpen(false)} />
+        <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 16 }]}>
+
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{t.restockReminders.newReminder}</Text>
+            <TouchableOpacity onPress={() => setModalOpen(false)}>
+              <Ionicons name="close" size={22} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.inputLabel}>{t.restockReminders.productName}</Text>
+          <TextInput
+            style={styles.textInput}
+            value={product}
+            onChangeText={setProduct}
+            placeholder={t.restockReminders.productPlaceholder}
+            placeholderTextColor={colors.textLight}
+            autoCorrect={false}
+          />
+
+          <View style={styles.suggestions}>
+            {SUGGESTIONS.filter((s) => !reminders.some((r) => r.product === s)).slice(0, 5).map((s) => (
+              <TouchableOpacity key={s} style={styles.chip} onPress={() => setProduct(s)}>
+                <Text style={styles.chipText}>{s}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.inputLabel}>{t.restockReminders.remindBelow}</Text>
+          <View style={styles.qtyRow}>
+            <TextInput
+              style={[styles.textInput, styles.qtyInput]}
+              value={quantity}
+              onChangeText={setQuantity}
+              placeholder="50"
+              placeholderTextColor={colors.textLight}
+              keyboardType="numeric"
+              returnKeyType="done"
+            />
+            <TouchableOpacity style={styles.unitSelector} onPress={() => setShowUnitPicker(!showUnitPicker)}>
+              <Text style={styles.unitText}>{unit}</Text>
+              <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {showUnitPicker && (
+            <View style={styles.unitPicker}>
+              {UNITS.map((u) => (
+                <TouchableOpacity
+                  key={u}
+                  style={[styles.unitOption, u === unit && styles.unitOptionActive]}
+                  onPress={() => { setUnit(u); setShowUnitPicker(false); }}
+                >
+                  <Text style={[styles.unitOptionText, u === unit && styles.unitOptionTextActive]}>{u}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          <TouchableOpacity style={[styles.addButton, saving && { opacity: 0.6 }]} onPress={handleAdd} disabled={saving}>
+            {saving
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={styles.addButtonText}>{t.restockReminders.addReminder}</Text>
+            }
+          </TouchableOpacity>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const makeStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  header: {
+    backgroundColor: colors.primary, flexDirection: 'row',
+    alignItems: 'center', paddingHorizontal: spacing.md, paddingBottom: 14,
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.2)',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25, shadowRadius: 14, elevation: 10,
+  },
+  backBtn:     { padding: 4, marginRight: 4 },
+  headerTitle: { flex: 1, fontSize: 18, fontFamily: fonts.semiBold, color: '#fff', textAlign: 'center' },
+  addBtn:      { padding: 4 },
+
+  listContent: { padding: spacing.md, paddingBottom: 32, flexGrow: 1 },
+  listHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12,
+  },
+  listHeaderText:   { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
+  addInlineBtn:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  addInlineBtnText: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary },
+
+  card: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: colors.surface, borderRadius: radii.xl,
+    paddingHorizontal: spacing.md, paddingVertical: 14,
+    marginBottom: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.09, shadowRadius: 10, elevation: 6,
+  },
+  cardInactive: { opacity: 0.55 },
+  cardIcon:  { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  cardBody:  { flex: 1 },
+  cardProduct: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 2 },
+  cardQty:   { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
+  textMuted: { color: colors.textLight },
+  deleteBtn: { padding: 4 },
+
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingTop: 80 },
+  emptyTitle: { fontSize: 18, fontFamily: fonts.semiBold, color: colors.text },
+  emptySub:   { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center', paddingHorizontal: 24 },
+  emptyBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8,
+    backgroundColor: colors.primary, borderRadius: radii.xl, paddingHorizontal: 20, paddingVertical: 12,
+    borderBottomWidth: 4, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
+  },
+  emptyBtnText: { color: '#fff', fontSize: 14, fontFamily: fonts.semiBold },
+
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalSheet: {
+    backgroundColor: colors.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    padding: spacing.lg,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.12, shadowRadius: 16, elevation: 20,
+  },
+  modalHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
+  modalTitle:   { fontSize: 18, fontFamily: fonts.semiBold, color: colors.text },
+  inputLabel:   { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 },
+  textInput: {
+    backgroundColor: colors.surface, borderRadius: radii.lg,
+    paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 15, fontFamily: fonts.regular, color: colors.text, marginBottom: spacing.md,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07, shadowRadius: 8, elevation: 4,
+  },
+  suggestions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -8, marginBottom: spacing.md },
+  chip: {
+    backgroundColor: `${colors.primary}12`, borderRadius: radii.full,
+    borderWidth: 1, borderColor: `${colors.primary}30`, paddingHorizontal: 12, paddingVertical: 6,
+  },
+  chipText: { fontSize: 12, fontFamily: fonts.medium, color: colors.primary },
+  qtyRow: { flexDirection: 'row', gap: 10 },
+  qtyInput: { flex: 1, marginBottom: 0 },
+  unitSelector: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: colors.surface, borderRadius: radii.lg,
+    paddingHorizontal: 14, paddingVertical: 12, marginBottom: spacing.md,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07, shadowRadius: 8, elevation: 4,
+  },
+  unitText: { fontSize: 15, fontFamily: fonts.regular, color: colors.text },
+  unitPicker: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -8, marginBottom: spacing.md },
+  unitOption: {
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: radii.full,
+    borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background,
+  },
+  unitOptionActive:     { backgroundColor: colors.primary, borderColor: colors.primary },
+  unitOptionText:       { fontSize: 13, fontFamily: fonts.medium, color: colors.textSecondary },
+  unitOptionTextActive: { color: '#fff' },
+  addButton: {
+    backgroundColor: colors.primary, borderRadius: radii.xl,
+    paddingVertical: 15, alignItems: 'center', marginTop: 8,
+    borderBottomWidth: 4, borderBottomColor: '#0a524d',
+    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.35)',
+  },
+  addButtonText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
+});

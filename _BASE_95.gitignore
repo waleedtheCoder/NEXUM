@@ -1,0 +1,7 @@
+﻿**/node_modules/
+**/.expo/
+**/venv/
+**/__pycache__/
+db.sqlite3
+.env
+backend/firebase-adminsdk.json

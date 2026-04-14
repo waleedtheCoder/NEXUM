@@ -14,7 +14,7 @@ function normalizeRoleFromApi(role) {
   const value = String(role || '').trim().toUpperCase();
   if (value === 'SUPPLIER') return 'supplier';
   if (value === 'SHOPKEEPER') return 'shopkeeper';
-  if (value === 'CUSTOMER') return 'shopkeeper';
+  if (value === 'CUSTOMER') return 'customer';
   return 'shopkeeper';
 }
 
@@ -111,33 +111,6 @@ export async function createGuestSessionFromBackend() {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new Error(payload?.detail || payload?.message || 'Unable to create guest session.');
-  }
-
-  return payload;
-}
-
-export async function rotateSessionWithBackend({ sessionId, idToken }) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-
-  let response;
-  try {
-    response = await fetch(`${BASE_URL}/api/users/auth/rotate-session/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(sessionId ? { 'X-Session-ID': sessionId } : {}),
-        ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
-      },
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(payload?.detail || payload?.message || 'Unable to rotate session.');
   }
 
   return payload;

@@ -7,10 +7,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
+import BubblyButton from '../components/BubblyButton';
 import { resetPasswordWithBackend } from '../services/authApi';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 
-function Rule({ valid, text }) {
+function Rule({ valid, text, styles }) {
   return (
     <View style={styles.ruleRow}>
       <View style={[styles.ruleDot, valid ? styles.valid : styles.invalid]}>
@@ -22,6 +25,9 @@ function Rule({ valid, text }) {
 }
 
 export default function ResetPasswordScreen() {
+  const { colors } = useTheme();
+  const { t } = useLanguage();
+  const styles = makeStyles(colors);
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
@@ -41,46 +47,41 @@ export default function ResetPasswordScreen() {
   const allValid = Object.values(rules).every(Boolean);
 
   const handleVerify = async () => {
-    if (!allValid) { Alert.alert('Error', 'Password does not meet requirements.'); return; }
-    if (newPass !== confirm) { Alert.alert('Error', 'Passwords do not match.'); return; }
+    if (!allValid) { Alert.alert(t.common.error, t.resetPassword.reqsNotMet); return; }
+    if (newPass !== confirm) { Alert.alert(t.common.error, t.resetPassword.mismatch); return; }
     if (!email || !otp) {
-      Alert.alert('Error', 'Reset session expired. Please request OTP again.');
+      Alert.alert(t.common.error, t.resetPassword.sessionExpired);
       navigation.reset({ index: 0, routes: [{ name: 'ForgotPassword' }] });
       return;
     }
-
     try {
       setLoading(true);
       await resetPasswordWithBackend({
         email: String(email).trim().toLowerCase(),
-        otp,
-        newPassword: newPass,
+        otp, newPassword: newPass,
       });
       setLoading(false);
-      Alert.alert('Success', 'Password reset successful. Please sign in.', [
-        { text: 'OK', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }) },
+      Alert.alert(t.resetPassword.success, t.resetPassword.successMsg, [
+        { text: t.common.confirm, onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }) },
       ]);
     } catch (err) {
       setLoading(false);
-      Alert.alert('Reset Failed', err?.message || 'Unable to reset password.');
+      Alert.alert(t.resetPassword.failed, err?.message || t.resetPassword.failedMsg);
     }
   };
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title="Reset Password" showBack />
+      <ScreenHeader title={t.resetPassword.title} subtitle={t.resetPassword.subtitle} showBack />
 
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Text style={styles.message}>
-          Your security is our priority. Reset your password to continue managing your wholesale account.
-        </Text>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
 
-        <Text style={styles.label}>New Password *</Text>
-        <View style={styles.passWrap}>
+        <Text style={styles.label}>{t.resetPassword.newPassword} *</Text>
+        <View style={styles.inputTile}>
           <TextInput
             style={styles.passInput} value={newPass} onChangeText={setNewPass}
-            secureTextEntry={!showNew} placeholder="Enter new password"
+            secureTextEntry={!showNew} placeholder={t.resetPassword.newPasswordPlaceholder}
             placeholderTextColor={colors.textLight}
           />
           <TouchableOpacity onPress={() => setShowNew(!showNew)}>
@@ -88,11 +89,11 @@ export default function ResetPasswordScreen() {
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.label}>Confirm Password *</Text>
-        <View style={styles.passWrap}>
+        <Text style={styles.label}>{t.resetPassword.confirmPassword} *</Text>
+        <View style={styles.inputTile}>
           <TextInput
             style={styles.passInput} value={confirm} onChangeText={setConfirm}
-            secureTextEntry={!showConfirm} placeholder="Re-enter new password"
+            secureTextEntry={!showConfirm} placeholder={t.resetPassword.confirmPlaceholder}
             placeholderTextColor={colors.textLight}
           />
           <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
@@ -101,42 +102,56 @@ export default function ResetPasswordScreen() {
         </View>
 
         <View style={styles.rulesBox}>
-          <Text style={styles.rulesTitle}>Password must contain:</Text>
-          <Rule valid={rules.minLength} text="At least 8 characters" />
-          <Rule valid={rules.hasNumber} text="One number" />
-          <Rule valid={rules.hasLetter} text="One letter" />
-          <Rule valid={rules.hasSpecial} text="One special character (@, #, $, %, etc.)" />
+          <Text style={styles.rulesTitle}>{t.resetPassword.passwordReqs}</Text>
+          <Rule valid={rules.minLength} text={t.resetPassword.req8chars} styles={styles} />
+          <Rule valid={rules.hasNumber} text={t.resetPassword.reqNumber} styles={styles} />
+          <Rule valid={rules.hasLetter} text={t.resetPassword.reqLetter} styles={styles} />
+          <Rule valid={rules.hasSpecial} text={t.resetPassword.reqSpecial} styles={styles} />
         </View>
 
-        <TouchableOpacity
-          style={[styles.verifyBtn, (!allValid || loading) && styles.verifyBtnDisabled]}
-          onPress={handleVerify} disabled={!allValid || loading}
-        >
-          <Text style={styles.verifyBtnText}>{loading ? 'Resetting...' : 'Reset Password'}</Text>
-        </TouchableOpacity>
+        <BubblyButton
+          label={loading ? t.resetPassword.resetting : t.resetPassword.reset}
+          onPress={handleVerify}
+          disabled={!allValid || loading}
+          loading={loading}
+          variant="accent"
+          colors={colors}
+          style={styles.verifyOverride}
+        />
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { padding: spacing.lg, paddingBottom: 32 },
-  message: {
-    textAlign: 'center', color: colors.primary, fontSize: 13,
-    fontFamily: fonts.regular, lineHeight: 20, marginBottom: spacing.lg,
-  },
   label: { color: colors.primary, fontSize: 13, fontFamily: fonts.medium, marginBottom: 6, marginTop: 14 },
-  passWrap: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-    borderRadius: radii.md, paddingHorizontal: 14, marginBottom: 4,
+  inputTile: {
+    backgroundColor: colors.surface,
+    borderRadius: radii.md,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  passInput: { flex: 1, paddingVertical: 12, fontSize: 14, fontFamily: fonts.regular, color: colors.text },
+  passInput: { flex: 1, paddingVertical: 13, fontSize: 14, fontFamily: fonts.regular, color: colors.text },
   rulesBox: {
-    backgroundColor: colors.surface, borderRadius: radii.md,
-    borderWidth: 1, borderColor: colors.border, padding: 14,
-    marginTop: spacing.md, gap: 8,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: 14,
+    marginTop: spacing.md,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 4,
   },
   rulesTitle: { fontSize: 13, fontFamily: fonts.medium, color: colors.text, marginBottom: 4 },
   ruleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -145,10 +160,5 @@ const styles = StyleSheet.create({
   invalid: { backgroundColor: '#E5E7EB' },
   ruleText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
   ruleTextValid: { color: colors.green },
-  verifyBtn: {
-    backgroundColor: colors.accent, borderRadius: radii.md,
-    paddingVertical: 15, alignItems: 'center', marginTop: spacing.xl,
-  },
-  verifyBtnDisabled: { opacity: 0.45 },
-  verifyBtnText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
+  verifyOverride: { marginTop: spacing.xl },
 });
