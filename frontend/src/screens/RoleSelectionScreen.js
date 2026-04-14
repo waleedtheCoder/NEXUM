@@ -9,6 +9,7 @@ import BubblyButton from '../components/BubblyButton';
 import { useUser } from '../context/UserContext';
 import { useTheme } from '../hooks/useTheme';
 import { fonts, spacing, radii } from '../constants/theme';
+import { updateProfile } from '../services/marketplaceApi';
 
 const ROLES = [
   {
@@ -30,11 +31,19 @@ export default function RoleSelectionScreen() {
   const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { setUserRole } = useUser();
+  const { setUserRole, idToken, sessionId, refreshToken, updateUser } = useUser();
   const [selected, setSelected] = useState('shopkeeper');
 
   const handleNext = async () => {
     await setUserRole(selected);
+    try {
+      await updateProfile(
+        { role: selected === 'supplier' ? 'SUPPLIER' : 'SHOPKEEPER' },
+        { idToken, sessionId, refreshToken, onTokenRefreshed: (t) => updateUser({ idToken: t }) },
+      );
+    } catch (_) {
+      // Non-fatal: local role is already saved; backend sync can retry on next login
+    }
     navigation.navigate(selected === 'supplier' ? 'SupplierPhone' : 'ShopkeeperCity');
   };
 
@@ -81,9 +90,6 @@ export default function RoleSelectionScreen() {
       </View>
 
       <View style={styles.footer}>
-        <PressableBounce style={styles.skipBtn} onPress={() => navigation.navigate(selected === 'supplier' ? 'SupplierPhone' : 'ShopkeeperCity')}>
-          <Text style={styles.skipText}>Skip</Text>
-        </PressableBounce>
         <BubblyButton
           label="Next"
           onPress={handleNext}
@@ -165,11 +171,5 @@ const makeStyles = (colors) => StyleSheet.create({
   },
 
   footer: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  skipBtn: {
-    flex: 1, paddingVertical: 14, borderRadius: radii.lg,
-    borderWidth: 1.5, borderColor: colors.border, alignItems: 'center',
-    backgroundColor: colors.surface,
-  },
-  skipText: { fontSize: 15, fontFamily: fonts.medium, color: colors.textSecondary },
-  nextBtnOverride: { flex: 2 },
+  nextBtnOverride: { flex: 1 },
 });

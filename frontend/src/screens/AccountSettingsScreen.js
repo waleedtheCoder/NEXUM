@@ -12,7 +12,7 @@ import { useUser } from '../context/UserContext';
 import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
-import { getOrders } from '../services/marketplaceApi';
+import { getOrders, getSavedListings, getSupplierNetwork } from '../services/marketplaceApi';
 
 // icon, iconBg: pastel background color for the 44×44 icon container
 const getMenuItems = (t) => [
@@ -43,6 +43,8 @@ export default function AccountSettingsScreen() {
   const [orders,        setOrders]        = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError,   setOrdersError]   = useState(null);
+  const [savedCount,    setSavedCount]    = useState(null);
+  const [suppliersCount, setSuppliersCount] = useState(null);
 
   const authArgs = { idToken, sessionId, refreshToken, onTokenRefreshed: (t) => updateUser({ idToken: t }) };
 
@@ -50,19 +52,27 @@ export default function AccountSettingsScreen() {
     useCallback(() => {
       if (!isShopkeeper) return;
       let cancelled = false;
-      const fetch = async () => {
+      const fetchAll = async () => {
         setOrdersLoading(true);
         setOrdersError(null);
         try {
-          const data = await getOrders(authArgs);
-          if (!cancelled) setOrders(Array.isArray(data) ? data : (data.results || []));
+          const [ordersData, savedData, networkData] = await Promise.all([
+            getOrders(authArgs),
+            getSavedListings(authArgs).catch(() => []),
+            getSupplierNetwork(authArgs).catch(() => []),
+          ]);
+          if (!cancelled) {
+            setOrders(Array.isArray(ordersData) ? ordersData : (ordersData.results || []));
+            setSavedCount((Array.isArray(savedData) ? savedData : []).length);
+            setSuppliersCount((Array.isArray(networkData) ? networkData : []).length);
+          }
         } catch (err) {
           if (!cancelled) setOrdersError(err.message || 'Failed to load orders.');
         } finally {
           if (!cancelled) setOrdersLoading(false);
         }
       };
-      fetch();
+      fetchAll();
       return () => { cancelled = true; };
     }, [idToken, sessionId, isShopkeeper])
   );
@@ -165,9 +175,9 @@ export default function AccountSettingsScreen() {
         {/* Translucent stat chips */}
         <View style={styles.statChipsRow}>
           {[
-            { label: t.accountSettings.orders,    value: ordersLoading ? '…' : String(orders.length), onPress: () => navigation.navigate('OrderHistory') },
-            { label: t.accountSettings.saved,     value: '—', onPress: () => navigation.navigate('SavedListings') },
-            { label: t.accountSettings.suppliers, value: '—', onPress: null },
+            { label: t.accountSettings.orders,    value: ordersLoading ? '…' : String(orders.length),                       onPress: () => navigation.navigate('OrderHistory') },
+            { label: t.accountSettings.saved,     value: savedCount === null ? '…' : String(savedCount),     onPress: () => navigation.navigate('SavedListings') },
+            { label: t.accountSettings.suppliers, value: suppliersCount === null ? '…' : String(suppliersCount), onPress: () => navigation.navigate('SupplierNetwork') },
           ].map((chip, i) => (
             <TouchableOpacity
               key={i}

@@ -30,7 +30,7 @@ export default function ProductDetailScreen() {
   const [product, setProduct]           = useState(stub || null);
   const [loading, setLoading]           = useState(!stub?.details);
   const [error, setError]               = useState(null);
-  const [saved, setSaved]               = useState(false);
+  const [saved, setSaved]               = useState(!!stub?.is_saved);
   const [savingInFlight, setSavingInFlight] = useState(false);
   const [chatLoading, setChatLoading]   = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
@@ -52,8 +52,14 @@ export default function ProductDetailScreen() {
     (async () => {
       setLoading(true);
       try {
-        const data = await getListingDetail(stub.id);
-        if (!cancelled) setProduct(data);
+        const data = await getListingDetail(stub.id, {
+          idToken, sessionId, refreshToken,
+          onTokenRefreshed: (t) => updateUser({ idToken: t }),
+        });
+        if (!cancelled) {
+          setProduct(data);
+          setSaved(!!data.is_saved);
+        }
       } catch (err) {
         if (!cancelled) setError(err.message || 'Failed to load product.');
       } finally {
