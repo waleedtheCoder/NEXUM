@@ -5,5 +5,6 @@
 db.sqlite3
 .env
 backend/firebase-adminsdk.json
+info.md
+.claude
 SESSION_ID_GUIDE.md
-.claude/

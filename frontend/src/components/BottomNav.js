@@ -1,158 +1,68 @@
-// import React from 'react';
-// import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
-// import { Ionicons } from '@expo/vector-icons';
-// import { useNavigation, useRoute } from '@react-navigation/native';
-// import { colors, fonts } from '../constants/theme';
-
-// const TAB_MAP = {
-//   Home: 'home',
-//   MyListings: 'listings',
-//   CategorySelection: 'sell',
-//   ChatList: 'chat',
-//   AccountSettings: 'account',
-// };
-
-// export default function BottomNav({ activeTab }) {
-//   const navigation = useNavigation();
-//   const route = useRoute();
-
-//   // Auto-derive from route name if not explicitly passed
-//   const derived = activeTab || TAB_MAP[route.name] || 'home';
-
-//   const tabs = [
-//     { key: 'home',     label: 'Home',     icon: 'home',              screen: 'Home' },
-//     { key: 'listings', label: 'Listings', icon: 'cube-outline',       screen: 'MyListings' },
-//     { key: 'sell',     label: 'Sell',     icon: 'add-circle',         screen: 'CategorySelection', isFAB: true },
-//     { key: 'chat',     label: 'Chat',     icon: 'chatbubble-outline',  screen: 'ChatList' },
-//     { key: 'account',  label: 'Account',  icon: 'person-outline',     screen: 'AccountSettings' },
-//   ];
-
-//   return (
-//     <View style={styles.container}>
-//       {tabs.map((tab) => {
-//         const isActive = derived === tab.key;
-
-//         if (tab.isFAB) {
-//           return (
-//             <TouchableOpacity
-//               key={tab.key}
-//               style={styles.fabWrapper}
-//               onPress={() => navigation.navigate(tab.screen)}
-//             >
-//               <View style={styles.fab}>
-//                 <Ionicons name="add" size={28} color="#fff" />
-//               </View>
-//               <Text style={[styles.label, { color: colors.accent }]}>{tab.label}</Text>
-//             </TouchableOpacity>
-//           );
-//         }
-
-//         return (
-//           <TouchableOpacity
-//             key={tab.key}
-//             style={styles.tab}
-//             onPress={() => navigation.navigate(tab.screen)}
-//           >
-//             <Ionicons
-//               name={isActive ? tab.icon.replace('-outline', '') : tab.icon}
-//               size={24}
-//               color={isActive ? colors.primary : colors.textSecondary}
-//             />
-//             <Text style={[styles.label, { color: isActive ? colors.primary : colors.textSecondary }]}>
-//               {tab.label}
-//             </Text>
-//           </TouchableOpacity>
-//         );
-//       })}
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flexDirection: 'row',
-//     backgroundColor: colors.surface,
-//     borderTopWidth: 1,
-//     borderTopColor: colors.border,
-//     paddingVertical: 8,
-//     paddingHorizontal: 4,
-//   },
-//   tab: {
-//     flex: 1,
-//     alignItems: 'center',
-//     gap: 2,
-//   },
-//   fabWrapper: {
-//     flex: 1,
-//     alignItems: 'center',
-//     marginTop: -20,
-//   },
-//   fab: {
-//     backgroundColor: colors.accent,
-//     width: 52,
-//     height: 52,
-//     borderRadius: 26,
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//     shadowColor: colors.accent,
-//     shadowOffset: { width: 0, height: 4 },
-//     shadowOpacity: 0.4,
-//     shadowRadius: 6,
-//     elevation: 6,
-//   },
-//   label: {
-//     fontSize: 10,
-//     fontFamily: fonts.medium,
-//     marginTop: 2,
-//   },
-// });
+// BottomNav — floating pill redesign.
+//
+// Sits inside the layout flow (not absolutely positioned) but appears to float
+// via marginHorizontal: 12, marginBottom: 8, and a strong drop shadow.
+//
+// Light mode : teal primary background, white icons.
+// Dark mode  : dark surface background, white icons.
+// Active tab : frosted inner pill (rgba(255,255,255,0.22)).
 
 import React from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUser } from '../context/UserContext';
-import { colors, fonts } from '../constants/theme';
+import { fonts } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
 
 const TAB_MAP = {
-  Home: 'home',
-  MyListings: 'listings',
-  CategorySelection: 'sell',
+  Home:     'home',
+  Browse:   'browse',
+  Sell:     'sell',
   ChatList: 'chat',
-  AccountSettings: 'account',
-  Search: 'search',
+  Account:  'account',
 };
 
-// Supplier — full 5 tabs including Sell FAB
 const SUPPLIER_TABS = [
-  { key: 'home',     label: 'Home',     icon: 'home-outline',       screen: 'Home' },
-  { key: 'listings', label: 'Listings', icon: 'cube-outline',       screen: 'MyListings' },
-  { key: 'sell',     label: 'Sell',     icon: 'add-circle',         screen: 'CategorySelection', isFAB: true },
-  { key: 'chat',     label: 'Chat',     icon: 'chatbubble-outline', screen: 'ChatList' },
-  { key: 'account',  label: 'Account',  icon: 'person-outline',     screen: 'SupplierAccountScreen' },
+  { key: 'home',    label: 'Home',     icon: 'home-outline',       screen: 'Home' },
+  { key: 'sell',    label: 'Listings', icon: 'cube-outline',       screen: 'Sell' },
+  { key: 'create',  label: 'Create',   icon: 'add-circle',         screen: 'CategorySelection', isFAB: true },
+  { key: 'chat',    label: 'Chat',     icon: 'chatbubble-outline', screen: 'ChatList' },
+  { key: 'account', label: 'Account',  icon: 'person-outline',     screen: 'Account' },
 ];
 
-// Shopkeeper — 4 tabs, no Sell, Search tab instead
 const SHOPKEEPER_TABS = [
   { key: 'home',    label: 'Home',    icon: 'home-outline',       screen: 'Home' },
-  { key: 'search',  label: 'Search',  icon: 'search-outline',     screen: 'Search' },
+  { key: 'browse',  label: 'Browse',  icon: 'storefront-outline', screen: 'Browse' },
   { key: 'chat',    label: 'Chat',    icon: 'chatbubble-outline', screen: 'ChatList' },
-  { key: 'account', label: 'Account', icon: 'person-outline',     screen: 'AccountSettings' },
+  { key: 'account', label: 'Account', icon: 'person-outline',     screen: 'Account' },
 ];
 
 export default function BottomNav({ activeTab }) {
   const navigation = useNavigation();
-  const route = useRoute();
-  const { role } = useUser();
+  const route      = useRoute();
+  const { role }   = useUser();
+  const { colors } = useTheme();
 
+  const insets        = useSafeAreaInsets();
   const isShopkeeper = role === 'shopkeeper' || !role;
-  const tabs = isShopkeeper ? SHOPKEEPER_TABS : SUPPLIER_TABS;
-  const derived = activeTab || TAB_MAP[route.name] || 'home';
+  const tabs         = isShopkeeper ? SHOPKEEPER_TABS : SUPPLIER_TABS;
+  const derived      = activeTab || TAB_MAP[route.name] || 'home';
+
+  // Pill background: translucent teal (40% opacity) in light, dark surface in dark
+  const pillBg = colors.isDark ? colors.surface : colors.primary;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.floatWrapper, { paddingBottom: insets.bottom }]} pointerEvents="box-none">
+    <View style={[styles.container, {
+      backgroundColor: pillBg,
+      // Primary-tinted or neutral shadow
+      shadowColor: colors.isDark ? '#000' : colors.primary,
+    }]}>
       {tabs.map((tab) => {
-        const isActive = derived === tab.key;
+        const isActive   = derived === tab.key;
+        const activeIcon = tab.icon.replace('-outline', '');
 
         if (tab.isFAB) {
           return (
@@ -160,72 +70,109 @@ export default function BottomNav({ activeTab }) {
               key={tab.key}
               style={styles.fabWrapper}
               onPress={() => navigation.navigate(tab.screen)}
+              activeOpacity={0.85}
             >
-              <View style={styles.fab}>
-                <Ionicons name="add" size={28} color="#fff" />
+              <View style={[styles.fab, {
+                backgroundColor: colors.accent,
+                shadowColor: colors.accent,
+                borderTopColor: 'rgba(255,255,255,0.35)',
+              }]}>
+                <Ionicons name="add" size={26} color="#fff" />
               </View>
-              <Text style={[styles.label, { color: colors.accent }]}>{tab.label}</Text>
+              <Text style={styles.fabLabel}>Create</Text>
             </TouchableOpacity>
           );
         }
 
-        const activeIcon = tab.icon.replace('-outline', '');
         return (
           <TouchableOpacity
             key={tab.key}
-            style={styles.tab}
+            style={[styles.tab, isActive && styles.tabActive]}
             onPress={() => navigation.navigate(tab.screen)}
+            activeOpacity={0.8}
           >
             <Ionicons
               name={isActive ? activeIcon : tab.icon}
-              size={24}
-              color={isActive ? colors.primary : colors.textSecondary}
+              size={22}
+              color={isActive ? '#fff' : 'rgba(255,255,255,0.6)'}
             />
-            <Text style={[styles.label, { color: isActive ? colors.primary : colors.textSecondary }]}>
+            <Text style={[styles.label, isActive && styles.labelActive]}>
               {tab.label}
             </Text>
           </TouchableOpacity>
         );
       })}
     </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  floatWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 12,
+    paddingBottom: 40, // overridden inline with insets
+    backgroundColor: 'transparent',
+  },
   container: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
+    borderRadius: 28,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    // Top-edge inner highlight
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    borderTopColor: 'rgba(255,255,255,0.18)',
+    // Floating shadow
+    shadowOffset:  { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius:  18,
+    elevation:     14,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
-    gap: 2,
+    justifyContent: 'center',
+    paddingVertical: 8,
+    gap: 3,
+    borderRadius: 20,
+  },
+  tabActive: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+  label: {
+    fontSize: 10,
+    fontFamily: fonts.medium,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  labelActive: {
+    color: '#fff',
   },
   fabWrapper: {
     flex: 1,
     alignItems: 'center',
     marginTop: -20,
+    gap: 3,
   },
   fab: {
-    backgroundColor: colors.accent,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 6,
+    borderTopWidth: 1,
+    shadowOffset:  { width: 0, height: 4 },
+    shadowOpacity: 0.40,
+    shadowRadius:  8,
+    elevation:     8,
   },
-  label: {
+  fabLabel: {
     fontSize: 10,
     fontFamily: fonts.medium,
+    color: 'rgba(255,255,255,0.7)',
     marginTop: 2,
   },
 });

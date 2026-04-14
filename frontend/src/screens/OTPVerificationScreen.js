@@ -3,11 +3,17 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, StatusBar, Alert }
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
+import BubblyButton from '../components/BubblyButton';
 import { useUser } from '../context/UserContext';
 import { forgotPasswordWithBackend, normalizeRoleFromApi, verifyOtpWithBackend } from '../services/authApi';
-import { colors, fonts, spacing, radii } from '../constants/theme';
+import { fonts, spacing, radii } from '../constants/theme';
+import { useTheme } from '../hooks/useTheme';
+import { useLanguage } from '../hooks/useLanguage';
 
 export default function OTPVerificationScreen() {
+  const { colors } = useTheme();
+  const { t, isUrdu } = useLanguage();
+  const styles = makeStyles(colors);
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
@@ -20,8 +26,8 @@ export default function OTPVerificationScreen() {
 
   useEffect(() => {
     if (countdown > 0) {
-      const t = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
     }
   }, [countdown]);
 
@@ -38,7 +44,7 @@ export default function OTPVerificationScreen() {
   };
 
   const handleVerify = async () => {
-    if (otp.some((d) => !d)) { Alert.alert('Error', 'Please enter all 4 digits.'); return; }
+    if (otp.some((d) => !d)) { Alert.alert(t.otp.failed, t.otp.fillAll); return; }
 
     const otpCode = otp.join('');
     setLoading(true);
@@ -65,10 +71,10 @@ export default function OTPVerificationScreen() {
         refreshToken: response.refresh_token,
       });
       setLoading(false);
-      navigation.reset({ index: 0, routes: [{ name: 'MainApp' }] });
+      navigation.reset({ index: 0, routes: [{ name: 'RoleSelection' }] });
     } catch (err) {
       setLoading(false);
-      Alert.alert('Verification Failed', err?.message || 'Could not verify OTP.');
+      Alert.alert(t.otp.failed, err?.message || t.otp.failedMsg);
     }
   };
 
@@ -80,9 +86,9 @@ export default function OTPVerificationScreen() {
       }
       setCountdown(60);
       setOtp(['', '', '', '']);
-      Alert.alert('OTP Sent', 'A new OTP has been sent.');
+      Alert.alert(t.otp.sent, t.otp.sentMsg);
     } catch (err) {
-      Alert.alert('Resend Failed', err?.message || 'Unable to resend OTP now.');
+      Alert.alert(t.otp.resendFailed, err?.message || t.otp.resendFailedMsg);
     }
   };
 
@@ -91,9 +97,12 @@ export default function OTPVerificationScreen() {
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
-      <ScreenHeader title="Verify Your Email" showBack />
+      <ScreenHeader title={t.otp.title} showBack />
       <View style={styles.body}>
-        <Text style={styles.message}>Please enter the 4-digit OTP sent to{'\n'}<Text style={styles.email}>{email}</Text></Text>
+        <Text style={styles.message}>
+          {t.otp.subtitle}{'\n'}<Text style={styles.email}>{email}</Text>
+        </Text>
+
         <View style={styles.otpRow}>
           {otp.map((digit, index) => (
             <TextInput
@@ -109,35 +118,60 @@ export default function OTPVerificationScreen() {
             />
           ))}
         </View>
+
         <View style={styles.resendRow}>
           {countdown > 0 ? (
-            <Text style={styles.countdownText}>Resend in {countdown}s</Text>
+            <Text style={styles.countdownText}>{t.otp.resendIn} {countdown}s</Text>
           ) : (
             <TouchableOpacity onPress={handleResend}>
-              <Text style={styles.resendText}>Resend OTP</Text>
+              <Text style={styles.resendText}>{t.otp.resend}</Text>
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity style={[styles.verifyBtn, (!allFilled || loading) && styles.verifyBtnDisabled]} onPress={handleVerify} disabled={!allFilled || loading}>
-          <Text style={styles.verifyBtnText}>{loading ? 'Verifying...' : 'Verify'}</Text>
-        </TouchableOpacity>
+
+        <BubblyButton
+          label={loading ? t.otp.verifying : t.otp.verify}
+          onPress={handleVerify}
+          disabled={!allFilled || loading}
+          loading={loading}
+          variant="accent"
+          colors={colors}
+          style={styles.verifyOverride}
+        />
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   body: { flex: 1, padding: spacing.lg, alignItems: 'center' },
-  message: { fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: spacing.xl, marginTop: spacing.md },
+  message: {
+    fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary,
+    textAlign: 'center', lineHeight: 22, marginBottom: spacing.xl, marginTop: spacing.md,
+  },
   email: { fontFamily: fonts.semiBold, color: colors.primary },
-  otpRow: { flexDirection: 'row', gap: 12, marginBottom: spacing.lg },
-  otpBox: { width: 64, height: 64, borderRadius: radii.md, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.surface, fontSize: 24, fontFamily: fonts.bold, color: colors.text, textAlign: 'center' },
-  otpBoxFilled: { borderColor: colors.primary, backgroundColor: colors.primaryLight },
+  otpRow: { flexDirection: 'row', gap: 14, marginBottom: spacing.lg },
+  otpBox: {
+    width: 68, height: 68,
+    borderRadius: radii.xl,
+    backgroundColor: colors.surface,
+    fontSize: 26, fontFamily: fonts.bold, color: colors.text,
+    textAlign: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.09,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  otpBoxFilled: {
+    backgroundColor: colors.primaryLight,
+    shadowColor: colors.primary,
+    shadowOpacity: 0.20,
+    elevation: 8,
+  },
   resendRow: { marginBottom: spacing.xl },
   countdownText: { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary },
   resendText: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary },
-  verifyBtn: { width: '100%', backgroundColor: colors.accent, borderRadius: radii.md, paddingVertical: 15, alignItems: 'center' },
-  verifyBtnDisabled: { opacity: 0.45 },
-  verifyBtnText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
+  verifyOverride: { width: '100%' },
 });
