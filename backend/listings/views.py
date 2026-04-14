@@ -132,8 +132,9 @@ class ListingDetailView(APIView):
     GET /api/listings/<id>/
     Returns the full product detail shape used by ProductDetailScreen.
     Also increments the view counter on each visit.
+    Public endpoint — unauthenticated requests are allowed.
+    When auth credentials are present, 'is_saved' is annotated in the response.
     """
-    authentication_classes = []
     permission_classes = []
 
     def get(self, request, pk):
@@ -145,8 +146,12 @@ class ListingDetailView(APIView):
         # Increment view counter (fire-and-forget)
         Listing.objects.filter(pk=pk).update(views=listing.views + 1)
 
-        serializer = ListingDetailSerializer(listing)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        data = ListingDetailSerializer(listing).data
+        data['is_saved'] = (
+            request.user.is_authenticated and
+            SavedListing.objects.filter(user=request.user, listing=listing).exists()
+        )
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class CategoriesView(APIView):

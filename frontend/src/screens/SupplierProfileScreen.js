@@ -19,7 +19,8 @@ import { fonts, spacing, radii, shadows } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 import { useUser } from '../context/UserContext';
-import { getSupplierProfile, getSupplierReviews } from '../services/marketplaceApi';
+import * as Haptics from 'expo-haptics';
+import { getSupplierProfile, getSupplierReviews, toggleFavouriteSupplier } from '../services/marketplaceApi';
 
 // Props-based — avoids referencing out-of-scope colors/styles
 function StarRating({ rating = 0, accentColor }) {
@@ -74,7 +75,7 @@ export default function SupplierProfileScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
-  const { idToken, sessionId, refreshToken, updateUser } = useUser();
+  const { idToken, sessionId, refreshToken, updateUser, isLoggedIn, role } = useUser();
 
   const { supplierId } = route.params || {};
 
@@ -83,6 +84,10 @@ export default function SupplierProfileScreen() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isFavourite, setIsFavourite] = useState(false);
+  const [favInFlight, setFavInFlight] = useState(false);
+
+  const isShopkeeper = isLoggedIn && role !== 'supplier' && role !== 'SUPPLIER';
 
   const authArgs = {
     idToken, sessionId, refreshToken,
@@ -108,6 +113,7 @@ export default function SupplierProfileScreen() {
           setSupplier(profileData);
           setListings(Array.isArray(profileData.listings) ? profileData.listings : []);
           setReviews(Array.isArray(reviewsData.reviews) ? reviewsData.reviews : []);
+          setIsFavourite(!!profileData.is_favourite);
         }
       } catch (err) {
         if (!cancelled) setError(err.message || 'Could not load supplier profile.');
@@ -141,6 +147,21 @@ export default function SupplierProfileScreen() {
     );
   }
 
+  const handleFavouriteToggle = async () => {
+    if (!isShopkeeper || favInFlight) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const willFav = !isFavourite;
+    setIsFavourite(willFav);
+    setFavInFlight(true);
+    try {
+      await toggleFavouriteSupplier(supplierId, authArgs);
+    } catch {
+      setIsFavourite(!willFav);
+    } finally {
+      setFavInFlight(false);
+    }
+  };
+
   const initials = supplier.initials
     || (supplier.name || '').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
     || 'S';
@@ -152,7 +173,17 @@ export default function SupplierProfileScreen() {
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t.supplierProfile.title}</Text>
-        <View style={{ width: 38 }} />
+        {isShopkeeper ? (
+          <TouchableOpacity style={styles.favBtn} onPress={handleFavouriteToggle} disabled={favInFlight}>
+            <Ionicons
+              name={isFavourite ? 'heart' : 'heart-outline'}
+              size={22}
+              color={isFavourite ? '#EF4444' : '#fff'}
+            />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 38 }} />
+        )}
       </View>
 
       <View style={styles.profileCard}>
@@ -274,6 +305,7 @@ const makeStyles = (colors) => StyleSheet.create({
     shadowOpacity: 0.25, shadowRadius: 14, elevation: 10,
   },
   backBtn: { padding: 4 },
+  favBtn: { padding: 4, width: 38, alignItems: 'center' },
   backBtnAbsolute: { position: 'absolute', top: 60, left: 16 },
   headerTitle: { fontSize: 16, fontFamily: fonts.semiBold, color: '#fff' },
 

@@ -115,7 +115,7 @@ export default function SavedListingsScreen() {
     return (
       <TouchableOpacity
         style={styles.card}
-        onPress={() => navigation.navigate('ProductDetail', { product: item })}
+        onPress={() => navigation.navigate('ProductDetail', { product: { ...item, is_saved: true } })}
         activeOpacity={0.85}
       >
         {/* Image */}

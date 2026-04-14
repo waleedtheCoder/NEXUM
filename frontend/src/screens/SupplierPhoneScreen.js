@@ -6,7 +6,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import ProgressIndicator from '../components/ProgressIndicator';
-import PressableBounce from '../components/PressableBounce';
 import BubblyButton from '../components/BubblyButton';
 import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
@@ -75,9 +74,6 @@ export default function SupplierPhoneScreen() {
       </View>
 
       <View style={styles.footer}>
-        <PressableBounce style={styles.skipBtn} onPress={goNext}>
-          <Text style={styles.skipText}>Skip</Text>
-        </PressableBounce>
         <BubblyButton
           label={saving ? '' : 'Next'}
           onPress={handleNext}
@@ -122,11 +118,5 @@ const makeStyles = (colors) => StyleSheet.create({
   errorText: { fontSize: 13, fontFamily: fonts.regular, color: '#EF4444', marginTop: -4 },
 
   footer: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  skipBtn: {
-    flex: 1, paddingVertical: 14, borderRadius: radii.lg,
-    borderWidth: 1.5, borderColor: colors.border, alignItems: 'center',
-    backgroundColor: colors.surface,
-  },
-  skipText: { fontSize: 15, fontFamily: fonts.medium, color: colors.textSecondary },
-  nextBtnOverride: { flex: 2 },
+  nextBtnOverride: { flex: 1 },
 });

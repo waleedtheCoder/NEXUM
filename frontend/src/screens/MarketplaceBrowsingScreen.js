@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import BottomNav from '../components/BottomNav';
 import FilterChip from '../components/FilterChip';
@@ -13,7 +13,7 @@ import { SkeletonGridCard, SkeletonListCard } from '../components/SkeletonLoader
 import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
-import { getListings, toggleSaveListing } from '../services/marketplaceApi';
+import { getListings, toggleSaveListing, getSavedListings } from '../services/marketplaceApi';
 import { useUser } from '../context/UserContext';
 
 const SORT_OPTIONS = [
@@ -46,7 +46,7 @@ export default function MarketplaceBrowsingScreen() {
   const insets     = useSafeAreaInsets();
   const { colors } = useTheme();
   const { t }      = useLanguage();
-  const { idToken, sessionId, refreshToken, updateUser, city } = useUser();
+  const { idToken, sessionId, refreshToken, updateUser, city, isLoggedIn } = useUser();
 
   const paramCategory   = route.params?.category    || null;
   const paramOffersOnly = route.params?.offersOnly  || false;
@@ -101,9 +101,20 @@ export default function MarketplaceBrowsingScreen() {
     [activeSort, searchText, paramCategory, paramOffersOnly, paramFeatured, city, filters]
   );
 
-  useEffect(() => {
-    fetchProducts({ sort: activeSort });
-  }, [activeSort, city, filters]);
+  // Refresh listings + saved state every time the screen is navigated to
+  useFocusEffect(
+    useCallback(() => {
+      fetchProducts({ sort: activeSort });
+      if (isLoggedIn) {
+        getSavedListings({ idToken, sessionId, refreshToken, onTokenRefreshed: (t) => updateUser({ idToken: t }) })
+          .then((data) => {
+            const ids = (Array.isArray(data) ? data : []).map((item) => item.id);
+            setSaved(new Set(ids));
+          })
+          .catch(() => {});
+      }
+    }, [activeSort, city, filters, isLoggedIn, idToken])
+  );
 
   const handleSearchChange = (text) => {
     setSearchText(text);
@@ -149,7 +160,7 @@ export default function MarketplaceBrowsingScreen() {
       return (
         <TouchableOpacity
           style={styles.listCard}
-          onPress={() => navigation.navigate('ProductDetail', { product: item })}
+          onPress={() => navigation.navigate('ProductDetail', { product: { ...item, is_saved: saved.has(item.id) } })}
           activeOpacity={0.88}
         >
           <View style={[styles.listAccentBar, { backgroundColor: colors.primary }]} />
@@ -204,7 +215,7 @@ export default function MarketplaceBrowsingScreen() {
     return (
       <TouchableOpacity
         style={styles.gridCard}
-        onPress={() => navigation.navigate('ProductDetail', { product: item })}
+        onPress={() => navigation.navigate('ProductDetail', { product: { ...item, is_saved: saved.has(item.id) } })}
         activeOpacity={0.88}
       >
         <View style={styles.gridImgWrap}>

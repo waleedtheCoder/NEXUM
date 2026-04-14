@@ -167,8 +167,14 @@ export async function getListings({ category, q, sort, featured, on_promo, city,
 /**
  * GET /api/listings/<id>/
  * Returns full product detail. Public.
+ * Pass auth args to receive is_saved annotation.
  */
-export async function getListingDetail(id) {
+export async function getListingDetail(id, { idToken, sessionId, refreshToken, onTokenRefreshed } = {}) {
+  if (idToken || sessionId) {
+    return _fetchWithRefresh(`/api/listings/${id}/`, {
+      idToken, sessionId, refreshToken, onTokenRefreshed,
+    });
+  }
   return _fetch(`/api/listings/${id}/`);
 }
 
