@@ -9,6 +9,7 @@ from .views import (
     ResetPasswordView,
     RotateSessionView,
     SignupView,
+    TokenRefreshView,
     UserOnboardingView,
     VerifyOtpView,
 )

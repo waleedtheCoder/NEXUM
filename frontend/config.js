@@ -3,10 +3,6 @@
 // // machine's local IP (e.g. http://192.168.1.5:8000) — NOT localhost.
 // // For production, replace with your deployed backend URL.
 
-<<<<<<< HEAD
-const config = {
-  BACKEND_URL: 'http://192.168.18.195:8000',
-=======
 // const config = {
 //   BACKEND_URL: 'http://192.168.1.15:8000',
 // };
@@ -15,5 +11,4 @@ const config = {
 
 export default {
   BACKEND_URL: 'http://192.168.0.134:8000',
->>>>>>> 77a78f9ff849465dd281a61ce12dd24f61739174
 };

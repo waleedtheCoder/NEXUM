@@ -40,7 +40,7 @@ export function UserProvider({ children }) {
   useEffect(() => {
     const loadSession = async () => {
       try {
-        const [sid, userData, userRole, idTok, refreshTok, themeVal, langVal, cityVal, adminFlag, adminMail] = await Promise.all([
+        const [sid, guestSid,userData, userRole, idTok, refreshTok, themeVal, langVal, cityVal, adminFlag, adminMail] = await Promise.all([
           AsyncStorage.getItem('session_id'),
           AsyncStorage.getItem('guest_session_id'),
           AsyncStorage.getItem('user_data'),
