@@ -82,7 +82,7 @@ export default function SupplierAccountScreen() {
         style: 'destructive',
         onPress: async () => {
           await logout();
-          navigation.reset({ index: 0, routes: [{ name: 'LoginSignupOption' }] });
+          navigation.reset({ index: 0, routes: [{ name: 'Auth', params: { screen: 'LoginSignupOption' } }] });
         },
       },
     ]);

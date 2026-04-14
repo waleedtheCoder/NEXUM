@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  getAnonymousSession,
+  logoutFromBackend,
+  rotateSessionWithBackend,
+} from '../services/authApi';
 
 const UserContext = createContext(null);
 
@@ -7,29 +12,86 @@ export function UserProvider({ children }) {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [sessionId, setSessionId] = useState(null);
+  const [guestSessionId, setGuestSessionId] = useState(null);
   const [idToken, setIdToken] = useState(null);
   const [refreshToken, setRefreshToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isLoggedIn = !!sessionId;
+  const isLoggedIn = !!(sessionId && idToken && user);
 
   // Load session data from AsyncStorage on mount
   useEffect(() => {
     const loadSession = async () => {
       try {
-        const [sid, userData, userRole, idTok, refreshTok] = await Promise.all([
+        const [sid, guestSid, userData, userRole, idTok, refreshTok] = await Promise.all([
           AsyncStorage.getItem('session_id'),
+          AsyncStorage.getItem('guest_session_id'),
           AsyncStorage.getItem('user_data'),
           AsyncStorage.getItem('user_role'),
           AsyncStorage.getItem('id_token'),
           AsyncStorage.getItem('refresh_token'),
         ]);
 
-        if (sid) setSessionId(sid);
-        if (userData) setUser(JSON.parse(userData));
-        if (userRole) setRole(userRole);
-        if (idTok) setIdToken(idTok);
-        if (refreshTok) setRefreshToken(refreshTok);
+        let parsedUser = null;
+        if (userData) {
+          try {
+            parsedUser = JSON.parse(userData);
+          } catch (err) {
+            parsedUser = null;
+          }
+        }
+
+        if (sid && idTok && parsedUser) {
+          let nextSessionId = sid;
+          try {
+            const rotated = await rotateSessionWithBackend({ sessionId: sid, idToken: idTok });
+            if (rotated?.session_id) {
+              nextSessionId = rotated.session_id;
+              await AsyncStorage.setItem('session_id', nextSessionId);
+            }
+          } catch (err) {
+            console.warn('Failed to rotate auth session. Keeping previous session id.', err);
+          }
+
+          await AsyncStorage.removeItem('guest_session_id');
+
+          setSessionId(nextSessionId);
+          setGuestSessionId(null);
+          setUser(parsedUser);
+          setRole(userRole || 'shopkeeper');
+          setIdToken(idTok);
+          setRefreshToken(refreshTok || null);
+        } else {
+          await AsyncStorage.multiRemove([
+            'session_id',
+            'user_data',
+            'user_role',
+            'id_token',
+            'refresh_token',
+          ]);
+
+          setSessionId(null);
+          setUser(null);
+          setRole(null);
+          setIdToken(null);
+          setRefreshToken(null);
+
+          let nextGuestSessionId = guestSid;
+          try {
+            const guest = await getAnonymousSession();
+            if (guest?.session_id) {
+              nextGuestSessionId = guest.session_id;
+              await AsyncStorage.setItem('guest_session_id', nextGuestSessionId);
+            }
+          } catch (err) {
+            if (!nextGuestSessionId) {
+              nextGuestSessionId = `guest-${Date.now()}`;
+              await AsyncStorage.setItem('guest_session_id', nextGuestSessionId);
+            }
+          }
+
+          setGuestSessionId(nextGuestSessionId || null);
+        }
       } catch (e) {
         console.error('Failed to load session:', e);
       } finally {
@@ -53,8 +115,10 @@ export function UserProvider({ children }) {
       if (tokens.refreshToken) pairs.push(['refresh_token', tokens.refreshToken]);
 
       await AsyncStorage.multiSet(pairs);
+      await AsyncStorage.removeItem('guest_session_id');
 
       setSessionId(sid);
+      setGuestSessionId(null);
       setUser(userData);
       setRole(userRole || 'shopkeeper');
       setIdToken(tokens.idToken || null);
@@ -66,6 +130,7 @@ export function UserProvider({ children }) {
 
   // Logout function
   const logout = async () => {
+    const currentSessionId = sessionId;
     try {
       await AsyncStorage.multiRemove([
         'session_id',
@@ -76,12 +141,26 @@ export function UserProvider({ children }) {
       ]);
 
       setSessionId(null);
+      setGuestSessionId(null);
       setUser(null);
       setRole(null);
       setIdToken(null);
       setRefreshToken(null);
     } catch (e) {
       console.error('Failed to clear session:', e);
+    }
+    // Invalidate the session on the server (best-effort, non-blocking).
+    logoutFromBackend(currentSessionId);
+
+    try {
+      const guest = await getAnonymousSession();
+      const newGuestSessionId = guest?.session_id || `guest-${Date.now()}`;
+      await AsyncStorage.setItem('guest_session_id', newGuestSessionId);
+      setGuestSessionId(newGuestSessionId);
+    } catch (e) {
+      const fallbackGuestSessionId = `guest-${Date.now()}`;
+      await AsyncStorage.setItem('guest_session_id', fallbackGuestSessionId);
+      setGuestSessionId(fallbackGuestSessionId);
     }
   };
 
@@ -112,6 +191,7 @@ export function UserProvider({ children }) {
         user,
         role,
         sessionId,
+        guestSessionId,
         idToken,
         refreshToken,
         isLoggedIn,

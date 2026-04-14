@@ -6,6 +6,7 @@ import urllib.request
 
 from django.contrib.auth.models import User
 from django.contrib.sessions.backends.db import SessionStore
+from django.contrib.sessions.models import Session
 from django.core.mail import send_mail
 from django.core.cache import cache
 from firebase_admin import auth
@@ -32,19 +33,20 @@ def _build_profile_payload(user, profile):
 ROLE_MAP = {
     '1': 'SHOPKEEPER',
     '2': 'SUPPLIER',
+    '3': 'ADMIN',
     'shopkeeper': 'SHOPKEEPER',
     'supplier': 'SUPPLIER',
-    'customer': 'CUSTOMER',
+    'admin': 'ADMIN',
     'SHOPKEEPER': 'SHOPKEEPER',
     'SUPPLIER': 'SUPPLIER',
-    'CUSTOMER': 'CUSTOMER',
+    'ADMIN': 'ADMIN',
 }
 
 
 def _normalize_role(role):
     if not role:
-        return 'CUSTOMER'
-    return ROLE_MAP.get(str(role).strip(), 'CUSTOMER')
+        return 'SHOPKEEPER'
+    return ROLE_MAP.get(str(role).strip(), 'SHOPKEEPER')
 
 
 def _otp_cache_key(email, flow):
@@ -59,12 +61,32 @@ def _generate_otp():
     return f"{random.randint(0, 9999):04d}"
 
 
-def _create_session_id(user):
-    session = SessionStore()
-    session['user_id'] = user.id
-    session['email'] = user.email or ''
-    session.save()
-    return session.session_key
+ROLE_SESSION_PREFIX = {
+    'SHOPKEEPER': 'sk',
+    'SUPPLIER': 'su',
+    'ADMIN': 'ad',
+}
+
+
+def _create_session_id(user, role='SHOPKEEPER'):
+    prefix = ROLE_SESSION_PREFIX.get(role, 'u')
+    store = SessionStore()
+    store['user_id'] = user.id
+    store.save()
+    raw_key = store.session_key
+    new_key = f"{prefix}_{raw_key}"
+    Session.objects.filter(session_key=raw_key).update(session_key=new_key)
+    return new_key
+
+
+def _create_anonymous_session_id():
+    store = SessionStore()
+    store['anonymous'] = True
+    store.save()
+    raw_key = store.session_key
+    new_key = f"anon_{raw_key}"
+    Session.objects.filter(session_key=raw_key).update(session_key=new_key)
+    return new_key
 
 
 def _build_otp_response(payload, otp):
@@ -172,7 +194,7 @@ def _sync_local_user_from_firebase(uid, email, name='', role=None, email_verifie
         user=user,
         defaults={
             'firebase_uid': uid,
-            'role': normalized_role or 'CUSTOMER',
+            'role': normalized_role or 'SHOPKEEPER',
             'email_verified': bool(email_verified),
         },
     )
@@ -223,7 +245,7 @@ class LoginView(APIView):
             uid=firebase_user.uid,
             email=firebase_user.email or email,
             name=firebase_user.display_name or '',
-            role=role_hint or 'CUSTOMER',
+            role=role_hint or 'SHOPKEEPER',
             email_verified=bool(firebase_user.email_verified),
         )
 
@@ -233,7 +255,7 @@ class LoginView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        session_id = _create_session_id(user)
+        session_id = _create_session_id(user, profile.role)
         payload = _build_profile_payload(user, profile)
         return Response(
             {
@@ -254,7 +276,7 @@ class SignupView(APIView):
         name = str(request.data.get('name', '')).strip()
         email = str(request.data.get('email', '')).strip().lower()
         password = str(request.data.get('password', ''))
-        role = request.data.get('role', 'CUSTOMER')
+        role = request.data.get('role', 'SHOPKEEPER')
 
         if not name or not email or not password:
             return Response(
@@ -348,13 +370,13 @@ class VerifyOtpView(APIView):
                 uid=firebase_user.uid,
                 email=pending['email'],
                 name=pending.get('name') or '',
-                role=pending.get('role') or 'CUSTOMER',
+                role=pending.get('role') or 'SHOPKEEPER',
                 email_verified=True,
             )
 
             cache.delete(_otp_cache_key(email, 'signup'))
             cache.delete(_signup_pending_cache_key(email))
-            session_id = _create_session_id(user)
+            session_id = _create_session_id(user, profile.role)
             payload = _build_profile_payload(user, profile)
             return Response(
                 {
@@ -446,6 +468,49 @@ class ResetPasswordView(APIView):
         cache.delete(_otp_cache_key(email, 'reset'))
 
         return Response({'message': 'Password reset successful.'}, status=status.HTTP_200_OK)
+
+
+class LogoutView(APIView):
+    def post(self, request):
+        session_id = request.META.get('HTTP_X_SESSION_ID', '').strip()
+        if not session_id:
+            auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+            parts = auth_header.split(' ')
+            if len(parts) == 2 and parts[0].lower() == 'session':
+                session_id = parts[1].strip()
+
+        if session_id:
+            Session.objects.filter(session_key=session_id).delete()
+
+        return Response({'message': 'Logged out successfully.'}, status=status.HTTP_200_OK)
+
+
+class GuestSessionView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, _request):
+        session_id = _create_anonymous_session_id()
+        return Response({'session_id': session_id}, status=status.HTTP_200_OK)
+
+
+class RotateSessionView(APIView):
+    def post(self, request):
+        previous_session_id = request.META.get('HTTP_X_SESSION_ID', '').strip()
+
+        if not previous_session_id:
+            auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+            parts = auth_header.split(' ')
+            if len(parts) == 2 and parts[0].lower() == 'session':
+                previous_session_id = parts[1].strip()
+
+        profile = request.user.profile
+        new_session_id = _create_session_id(request.user, profile.role)
+
+        if previous_session_id and previous_session_id != new_session_id:
+            Session.objects.filter(session_key=previous_session_id).delete()
+
+        return Response({'session_id': new_session_id}, status=status.HTTP_200_OK)
 
 
 class AuthSessionView(APIView):

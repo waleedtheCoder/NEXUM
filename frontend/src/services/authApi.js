@@ -91,4 +91,117 @@ export async function resetPasswordWithBackend({ email, otp, newPassword }) {
   });
 }
 
+export async function createGuestSessionFromBackend() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}/api/users/auth/guest-session/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload?.detail || payload?.message || 'Unable to create guest session.');
+  }
+
+  return payload;
+}
+
+export async function rotateSessionWithBackend({ sessionId, idToken }) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}/api/users/auth/rotate-session/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(sessionId ? { 'X-Session-ID': sessionId } : {}),
+        ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+      },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload?.detail || payload?.message || 'Unable to rotate session.');
+  }
+
+  return payload;
+}
+
+export async function getAnonymousSession() {
+  return request('/api/users/auth/guest-session/', {});
+}
+
+export async function rotateSessionWithBackend({ sessionId, idToken }) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (sessionId) headers['X-Session-ID'] = sessionId;
+  else if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
+
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}/api/users/auth/rotate-session/`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({}),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    clearTimeout(timeout);
+    throw new Error(
+      err?.name === 'AbortError' ? 'Session rotation timed out.' : 'Network error during session rotation.',
+    );
+  }
+
+  clearTimeout(timeout);
+
+  let payload = {};
+  try { payload = await response.json(); } catch (_) {}
+
+  if (!response.ok) {
+    const error = new Error(payload?.detail || 'Session rotation failed.');
+    error.status = response.status;
+    throw error;
+  }
+
+  return payload;
+}
+
+export async function logoutFromBackend(sessionId) {
+  if (!sessionId) return;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    await fetch(`${BASE_URL}/api/users/auth/logout/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Session-ID': sessionId,
+      },
+      signal: controller.signal,
+    });
+  } catch (_) {
+    // Best-effort — local logout still completes even if the request fails.
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export { normalizeRoleFromApi };

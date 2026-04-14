@@ -33,7 +33,7 @@ class SessionIDAuthentication(BaseAuthentication):
             raise AuthenticationFailed('Session is missing user_id.')
 
         try:
-            user = User.objects.get(id=user_id)
+            user = User.objects.get(id=user_id) 
         except User.DoesNotExist as exc:
             raise AuthenticationFailed('User for this session does not exist.') from exc
 
@@ -69,7 +69,6 @@ class FirebaseAuthentication(BaseAuthentication):
         if not uid:
             raise AuthenticationFailed('Invalid Firebase token payload: uid is missing.')
 
-        # Get or create the user in Django DB
         user, _ = User.objects.get_or_create(username=uid, defaults={'email': email})
 
         if email and user.email != email:

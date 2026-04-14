@@ -61,7 +61,7 @@ python manage.py migrate
 ## 6) Start server
 
 ```bash
-python manage.py runserver
+python manage.py runserver 0.0.0.0:8000
 ```
 
 ## Create user from terminal (legacy helper)
