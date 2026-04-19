@@ -30,7 +30,9 @@ class SessionIDAuthentication(BaseAuthentication):
         session_data = session.get_decoded()
         user_id = session_data.get('user_id')
         if not user_id:
-            raise AuthenticationFailed('Session is missing user_id.')
+            # Anonymous guest session — not authenticated, but not an error.
+            # Let the view's permission_classes decide whether to allow access.
+            return None
 
         try:
             user = User.objects.get(id=user_id) 

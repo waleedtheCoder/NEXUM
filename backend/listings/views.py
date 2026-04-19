@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import Listing, SavedListing
+from .models import Listing, SavedListing, ListingImage
 from .serializers import (
     ListingCardSerializer,
     ListingDetailSerializer,
@@ -62,7 +62,7 @@ class ListingsView(APIView):
     permission_classes = []
 
     def get(self, request):
-        qs = Listing.objects.filter(status='active').select_related('supplier__profile', 'promotion')
+        qs = Listing.objects.filter(status='active').select_related('supplier__profile', 'promotion').prefetch_related('images')
 
         category = request.query_params.get('category', '').strip()
         if category:
@@ -139,7 +139,7 @@ class ListingDetailView(APIView):
 
     def get(self, request, pk):
         try:
-            listing = Listing.objects.select_related('supplier__profile', 'promotion').get(pk=pk)
+            listing = Listing.objects.select_related('supplier__profile', 'promotion').prefetch_related('images').get(pk=pk)
         except Listing.DoesNotExist:
             return Response({'detail': 'Listing not found.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -186,7 +186,7 @@ class SearchView(APIView):
             Q(category__icontains=q) |
             Q(location__icontains=q) |
             Q(description__icontains=q)
-        ).select_related('supplier__profile')
+        ).select_related('supplier__profile').prefetch_related('images')
 
         price_min = request.query_params.get('price_min', '').strip()
         price_max = request.query_params.get('price_max', '').strip()
@@ -230,7 +230,7 @@ class MyListingsView(APIView):
       - status  ("active" | "pending" | "removed") — optional filter
     """
     def get(self, request):
-        qs = Listing.objects.filter(supplier=request.user).order_by('-created_at')
+        qs = Listing.objects.filter(supplier=request.user).order_by('-created_at').prefetch_related('images')
 
         status_filter = request.query_params.get('status', '').strip()
         if status_filter in ('active', 'pending', 'removed'):
@@ -256,6 +256,12 @@ class CreateListingView(APIView):
         # Derive a human-readable location string from the selected cities
         location = ', '.join(cities) if cities else 'Pakistan'
 
+        # Resolve image URLs — prefer imageUrls list, fall back to single imageUrl
+        image_urls = d.get('imageUrls') or []
+        if not image_urls and d.get('imageUrl'):
+            image_urls = [d['imageUrl']]
+        first_image_url = image_urls[0] if image_urls else ''
+
         # Auto-feature listing if supplier is verified
         is_verified = False
         try:
@@ -275,10 +281,17 @@ class CreateListingView(APIView):
             location=location,
             category=d.get('category', 'General'),
             cities=cities,
-            image_url=d.get('imageUrl', ''),
+            image_url=first_image_url,
             status='pending',   # requires approval before going live
             is_featured=is_verified,
         )
+
+        # Create ListingImage records for each uploaded photo
+        for i, url in enumerate(image_urls):
+            ListingImage.objects.create(listing=listing, url=url, order=i)
+
+        # Prefetch for serializer
+        listing = Listing.objects.prefetch_related('images').get(pk=listing.pk)
 
         # Return in the myListing shape so MyListingsScreen can show it immediately
         return Response(
@@ -324,7 +337,6 @@ class ListingManageView(APIView):
             'condition': 'condition',
             'cities': 'cities',
             'status': 'status',
-            'imageUrl': 'image_url',
         }
         for frontend_key, model_field in field_map.items():
             if frontend_key in d:
@@ -334,7 +346,23 @@ class ListingManageView(APIView):
         if 'cities' in d:
             listing.location = ', '.join(d['cities']) if d['cities'] else 'Pakistan'
 
+        # Handle image updates — replace all images when imageUrls is provided
+        image_urls = d.get('imageUrls')
+        if image_urls is not None:
+            ListingImage.objects.filter(listing=listing).delete()
+            for i, url in enumerate(image_urls):
+                ListingImage.objects.create(listing=listing, url=url, order=i)
+            listing.image_url = image_urls[0] if image_urls else ''
+        elif 'imageUrl' in d:
+            # Legacy single-image update
+            url = d['imageUrl']
+            ListingImage.objects.filter(listing=listing).delete()
+            if url:
+                ListingImage.objects.create(listing=listing, url=url, order=0)
+            listing.image_url = url
+
         listing.save()
+        listing = Listing.objects.prefetch_related('images').get(pk=listing.pk)
         return Response(MyListingSerializer(listing).data, status=status.HTTP_200_OK)
 
     def delete(self, request, pk):
