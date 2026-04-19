@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 from rest_framework import serializers
-from .models import Listing, SavedListing, ListingPromotion
+from .models import Listing, SavedListing, ListingPromotion, ListingImage
 from .utils import time_ago, get_initials, compute_total_value
 from orders.models import Order
 
@@ -17,17 +17,26 @@ class ListingCardSerializer(serializers.ModelSerializer):
     location  = serializers.CharField()
     time      = serializers.SerializerMethodField()
     isFeatured = serializers.BooleanField(source='is_featured')
-    imageUrl  = serializers.URLField(source='image_url')
+    imageUrl  = serializers.SerializerMethodField()
+    imageUrls = serializers.SerializerMethodField()
     category  = serializers.CharField()
     cities    = serializers.JSONField()
     promotion = serializers.SerializerMethodField()
 
     class Meta:
         model  = Listing
-        fields = ['id', 'title', 'price', 'location', 'time', 'isFeatured', 'imageUrl', 'category', 'cities', 'promotion']
+        fields = ['id', 'title', 'price', 'location', 'time', 'isFeatured', 'imageUrl', 'imageUrls', 'category', 'cities', 'promotion']
 
     def get_time(self, obj):
         return time_ago(obj.created_at)
+
+    def get_imageUrl(self, obj):
+        first = obj.images.first()
+        return first.url if first else (obj.image_url or '')
+
+    def get_imageUrls(self, obj):
+        urls = [img.url for img in obj.images.all()]
+        return urls if urls else ([obj.image_url] if obj.image_url else [])
 
     def get_promotion(self, obj):
         try:
@@ -70,7 +79,8 @@ class ListingDetailSerializer(serializers.ModelSerializer):
         return time_ago(obj.created_at)
 
     def get_images(self, obj):
-        return [obj.image_url] if obj.image_url else []
+        urls = [img.url for img in obj.images.all()]
+        return urls if urls else ([obj.image_url] if obj.image_url else [])
 
     def get_details(self, obj):
         return [
@@ -124,7 +134,7 @@ class MyListingSerializer(serializers.ModelSerializer):
     """
     id           = serializers.CharField(source='pk')
     productName  = serializers.CharField(source='product_name')
-    description  = serializers.CharField(default='')          # ← was missing
+    description  = serializers.CharField(default='')
     category     = serializers.CharField()
     quantity     = serializers.SerializerMethodField()
     unit         = serializers.CharField()
@@ -132,7 +142,8 @@ class MyListingSerializer(serializers.ModelSerializer):
     pricePerUnit = serializers.DecimalField(source='price', max_digits=12, decimal_places=2)
     totalValue   = serializers.SerializerMethodField()
     status       = serializers.CharField()
-    imageUrl     = serializers.URLField(source='image_url')
+    imageUrl     = serializers.SerializerMethodField()
+    imageUrls    = serializers.SerializerMethodField()
     postedDate   = serializers.SerializerMethodField()
     location     = serializers.CharField()
     cities       = serializers.JSONField()
@@ -144,7 +155,7 @@ class MyListingSerializer(serializers.ModelSerializer):
         model  = Listing
         fields = [
             'id', 'productName', 'description', 'category', 'quantity', 'unit',
-            'minOrderQty', 'pricePerUnit', 'totalValue', 'status', 'imageUrl',
+            'minOrderQty', 'pricePerUnit', 'totalValue', 'status', 'imageUrl', 'imageUrls',
             'postedDate', 'location', 'cities', 'views', 'inquiries', 'promotion',
         ]
 
@@ -156,6 +167,14 @@ class MyListingSerializer(serializers.ModelSerializer):
 
     def get_postedDate(self, obj):
         return time_ago(obj.created_at)
+
+    def get_imageUrl(self, obj):
+        first = obj.images.first()
+        return first.url if first else (obj.image_url or '')
+
+    def get_imageUrls(self, obj):
+        urls = [img.url for img in obj.images.all()]
+        return urls if urls else ([obj.image_url] if obj.image_url else [])
 
     def get_inquiries(self, obj):
         return obj.conversations.count()
@@ -192,6 +211,7 @@ class CreateListingSerializer(serializers.Serializer):
     category    = serializers.CharField(max_length=100, default='General')
     cities      = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     imageUrl    = serializers.URLField(required=False, allow_blank=True, default='')
+    imageUrls   = serializers.ListField(child=serializers.URLField(), required=False, default=list)
 
 
 class UpdateListingSerializer(serializers.Serializer):
@@ -215,6 +235,7 @@ class UpdateListingSerializer(serializers.Serializer):
         required=False,
     )
     imageUrl    = serializers.URLField(required=False, allow_blank=True)
+    imageUrls   = serializers.ListField(child=serializers.URLField(), required=False)
 
     def validate(self, attrs):
         if not attrs:

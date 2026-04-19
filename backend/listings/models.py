@@ -62,6 +62,19 @@ class Listing(models.Model):
         return self.conversations.count()
 
 
+class ListingImage(models.Model):
+    """Additional images for a listing (supports multiple photos)."""
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name='images')
+    url     = models.URLField()
+    order   = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return f"Image {self.order} for {self.listing.product_name}"
+
+
 class ListingPromotion(models.Model):
     """A supplier-created discount promotion on one of their listings."""
     listing          = models.OneToOneField(Listing, on_delete=models.CASCADE, related_name='promotion')

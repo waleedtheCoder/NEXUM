@@ -1,8 +1,9 @@
+import os
 import uuid
+import urllib.request
+import urllib.error
 
 from django.db.models import Count
-from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -11,6 +12,11 @@ from rest_framework import status
 
 from .models import Listing, SavedListing
 from .serializers import ListingCardSerializer
+
+
+SUPABASE_URL            = os.getenv('SUPABASE_URL', '').rstrip('/')
+SUPABASE_SERVICE_KEY    = os.getenv('SUPABASE_SERVICE_ROLE_KEY', '')
+SUPABASE_BUCKET         = 'listings'
 
 
 # ── 3. Trending search ───────────────────────────────────────────────────────
@@ -74,7 +80,7 @@ class SavedListingsView(APIView):
             user=request.user
         ).values_list('listing_id', flat=True)
 
-        listings = Listing.objects.filter(id__in=saved_ids, status='active')
+        listings = Listing.objects.filter(id__in=saved_ids, status='active').prefetch_related('images')
         serializer = ListingCardSerializer(listings, many=True)
         return Response(serializer.data)
 
@@ -84,18 +90,14 @@ class SavedListingsView(APIView):
 class ImageUploadView(APIView):
     """
     POST /api/listings/upload-image/
-    Protected. Accepts a multipart image file, saves it to MEDIA_ROOT/listings/,
-    and returns the public URL.
+    Protected. Accepts a multipart image file, uploads it to Supabase Storage,
+    and returns the public CDN URL.
 
     Request:  multipart/form-data  { image: <file> }
-    Response: { imageUrl: "http://.../.../listings/<uuid>.<ext>" }
-
-    In production, swap the local save for django-storages (S3/Cloudinary)
-    by overriding DEFAULT_FILE_STORAGE in settings.py — this view code stays
-    identical; Django handles the storage backend transparently.
+    Response: { imageUrl: "https://<project>.supabase.co/storage/v1/object/public/listings/<uuid>.<ext>" }
     """
-    ALLOWED_TYPES   = {'image/jpeg', 'image/png', 'image/webp'}
-    MAX_SIZE_BYTES  = 5 * 1024 * 1024   # 5 MB
+    ALLOWED_TYPES  = {'image/jpeg', 'image/png', 'image/webp'}
+    MAX_SIZE_BYTES = 5 * 1024 * 1024   # 5 MB
 
     def post(self, request):
         image = request.FILES.get('image')
@@ -113,15 +115,36 @@ class ImageUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        ext      = image.name.rsplit('.', 1)[-1].lower()
+        if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+            return Response(
+                {'detail': 'Image storage is not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing).'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        ext      = image.name.rsplit('.', 1)[-1].lower() if '.' in image.name else 'jpg'
         filename = f"{uuid.uuid4().hex}.{ext}"
+        object_path = f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_BUCKET}/{filename}"
 
-        # Django's default_storage respects DEFAULT_FILE_STORAGE —
-        # works locally and switches to S3/Cloudinary automatically.
-        from django.core.files.storage import default_storage
-        from django.core.files.base import ContentFile
+        data = image.read()
+        req  = urllib.request.Request(
+            object_path,
+            data=data,
+            method='POST',
+            headers={
+                'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}',
+                'Content-Type':  image.content_type,
+                'x-upsert':      'true',
+            },
+        )
+        try:
+            with urllib.request.urlopen(req) as resp:
+                resp.read()
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode('utf-8', errors='replace')
+            return Response(
+                {'detail': f'Storage upload failed: {body}'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
 
-        path = default_storage.save(f"listings/{filename}", ContentFile(image.read()))
-        url  = request.build_absolute_uri(default_storage.url(path))
-
-        return Response({'imageUrl': url}, status=status.HTTP_201_CREATED)
+        public_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/{filename}"
+        return Response({'imageUrl': public_url}, status=status.HTTP_201_CREATED)

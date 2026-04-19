@@ -20,7 +20,7 @@ export default function AuthOptionsScreen() {
     <View style={[styles.container, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }]}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
       <View style={styles.topRow}>
-        <PressableBounce onPress={() => navigation.goBack()} style={styles.closeBtn}>
+        <PressableBounce onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.replace('MainApp')} style={styles.closeBtn}>
           <Ionicons name="close" size={20} color={colors.text} />
         </PressableBounce>
       </View>

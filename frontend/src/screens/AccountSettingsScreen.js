@@ -87,7 +87,7 @@ export default function AccountSettingsScreen() {
           await logout();
           navigation.reset({
             index: 0,
-            routes: [{ name: 'Auth', params: { screen: 'LoginSignupOption' } }],
+            routes: [{ name: 'AuthOptions' }],
           });
         },
       }
