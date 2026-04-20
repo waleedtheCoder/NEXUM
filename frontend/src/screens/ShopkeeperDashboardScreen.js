@@ -70,6 +70,13 @@ export default function ShopkeeperDashboardScreen() {
       icon:  'notifications-outline',
       screen: 'RestockReminders',
     },
+    {
+      title: 'AI Analytics',
+      desc:  'Smart insights on your spending & orders',
+      icon:  'sparkles-outline',
+      screen: 'ShopkeeperAIAnalytics',
+      iconBg: '#EEF2FF', iconColor: '#6366F1',
+    },
   ];
   const insets = useSafeAreaInsets();
   const { user, logout, role, idToken, sessionId, refreshToken, updateUser } = useUser();
@@ -309,8 +316,8 @@ export default function ShopkeeperDashboardScreen() {
               style={[styles.menuItem, i < MENU_ITEMS.length - 1 && styles.menuItemBorder]}
               onPress={() => navigation.navigate(item.screen)}
             >
-              <View style={[styles.menuIcon, { backgroundColor: `${colors.primary}18` }]}>
-                <Ionicons name={item.icon} size={18} color={colors.primary} />
+              <View style={[styles.menuIcon, { backgroundColor: item.iconBg || `${colors.primary}18` }]}>
+                <Ionicons name={item.icon} size={18} color={item.iconColor || colors.primary} />
               </View>
               <View style={styles.menuItemText}>
                 <Text style={styles.menuItemTitle}>{item.title}</Text>

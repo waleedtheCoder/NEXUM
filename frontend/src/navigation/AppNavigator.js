@@ -66,6 +66,9 @@ import RestockRemindersScreen   from '../screens/RestockRemindersScreen';
 import ShopkeeperDashboardScreen from '../screens/ShopkeeperDashboardScreen';
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
+import ShopkeeperAIAnalyticsScreen from '../screens/ShopkeeperAIAnalyticsScreen';
+import SupplierAIAnalyticsScreen   from '../screens/SupplierAIAnalyticsScreen';
+
 import AdminDashboardScreen      from '../screens/AdminDashboardScreen';
 import AdminSuppliersScreen      from '../screens/AdminSuppliersScreen';
 import AdminShopkeepersScreen    from '../screens/AdminShopkeepersScreen';
@@ -157,6 +160,10 @@ function RootStack() {
 
       {/* ── Mode switching ───────────────────────────────────────────────── */}
       <Stack.Screen name="ShopkeeperDashboard" component={ShopkeeperDashboardScreen} />
+
+      {/* ── AI Analytics ────────────────────────────────────────────────── */}
+      <Stack.Screen name="ShopkeeperAIAnalytics" component={ShopkeeperAIAnalyticsScreen} />
+      <Stack.Screen name="SupplierAIAnalytics"   component={SupplierAIAnalyticsScreen} />
 
       {/* ── Supplier verification ───────────────────────────────────────── */}
       <Stack.Screen name="Verification" component={VerificationScreen} />
