@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, Image, TouchableOpacity, ScrollView,
   StyleSheet, StatusBar, Dimensions, Linking, Alert,
@@ -15,7 +15,8 @@ import { getListingDetail, toggleSaveListing, startConversation, placeOrder } fr
 import { formatPrice } from '../utils/format';
 import { useUser } from '../context/UserContext';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_WIDTH  = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 export default function ProductDetailScreen() {
   const { colors } = useTheme();
@@ -34,6 +35,9 @@ export default function ProductDetailScreen() {
   const [savingInFlight, setSavingInFlight] = useState(false);
   const [chatLoading, setChatLoading]   = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
+  const [lightboxVisible, setLightboxVisible] = useState(false);
+  const [lightboxIndex, setLightboxIndex]     = useState(0);
+  const lightboxScrollRef = useRef(null);
 
   // ── Order modal state ────────────────────────────────────────────────────
   const [orderModalVisible, setOrderModalVisible] = useState(false);
@@ -242,7 +246,16 @@ export default function ProductDetailScreen() {
             }}
           >
             {images.map((uri, i) => (
-              <Image key={i} source={{ uri }} style={styles.productImage} resizeMode="cover" />
+              <TouchableOpacity
+                key={i}
+                activeOpacity={0.95}
+                onPress={() => {
+                  setLightboxIndex(i);
+                  setLightboxVisible(true);
+                }}
+              >
+                <Image source={{ uri }} style={styles.productImage} resizeMode="cover" />
+              </TouchableOpacity>
             ))}
           </ScrollView>
         ) : (
@@ -395,6 +408,76 @@ export default function ProductDetailScreen() {
           <Text style={styles.orderBtnText}>{t.productDetail.placeOrder}</Text>
         </TouchableOpacity>
       </View>
+
+      {/* ── Lightbox ────────────────────────────────────────────────────── */}
+      <Modal
+        visible={lightboxVisible}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={() => setLightboxVisible(false)}
+        onShow={() => {
+          // Scroll to the tapped image after the modal renders
+          setTimeout(() => {
+            lightboxScrollRef.current?.scrollTo({
+              x: lightboxIndex * SCREEN_WIDTH,
+              animated: false,
+            });
+          }, 50);
+        }}
+      >
+        <View style={styles.lightboxContainer}>
+          <StatusBar hidden />
+
+          {/* Close button */}
+          <TouchableOpacity
+            style={styles.lightboxClose}
+            onPress={() => setLightboxVisible(false)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="close" size={26} color="#fff" />
+          </TouchableOpacity>
+
+          {/* Counter */}
+          <View style={styles.lightboxCounter}>
+            <Text style={styles.lightboxCounterText}>{lightboxIndex + 1} / {images.length}</Text>
+          </View>
+
+          {/* Full-screen paging scroll */}
+          <ScrollView
+            ref={lightboxScrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) => {
+              const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+              setLightboxIndex(idx);
+            }}
+          >
+            {images.map((uri, i) => (
+              <View key={i} style={styles.lightboxPage}>
+                <Image
+                  source={{ uri }}
+                  style={styles.lightboxImage}
+                  resizeMode="contain"
+                />
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Dot indicators */}
+          {images.length > 1 && (
+            <View style={styles.lightboxDots}>
+              {images.map((_, i) => (
+                <View
+                  key={i}
+                  style={[styles.lightboxDot, i === lightboxIndex && styles.lightboxDotActive]}
+                />
+              ))}
+            </View>
+          )}
+        </View>
+      </Modal>
 
       {/* ── Order modal (bottom sheet) ──────────────────────────────────── */}
       <Modal
@@ -761,4 +844,32 @@ const makeStyles = (colors) => StyleSheet.create({
   orderConfirmText: { color: '#fff', fontSize: 15, fontFamily: fonts.semiBold },
   orderCancelBtn:   { alignItems: 'center', paddingVertical: 10 },
   orderCancelText:  { fontSize: 14, fontFamily: fonts.medium, color: colors.textSecondary },
+
+  // Lightbox
+  lightboxContainer: {
+    flex: 1, backgroundColor: '#000',
+    justifyContent: 'center',
+  },
+  lightboxClose: {
+    position: 'absolute', top: 52, right: 20, zIndex: 10,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 22, padding: 8,
+  },
+  lightboxCounter: {
+    position: 'absolute', top: 56, left: 20, zIndex: 10,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: radii.full, paddingHorizontal: 12, paddingVertical: 5,
+  },
+  lightboxCounterText: { color: '#fff', fontSize: 13, fontFamily: fonts.medium },
+  lightboxPage: {
+    width: SCREEN_WIDTH, height: SCREEN_HEIGHT,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  lightboxImage: { width: SCREEN_WIDTH, height: SCREEN_HEIGHT },
+  lightboxDots: {
+    position: 'absolute', bottom: 40, width: '100%',
+    flexDirection: 'row', justifyContent: 'center', gap: 6,
+  },
+  lightboxDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.35)' },
+  lightboxDotActive: { backgroundColor: '#fff', width: 16 },
 });

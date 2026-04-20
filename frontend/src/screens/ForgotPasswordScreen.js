@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import ScreenHeader from '../components/ScreenHeader';
 import BubblyButton from '../components/BubblyButton';
-import PressableBounce from '../components/PressableBounce';
 import { forgotPasswordWithBackend } from '../services/authApi';
 import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
@@ -12,7 +11,7 @@ import { useLanguage } from '../hooks/useLanguage';
 
 export default function ForgotPasswordScreen() {
   const { colors } = useTheme();
-  const { t, isUrdu } = useLanguage();
+  const { t } = useLanguage();
   const styles = makeStyles(colors);
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -20,7 +19,7 @@ export default function ForgotPasswordScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleReset = async () => {
-    if (!email) { Alert.alert(t.forgotPassword.failed, t.forgotPassword.fillEmail); return; }
+    if (!email.trim()) { Alert.alert(t.forgotPassword.failed, t.forgotPassword.fillEmail); return; }
     try {
       setLoading(true);
       await forgotPasswordWithBackend({ email: email.trim().toLowerCase() });
@@ -33,10 +32,13 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom + 16 }]}>
+    <View style={[styles.container, { paddingBottom: insets.bottom + 24 }]}>
       <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <ScreenHeader title={t.forgotPassword.title} subtitle={t.forgotPassword.subtitle} showBack />
       <View style={styles.body}>
+        <Text style={styles.hint}>
+          Enter the email address associated with your account and we'll send you a verification code.
+        </Text>
         <Text style={styles.label}>{t.forgotPassword.email}</Text>
         <View style={styles.inputTile}>
           <TextInput
@@ -45,24 +47,25 @@ export default function ForgotPasswordScreen() {
             placeholderTextColor={colors.textLight}
             keyboardType="email-address"
             autoCapitalize="none"
+            autoCorrect={false}
             value={email}
             onChangeText={setEmail}
+            returnKeyType="done"
+            onSubmitEditing={handleReset}
           />
         </View>
-        <View style={styles.btnRow}>
-          <PressableBounce style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.backBtnText}>{t.forgotPassword.back}</Text>
-          </PressableBounce>
-          <BubblyButton
-            label={loading ? t.forgotPassword.sending : t.forgotPassword.sendOtp}
-            onPress={handleReset}
-            disabled={loading}
-            loading={loading}
-            variant="accent"
-            colors={colors}
-            style={styles.sendBtnOverride}
-          />
-        </View>
+        <BubblyButton
+          label={loading ? t.forgotPassword.sending : t.forgotPassword.sendOtp}
+          onPress={handleReset}
+          disabled={loading || !email.trim()}
+          loading={loading}
+          variant="accent"
+          colors={colors}
+          style={styles.sendBtn}
+        />
+        <TouchableOpacity style={styles.backLink} onPress={() => navigation.goBack()}>
+          <Text style={styles.backLinkText}>{t.forgotPassword.back}</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -71,7 +74,11 @@ export default function ForgotPasswordScreen() {
 const makeStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   body: { flex: 1, padding: spacing.lg },
-  label: { color: colors.primary, fontSize: 13, fontFamily: fonts.medium, marginBottom: 8, marginTop: spacing.md },
+  hint: {
+    fontSize: 14, fontFamily: fonts.regular, color: colors.textSecondary,
+    lineHeight: 22, marginTop: spacing.md, marginBottom: spacing.xl,
+  },
+  label: { color: colors.primary, fontSize: 13, fontFamily: fonts.medium, marginBottom: 8 },
   inputTile: {
     backgroundColor: colors.surface,
     borderRadius: radii.md,
@@ -83,13 +90,8 @@ const makeStyles = (colors) => StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  input: { paddingVertical: 13, fontSize: 14, fontFamily: fonts.regular, color: colors.text },
-  btnRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  backBtn: {
-    flex: 1, borderRadius: radii.lg, paddingVertical: 14,
-    backgroundColor: colors.surface, alignItems: 'center',
-    borderWidth: 1.5, borderColor: colors.border,
-  },
-  backBtnText: { color: colors.textSecondary, fontSize: 14, fontFamily: fonts.semiBold },
-  sendBtnOverride: { flex: 1 },
+  input: { paddingVertical: 14, fontSize: 15, fontFamily: fonts.regular, color: colors.text },
+  sendBtn: { marginBottom: spacing.lg },
+  backLink: { alignItems: 'center', paddingVertical: 10 },
+  backLinkText: { fontSize: 14, fontFamily: fonts.medium, color: colors.textSecondary },
 });

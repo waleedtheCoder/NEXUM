@@ -393,8 +393,7 @@ class VerifyOtpView(APIView):
                 status=status.HTTP_200_OK,
             )
 
-        # flow == 'reset'
-        cache.delete(_otp_cache_key(email, 'reset'))
+        # flow == 'reset' — keep OTP in cache so ResetPasswordView can re-validate and delete it
         return Response({'message': 'OTP verified for password reset.'}, status=status.HTTP_200_OK)
 
 

@@ -62,7 +62,7 @@ export default function ResetPasswordScreen() {
       });
       setLoading(false);
       Alert.alert(t.resetPassword.success, t.resetPassword.successMsg, [
-        { text: t.common.confirm, onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Login' }] }) },
+        { text: t.common.confirm, onPress: () => navigation.reset({ index: 1, routes: [{ name: 'MainApp' }, { name: 'Login' }] }) },
       ]);
     } catch (err) {
       setLoading(false);

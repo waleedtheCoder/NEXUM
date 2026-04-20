@@ -15,6 +15,8 @@ import { createListing, updateListing, uploadListingImage } from '../services/ma
 import { useUser } from '../context/UserContext';
 import { CITIES } from '../constants/cities';
 
+const MAX_IMAGES = 5;
+
 const UNITS = ['kg', 'liters', 'pieces', 'boxes', 'cartons', 'bags', 'bottles'];
 const CONDITIONS = ['New', 'Bulk Wholesale', 'Clearance Stock'];
 
@@ -44,12 +46,18 @@ export default function CreateListingScreen() {
   const [loading, setLoading] = useState(false);
 
   // ── Image state ──────────────────────────────────────────────────────────
-  // imageUri     — local URI shown as preview (picked from library)
-  // imageUrl     — remote URL returned by the upload API (sent in payload)
-  // uploading    — true while the POST /api/listings/upload-image/ is in flight
-  const [imageUri, setImageUri]   = useState(existing?.imageUrl || null);
-  const [imageUrl, setImageUrl]   = useState(existing?.imageUrl || null);
-  const [uploading, setUploading] = useState(false);
+  // images: [{ id, uri, url, uploading }]
+  //   id        — client-side unique key
+  //   uri       — local file URI (shown as preview)
+  //   url       — remote Supabase URL (null until upload completes)
+  //   uploading — true while upload is in-flight
+  const buildInitialImages = () => {
+    const urls = existing?.imageUrls?.length ? existing.imageUrls
+      : existing?.imageUrl ? [existing.imageUrl]
+      : [];
+    return urls.map((u, i) => ({ id: `existing-${i}`, uri: u, url: u, uploading: false }));
+  };
+  const [images, setImages] = useState(buildInitialImages);
 
   const authArgs = {
     idToken, sessionId, refreshToken,
@@ -67,62 +75,68 @@ export default function CreateListingScreen() {
     })();
   }, []);
 
-  // ── Pick image from device library ──────────────────────────────────────
+  // ── Pick and upload images ────────────────────────────────────────────────
   const handlePickImage = async () => {
+    if (images.length >= MAX_IMAGES) {
+      Alert.alert('Limit reached', `You can upload up to ${MAX_IMAGES} photos.`);
+      return;
+    }
     try {
-      // Re-request in case user denied initially
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          t.createListing.permRequired,
-          t.createListing.permMsg,
-        );
+        Alert.alert(t.createListing.permRequired, t.createListing.permMsg);
         return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
+        allowsMultipleSelection: true,
+        selectionLimit: MAX_IMAGES - images.length,
         quality: 0.8,
       });
 
-      if (result.canceled) return;
+      if (result.canceled || !result.assets?.length) return;
 
-      const asset = result.assets[0];
-      // Show local preview immediately — don't wait for upload
-      setImageUri(asset.uri);
-      setImageUrl(null); // reset remote URL until upload completes
+      const newEntries = result.assets.map((asset) => ({
+        id: `pick-${Date.now()}-${Math.random()}`,
+        uri: asset.uri,
+        url: null,
+        uploading: true,
+      }));
 
-      // Upload to backend
-      setUploading(true);
-      try {
-        const filename = asset.uri.split('/').pop();
-        const ext = filename.split('.').pop().toLowerCase();
-        const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
-        const mime = mimeMap[ext] || 'image/jpeg';
+      setImages((prev) => [...prev, ...newEntries]);
 
-        const uploaded = await uploadListingImage(
-          { uri: asset.uri, name: filename, type: mime },
-          { idToken, sessionId },
-        );
-        setImageUrl(uploaded.imageUrl);
-      } catch (err) {
-        Alert.alert(t.createListing.uploadFailed, err.message || t.createListing.uploadFailedMsg);
-        // Keep local preview but clear remote URL so submit won't use a broken link
-        setImageUrl(null);
-      } finally {
-        setUploading(false);
-      }
+      // Upload each picked asset in parallel
+      await Promise.all(
+        newEntries.map(async (entry) => {
+          try {
+            const filename = entry.uri.split('/').pop();
+            const ext = filename.split('.').pop().toLowerCase();
+            const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+            const mime = mimeMap[ext] || 'image/jpeg';
+            const uploaded = await uploadListingImage(
+              { uri: entry.uri, name: filename, type: mime },
+              { idToken, sessionId },
+            );
+            setImages((prev) =>
+              prev.map((img) => img.id === entry.id ? { ...img, url: uploaded.imageUrl, uploading: false } : img)
+            );
+          } catch (err) {
+            Alert.alert(t.createListing.uploadFailed, err.message || t.createListing.uploadFailedMsg);
+            setImages((prev) => prev.filter((img) => img.id !== entry.id));
+          }
+        })
+      );
     } catch (err) {
       Alert.alert(t.createListing.permRequired, t.createListing.cantOpenLibrary);
     }
   };
 
-  const handleRemoveImage = () => {
-    setImageUri(null);
-    setImageUrl(null);
+  const handleRemoveImage = (id) => {
+    setImages((prev) => prev.filter((img) => img.id !== id));
   };
+
+  const isUploading = images.some((img) => img.uploading);
 
   // ── Validation ──────────────────────────────────────────────────────────
   const validate = () => {
@@ -130,7 +144,7 @@ export default function CreateListingScreen() {
     if (!price.trim() || isNaN(parseFloat(price))) { Alert.alert(t.createListing.required, t.createListing.enterValidPrice); return false; }
     if (!quantity.trim() || isNaN(parseInt(quantity))) { Alert.alert(t.createListing.required, t.createListing.enterValidQty); return false; }
     if (cities.length === 0) { Alert.alert(t.createListing.required, 'Select at least one delivery city.'); return false; }
-    if (imageUri && !imageUrl) {
+    if (isUploading) {
       Alert.alert(t.createListing.imageUploading, t.createListing.imageUploadingMsg);
       return false;
     }
@@ -142,6 +156,7 @@ export default function CreateListingScreen() {
     if (!validate()) return;
     setLoading(true);
 
+    const imageUrls = images.map((img) => img.url).filter(Boolean);
     const payload = {
       productName: productName.trim(),
       description: description.trim(),
@@ -152,8 +167,7 @@ export default function CreateListingScreen() {
       condition,
       category,
       cities,
-      // Only include imageUrl if one was successfully uploaded
-      ...(imageUrl ? { imageUrl } : {}),
+      ...(imageUrls.length ? { imageUrls, imageUrl: imageUrls[0] } : {}),
     };
 
     try {
@@ -201,48 +215,46 @@ export default function CreateListingScreen() {
 
         {/* ── Photo upload ──────────────────────────────────────────────── */}
         <View style={styles.photoSection}>
-          <Text style={styles.label}>{t.createListing.productPhoto}</Text>
+          <View style={styles.photoLabelRow}>
+            <Text style={styles.label}>{t.createListing.productPhoto}</Text>
+            <Text style={styles.photoCount}>{images.length}/{MAX_IMAGES}</Text>
+          </View>
 
-          {imageUri ? (
-            // Preview + remove button
-            <View style={styles.previewWrapper}>
-              <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="cover" />
-
-              {/* Upload progress overlay */}
-              {uploading && (
-                <View style={styles.uploadOverlay}>
-                  <ActivityIndicator size="large" color="#fff" />
-                  <Text style={styles.uploadingText}>{t.createListing.uploading}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.photoStrip}>
+              {images.map((img) => (
+                <View key={img.id} style={styles.thumbWrapper}>
+                  <Image source={{ uri: img.uri }} style={styles.thumb} resizeMode="cover" />
+                  {img.uploading ? (
+                    <View style={styles.thumbOverlay}>
+                      <ActivityIndicator size="small" color="#fff" />
+                    </View>
+                  ) : (
+                    <TouchableOpacity style={styles.thumbRemoveBtn} onPress={() => handleRemoveImage(img.id)}>
+                      <Ionicons name="close-circle" size={22} color="#fff" />
+                    </TouchableOpacity>
+                  )}
+                  {!img.uploading && img.url && (
+                    <View style={styles.thumbDone}>
+                      <Ionicons name="checkmark-circle" size={14} color="#fff" />
+                    </View>
+                  )}
                 </View>
-              )}
+              ))}
 
-              {/* Remove button — top-right corner */}
-              {!uploading && (
-                <TouchableOpacity style={styles.removeBtn} onPress={handleRemoveImage}>
-                  <Ionicons name="close-circle" size={24} color="#fff" />
+              {images.length < MAX_IMAGES && (
+                <TouchableOpacity style={styles.photoAddBtn} onPress={handlePickImage}>
+                  <Ionicons name="camera-outline" size={26} color={colors.primary} />
+                  <Text style={styles.photoAddText}>
+                    {images.length === 0 ? t.createListing.addPhoto : 'Add More'}
+                  </Text>
                 </TouchableOpacity>
               )}
+            </View>
+          </ScrollView>
 
-              {/* Success tick once uploaded */}
-              {!uploading && imageUrl && (
-                <View style={styles.successBadge}>
-                  <Ionicons name="checkmark-circle" size={16} color="#fff" />
-                  <Text style={styles.successText}>{t.createListing.uploaded}</Text>
-                </View>
-              )}
-            </View>
-          ) : (
-            // Empty state picker button
-            <View style={styles.photoRow}>
-              <TouchableOpacity style={styles.photoAddBtn} onPress={handlePickImage}>
-                <Ionicons name="camera-outline" size={28} color={colors.primary} />
-                <Text style={styles.photoAddText}>{t.createListing.addPhoto}</Text>
-              </TouchableOpacity>
-              <View style={styles.photoHint}>
-                <Text style={styles.photoHintText}>{t.createListing.tapToChoose}</Text>
-                <Text style={styles.photoHintText}>{t.createListing.fileTypes}</Text>
-              </View>
-            </View>
+          {images.length === 0 && (
+            <Text style={styles.photoHintText}>{t.createListing.tapToChoose} · {t.createListing.fileTypes}</Text>
           )}
         </View>
 
@@ -385,9 +397,9 @@ export default function CreateListingScreen() {
 
         {/* Submit */}
         <TouchableOpacity
-          style={[styles.submitBtn, (loading || uploading) && styles.submitBtnDisabled]}
+          style={[styles.submitBtn, (loading || isUploading) && styles.submitBtnDisabled]}
           onPress={handleSubmit}
-          disabled={loading || uploading}
+          disabled={loading || isUploading}
         >
           {loading
             ? <ActivityIndicator size="small" color="#fff" />
@@ -414,39 +426,37 @@ const makeStyles = (colors) => StyleSheet.create({
 
   // Photo section
   photoSection: { marginBottom: spacing.md },
-  photoRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 8 },
+  photoLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  photoCount: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
+  photoStrip: { flexDirection: 'row', gap: 10, alignItems: 'center', paddingVertical: 4 },
   photoAddBtn: {
-    width: 90, height: 90, borderRadius: radii.xl,
+    width: 86, height: 86, borderRadius: radii.xl,
     borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center', gap: 4,
   },
-  photoAddText: { fontSize: 11, fontFamily: fonts.medium, color: colors.primary },
-  photoHint: { flex: 1 },
-  photoHintText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 18 },
+  photoAddText: { fontSize: 10, fontFamily: fonts.medium, color: colors.primary, textAlign: 'center' },
+  photoHintText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 6 },
 
-  // Image preview
-  previewWrapper: {
-    marginTop: 8, borderRadius: radii.xl, overflow: 'hidden',
-    width: '100%', height: 180, backgroundColor: colors.surface,
+  // Image thumbnails
+  thumbWrapper: {
+    width: 86, height: 86, borderRadius: radii.xl, overflow: 'hidden',
+    backgroundColor: colors.surface,
   },
-  previewImage: { width: '100%', height: '100%' },
-  uploadOverlay: {
+  thumb: { width: '100%', height: '100%' },
+  thumbOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: 'rgba(0,0,0,0.50)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  uploadingText: { color: '#fff', fontFamily: fonts.medium, fontSize: 13 },
-  removeBtn: {
-    position: 'absolute', top: 8, right: 8,
-    backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12,
+  thumbRemoveBtn: {
+    position: 'absolute', top: 4, right: 4,
+    backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 11,
   },
-  successBadge: {
-    position: 'absolute', bottom: 8, left: 8,
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(16,185,129,0.85)', borderRadius: radii.full,
-    paddingHorizontal: 10, paddingVertical: 4,
+  thumbDone: {
+    position: 'absolute', bottom: 4, left: 4,
+    backgroundColor: 'rgba(16,185,129,0.85)', borderRadius: 7,
+    padding: 1,
   },
-  successText: { color: '#fff', fontSize: 11, fontFamily: fonts.semiBold },
 
   label: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.text, marginBottom: 6 },
   required: { color: colors.accent },
