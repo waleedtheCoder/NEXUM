@@ -10,6 +10,7 @@ urlpatterns = [
     path('api/chat/',          include('chat.urls')),
     path('api/orders/',        include('orders.urls')),
     path('api/promotions/',    include('promotions.urls')),
+    path('api/analytics/',     include('analytics.urls')),
 ]
 
 # Serve uploaded media files in development only

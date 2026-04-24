@@ -35,7 +35,7 @@ export default function GuestAccountScreen() {
         <Text style={styles.topBarTitle}>{t.guestAccount.title}</Text>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 80 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.illustrationWrap}>
           <WarehouseIllustration />
         </View>

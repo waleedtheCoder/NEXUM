@@ -229,6 +229,25 @@ export default function AccountSettingsScreen() {
           </View>
         )}
 
+        {/* AI Analytics CTA */}
+        <TouchableOpacity
+          style={styles.analyticsCTA}
+          onPress={() => navigation.navigate('ShopkeeperAIAnalytics')}
+          activeOpacity={0.85}
+        >
+          <View style={[styles.menuIconWrap, { backgroundColor: 'rgba(99,102,241,0.15)' }]}>
+            <Ionicons name="sparkles-outline" size={20} color="#6366F1" />
+          </View>
+          <View style={styles.analyticsInfo}>
+            <Text style={styles.analyticsCTATitle}>AI Analytics</Text>
+            <Text style={styles.analyticsCTADesc}>Smart insights on your spending, suppliers & restocking</Text>
+          </View>
+          <View style={styles.aiPill}>
+            <Ionicons name="sparkles" size={10} color="#6366F1" />
+            <Text style={styles.aiPillText}>AI</Text>
+          </View>
+        </TouchableOpacity>
+
         {/* More on NEXUM — menu list with colored icon containers */}
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>{t.accountSettings.moreOnNexum}</Text>
@@ -484,6 +503,29 @@ const makeStyles = (colors, isDark) => StyleSheet.create({
     elevation: 4,
   },
   navCardText: { flex: 1, fontSize: 14, fontFamily: fonts.medium, color: colors.text },
+
+  // AI Analytics CTA
+  analyticsCTA: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: 'rgba(99,102,241,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(99,102,241,0.22)',
+    borderRadius: radii.xl,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
+    marginBottom: spacing.md,
+  },
+  analyticsInfo:    { flex: 1 },
+  analyticsCTATitle:{ fontSize: 14, fontFamily: fonts.semiBold, color: colors.text },
+  analyticsCTADesc: { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, marginTop: 1 },
+  aiPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: 'rgba(99,102,241,0.12)',
+    borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 4,
+  },
+  aiPillText: { fontSize: 10, fontFamily: fonts.semiBold, color: '#6366F1' },
 
   // Supplier CTA
   supplierCTA: {

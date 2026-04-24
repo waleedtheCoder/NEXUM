@@ -1,0 +1,42 @@
+# Core framework
+Django==6.0.3
+djangorestframework==3.17.1
+
+# ASGI / WebSocket
+daphne==4.2.1
+channels==4.3.2
+channels_redis==4.3.0
+
+# Firebase / Google Cloud
+firebase_admin==7.3.0
+google-cloud-firestore==2.26.0
+google-cloud-storage==3.10.1
+google-auth==2.49.1
+
+# Database
+psycopg2-binary==2.9.11
+
+# Media / Storage
+cloudinary==1.44.1
+django-cloudinary-storage==0.3.0
+Pillow==12.2.0
+
+# HTTP
+httpx==0.28.1
+requests==2.33.0
+django-cors-headers==4.9.0
+
+# Cache / Messaging
+redis==7.4.0
+msgpack==1.1.2
+
+# Auth
+PyJWT==2.12.1
+
+# PDF
+reportlab==4.4.10
+
+# ── Analytics / AI ────────────────────────────────────────────────────────────
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.4
