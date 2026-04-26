@@ -18,9 +18,8 @@ import { getOrders, getSavedListings, getSupplierNetwork } from '../services/mar
 const getMenuItems = (t) => [
   { titleKey: 'savedListings',    descKey: 'savedListingsDesc',    screen: 'SavedListings',      icon: 'bookmark-outline',   iconBg: '#E6F4FF', iconColor: '#0F766E' },
   { titleKey: 'supplierNetwork',  descKey: 'supplierNetworkDesc',  screen: 'SupplierNetwork',    icon: 'business-outline',   iconBg: '#E6F4FF', iconColor: '#0F766E' },
-  { titleKey: 'restockReminders', descKey: 'restockDesc',          screen: 'RestockReminders',   icon: 'alarm-outline',      iconBg: '#F3E8FF', iconColor: '#9333EA', hasNew: true },
-  { titleKey: 'bulkDeals',        descKey: 'bulkDealsDesc',        screen: 'MarketplaceBrowsing',icon: 'pricetag-outline',   iconBg: '#FFF1E6', iconColor: '#F97316' },
-  { titleKey: 'inviteRetailers',  descKey: 'inviteDesc',           screen: null,                 icon: 'person-add-outline', iconBg: '#E6F4FF', iconColor: '#0F766E' },
+  { titleKey: 'restockReminders', descKey: 'restockDesc',   screen: 'RestockReminders',    icon: 'alarm-outline',    iconBg: '#F3E8FF', iconColor: '#9333EA', hasNew: true },
+  { titleKey: 'bulkDeals',        descKey: 'bulkDealsDesc', screen: 'MarketplaceBrowsing', icon: 'pricetag-outline', iconBg: '#FFF1E6', iconColor: '#F97316' },
 ];
 
 const STATUS_COLORS = {

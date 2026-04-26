@@ -19,11 +19,8 @@ const getMenuItems = (t) => [
   { titleKey: 'myListings',     descKey: 'myListingsDesc',      icon: 'cube-outline',             screen: 'Sell',                 iconBg: '#E6F4FF', iconColor: '#0F766E' },
   { titleKey: 'incomingOrders', descKey: 'incomingOrdersDesc',  icon: 'receipt-outline',          screen: 'IncomingOrders',       iconBg: '#FFF1E6', iconColor: '#F97316', badge: 'New' },
   { titleKey: 'businessProfile',descKey: 'businessProfileDesc', icon: 'business-outline',         screen: 'EditProfile',          iconBg: '#E6F4FF', iconColor: '#0F766E' },
-  { titleKey: 'aiAnalytics',    descKey: 'aiAnalyticsDesc',     icon: 'sparkles-outline',         screen: 'SupplierAIAnalytics',  iconBg: '#EEF2FF', iconColor: '#6366F1' },
-  { titleKey: 'payoutBanking',  descKey: 'payoutDesc',          icon: 'card-outline',             screen: null,                   iconBg: '#F0FDF4', iconColor: '#22C55E' },
-  { titleKey: 'getVerified',    descKey: 'getVerifiedDesc',     icon: 'shield-checkmark-outline', screen: 'Verification',         iconBg: '#F0FDF4', iconColor: '#22C55E' },
-  { titleKey: 'promoteListings',descKey: 'promoteDesc',         icon: 'trending-up-outline',      screen: null,                   iconBg: '#FFF1E6', iconColor: '#F97316' },
-  { titleKey: 'inviteRetailers',descKey: 'inviteDesc',          icon: 'person-add-outline',       screen: null,                   iconBg: '#E6F4FF', iconColor: '#0F766E' },
+  { titleKey: 'aiAnalytics',    descKey: 'aiAnalyticsDesc',     icon: 'sparkles-outline',         screen: 'SupplierAIAnalytics', iconBg: '#EEF2FF', iconColor: '#6366F1' },
+  { titleKey: 'getVerified',    descKey: 'getVerifiedDesc',     icon: 'shield-checkmark-outline', screen: 'Verification',        iconBg: '#F0FDF4', iconColor: '#22C55E' },
 ];
 
 export default function SupplierAccountScreen() {

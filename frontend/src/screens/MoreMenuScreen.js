@@ -23,8 +23,7 @@ const FEATURE_META = [
   { icon: 'storefront',    iconBg: '#E6F4FF', iconColor: '#0F766E', titleKey: 'savedSuppliers',  screen: 'MarketplaceBrowsing' },
   { icon: 'cube',          iconBg: '#F3E8FF', iconColor: '#9333EA', titleKey: 'savedProducts',   screen: 'SavedListings'     },
   { icon: 'receipt',       iconBg: '#FFF1E6', iconColor: '#F97316', titleKey: 'purchaseHistory', screen: 'OrderHistory'      },
-  { icon: 'notifications', iconBg: '#F3E8FF', iconColor: '#9333EA', titleKey: 'restockReminders',screen: 'RestockReminders'  },
-  { icon: 'card',          iconBg: '#F0FDF4', iconColor: '#22C55E', titleKey: 'creditsLimits',   screen: null                },
+  { icon: 'notifications', iconBg: '#F3E8FF', iconColor: '#9333EA', titleKey: 'restockReminders', screen: 'RestockReminders' },
 ];
 
 export default function MoreMenuScreen() {
@@ -48,7 +47,7 @@ export default function MoreMenuScreen() {
 
         {/* Feature grid — 2 cards per row, each flex: 1 */}
         <View style={styles.grid}>
-          {[0, 2, 4].map((rowStart) => (
+          {Array.from({ length: Math.ceil(FEATURE_META.length / 2) }, (_, i) => i * 2).map((rowStart) => (
             <View key={rowStart} style={styles.gridRow}>
               {FEATURE_META.slice(rowStart, rowStart + 2).map((card, i) => (
                 <View key={i} style={styles.featureCardWrap}>
@@ -151,21 +150,6 @@ export default function MoreMenuScreen() {
             <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
           </PressableBounce>
 
-          <View style={styles.settingDivider} />
-
-          {/* ── Invite ── */}
-          <PressableBounce
-            style={styles.settingRow}
-            onPress={() => Alert.alert(t.moreMenu.invite, t.common.comingSoon)}
-          >
-            <View style={styles.settingLeft}>
-              <View style={[styles.settingIconWrap, { backgroundColor: '#F0FDF4' }]}>
-                <Ionicons name="person-add-outline" size={18} color="#22C55E" />
-              </View>
-              <Text style={styles.settingLabel}>{t.moreMenu.invite}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
-          </PressableBounce>
 
         </View>
 

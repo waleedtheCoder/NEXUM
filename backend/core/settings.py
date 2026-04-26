@@ -34,7 +34,7 @@ DEBUG      = _env_to_bool(os.getenv('DJANGO_DEBUG'), default=True)
 
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+    for host in os.getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost,192.168.110.200').split(',')
     if host.strip()
 ]
 

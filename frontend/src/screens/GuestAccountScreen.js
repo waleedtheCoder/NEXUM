@@ -14,10 +14,8 @@ import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
 
 const EXPLORE_ITEMS = [
-  { labelKey: 'viewSuppliers', icon: 'business-outline',           iconBg: '#E6F4FF', iconColor: '#0F766E', screen: 'MarketplaceBrowsing' },
-  { labelKey: 'browseBulk',   icon: 'cube-outline',               iconBg: '#F3E8FF', iconColor: '#9333EA', screen: 'MarketplaceBrowsing' },
-  { labelKey: 'learnHow',     icon: 'information-circle-outline', iconBg: '#FFF1E6', iconColor: '#F97316', screen: null },
-  { labelKey: 'invite',       icon: 'person-add-outline',         iconBg: '#F0FDF4', iconColor: '#22C55E', screen: null },
+  { labelKey: 'viewSuppliers', icon: 'business-outline', iconBg: '#E6F4FF', iconColor: '#0F766E', screen: 'MarketplaceBrowsing' },
+  { labelKey: 'browseBulk',   icon: 'cube-outline',     iconBg: '#F3E8FF', iconColor: '#9333EA', screen: 'MarketplaceBrowsing' },
 ];
 
 export default function GuestAccountScreen() {
