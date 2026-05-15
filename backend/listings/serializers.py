@@ -31,8 +31,9 @@ class ListingCardSerializer(serializers.ModelSerializer):
         return time_ago(obj.created_at)
 
     def get_imageUrl(self, obj):
-        first = obj.images.first()
-        return first.url if first else (obj.image_url or '')
+        # Use prefetched cache — .first() would issue a fresh LIMIT 1 query per row.
+        images = list(obj.images.all())
+        return images[0].url if images else (obj.image_url or '')
 
     def get_imageUrls(self, obj):
         urls = [img.url for img in obj.images.all()]
@@ -169,20 +170,26 @@ class MyListingSerializer(serializers.ModelSerializer):
         return time_ago(obj.created_at)
 
     def get_imageUrl(self, obj):
-        first = obj.images.first()
-        return first.url if first else (obj.image_url or '')
+        # Use prefetched cache — .first() would issue a fresh LIMIT 1 query per row.
+        images = list(obj.images.all())
+        return images[0].url if images else (obj.image_url or '')
 
     def get_imageUrls(self, obj):
         urls = [img.url for img in obj.images.all()]
         return urls if urls else ([obj.image_url] if obj.image_url else [])
 
     def get_inquiries(self, obj):
+        # Prefer the annotated count from MyListingsView; fall back to a query
+        # only if this serializer is used elsewhere without the annotation.
+        annotated = getattr(obj, '_inquiry_count', None)
+        if annotated is not None:
+            return annotated
         return obj.conversations.count()
 
     def get_promotion(self, obj):
         try:
             p = obj.promotion
-            if p.is_active:
+            if p and p.is_active:
                 return {
                     'discountPercent':  p.discount_percent,
                     'discountedPrice':  str(round(p.discounted_price, 2)),

@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import Q, Count
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -230,7 +230,17 @@ class MyListingsView(APIView):
       - status  ("active" | "pending" | "removed") — optional filter
     """
     def get(self, request):
-        qs = Listing.objects.filter(supplier=request.user).order_by('-created_at').prefetch_related('images')
+        # select_related('promotion') + prefetch_related('images') + annotated
+        # inquiry count collapses what was an N+1 (3 extra queries per listing)
+        # into a constant 3-query total — the cause of the listing page timeouts.
+        qs = (
+            Listing.objects
+            .filter(supplier=request.user)
+            .select_related('promotion')
+            .prefetch_related('images')
+            .annotate(_inquiry_count=Count('conversations'))
+            .order_by('-created_at')
+        )
 
         status_filter = request.query_params.get('status', '').strip()
         if status_filter in ('active', 'pending', 'removed'):
