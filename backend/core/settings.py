@@ -106,6 +106,12 @@ CHANNEL_LAYERS = {
 DB_ENGINE = os.getenv('DB_ENGINE', 'sqlite3').strip().lower()
 
 if DB_ENGINE in {'postgres', 'postgresql', 'django.db.backends.postgresql'}:
+    # CONN_MAX_AGE: keep 0 when using Supabase transaction pooler (port 6543 /
+    # PgBouncer in transaction mode) — pooler owns the connection lifecycle.
+    # Switch to 60 if connecting to port 5432 (session mode or direct).
+    _pg_port = int(os.getenv('DB_PORT', '5432'))
+    _conn_max_age = 0 if _pg_port == 6543 else 60
+
     DATABASES = {
         'default': {
             'ENGINE':       'django.db.backends.postgresql',
@@ -113,22 +119,39 @@ if DB_ENGINE in {'postgres', 'postgresql', 'django.db.backends.postgresql'}:
             'USER':         os.getenv('DB_USER', 'postgres'),
             'PASSWORD':     os.getenv('DB_PASSWORD', ''),
             'HOST':         os.getenv('DB_HOST', 'localhost'),
-            'PORT':         os.getenv('DB_PORT', '5432'),
-            'CONN_MAX_AGE': 0,
-            'DISABLE_SERVER_SIDE_CURSORS': True,   # required for Supabase transaction pooler (port 6543)
+            'PORT':         str(_pg_port),
+            'CONN_MAX_AGE': _conn_max_age,
+            'DISABLE_SERVER_SIDE_CURSORS': True,   # required for Supabase transaction pooler
             'OPTIONS': {
-                'sslmode': 'require',
+                'sslmode':         'require',
                 'connect_timeout': 10,
             },
         }
     }
 else:
+    # SQLite — WAL mode + pragmas are applied via UsersConfig.ready()
+    # using the connection_created signal (see users/apps.py).
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME':   BASE_DIR / os.getenv('SQLITE_FILE', 'db.sqlite3'),
+            'OPTIONS': {
+                'timeout': 20,   # seconds to wait for the write lock before raising OperationalError
+            },
         }
     }
+
+# ── Cache ────────────────────────────────────────────────────────────────────
+# LocMemCache: per-process in-memory dict. Zero latency, zero infra.
+# In production with multiple workers, swap to Redis so caches are shared:
+#   CACHES = {'default': {'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+#                         'LOCATION': os.getenv('REDIS_URL', 'redis://localhost:6379')}}
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'nexum-main',
+    }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

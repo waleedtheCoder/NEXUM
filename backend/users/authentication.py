@@ -1,5 +1,6 @@
 import firebase_admin
 from django.contrib.sessions.models import Session
+from django.core.cache import cache
 from django.utils import timezone
 from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import AuthenticationFailed
@@ -7,6 +8,15 @@ from firebase_admin import auth
 from django.contrib.auth.models import User
 
 from .models import UserProfile
+
+# How long to hold the session_id → user_id mapping in cache.
+# Sessions themselves can live much longer; this just controls how often we
+# re-verify by hitting the Session table. 5 minutes is safe.
+_SESSION_CACHE_TTL = 300
+
+
+def session_cache_key(session_id: str) -> str:
+    return f'sid:{session_id}'
 
 
 class SessionIDAuthentication(BaseAuthentication):
@@ -22,24 +32,40 @@ class SessionIDAuthentication(BaseAuthentication):
         if not session_id:
             return None
 
-        try:
-            session = Session.objects.get(session_key=session_id, expire_date__gte=timezone.now())
-        except Session.DoesNotExist as exc:
-            raise AuthenticationFailed('Invalid or expired session ID.') from exc
+        # ── Cache look-up (avoids a Session DB query on every request) ────────
+        cache_key = session_cache_key(session_id)
+        user_id   = cache.get(cache_key)
 
-        session_data = session.get_decoded()
-        user_id = session_data.get('user_id')
-        if not user_id:
-            # Anonymous guest session — not authenticated, but not an error.
-            # Let the view's permission_classes decide whether to allow access.
-            return None
+        if user_id is None:
+            # Cache miss — verify against the DB and populate the cache.
+            try:
+                session = Session.objects.get(
+                    session_key=session_id,
+                    expire_date__gte=timezone.now(),
+                )
+            except Session.DoesNotExist as exc:
+                raise AuthenticationFailed('Invalid or expired session ID.') from exc
 
+            session_data = session.get_decoded()
+            user_id      = session_data.get('user_id')
+
+            if not user_id:
+                # Anonymous guest session — not authenticated, but not an error.
+                return None
+
+            cache.set(cache_key, user_id, timeout=_SESSION_CACHE_TTL)
+
+        # ── Single JOIN query: User + profile together ────────────────────────
+        # select_related('profile') means request.user.profile in any view is
+        # free — no extra DB round trip.
         try:
-            user = User.objects.get(id=user_id) 
+            user = User.objects.select_related('profile').get(id=user_id)
         except User.DoesNotExist as exc:
+            cache.delete(cache_key)
             raise AuthenticationFailed('User for this session does not exist.') from exc
 
         return (user, None)
+
 
 class FirebaseAuthentication(BaseAuthentication):
     def authenticate(self, request):
@@ -60,10 +86,10 @@ class FirebaseAuthentication(BaseAuthentication):
             ) from exc
 
         try:
-            decoded_token = auth.verify_id_token(token)
-            uid = decoded_token.get('uid')
-            email = decoded_token.get('email', f"{uid}@firebase.local")
-            phone = decoded_token.get('phone_number', '')
+            decoded_token  = auth.verify_id_token(token)
+            uid            = decoded_token.get('uid')
+            email          = decoded_token.get('email', f"{uid}@firebase.local")
+            phone          = decoded_token.get('phone_number', '')
             email_verified = bool(decoded_token.get('email_verified', False))
         except Exception as e:
             raise AuthenticationFailed(f'Invalid or expired Firebase ID Token: {str(e)}')
@@ -71,18 +97,21 @@ class FirebaseAuthentication(BaseAuthentication):
         if not uid:
             raise AuthenticationFailed('Invalid Firebase token payload: uid is missing.')
 
-        user, _ = User.objects.get_or_create(username=uid, defaults={'email': email})
+        # Single JOIN: fetch User + profile together so views don't need a
+        # second query for request.user.profile.
+        user, _ = User.objects.select_related('profile').get_or_create(
+            username=uid, defaults={'email': email}
+        )
 
         if email and user.email != email:
             user.email = email
             user.save(update_fields=['email'])
-        
-        # Link the custom profile
+
         profile, created = UserProfile.objects.get_or_create(
-            user=user, 
+            user=user,
             defaults={
-                'firebase_uid': uid,
-                'phone_number': phone,
+                'firebase_uid':   uid,
+                'phone_number':   phone,
                 'email_verified': email_verified,
             }
         )

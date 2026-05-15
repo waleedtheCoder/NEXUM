@@ -496,6 +496,8 @@ class LogoutView(APIView):
                 session_id = parts[1].strip()
 
         if session_id:
+            from users.authentication import session_cache_key
+            cache.delete(session_cache_key(session_id))
             Session.objects.filter(session_key=session_id).delete()
 
         return Response({'message': 'Logged out successfully.'}, status=status.HTTP_200_OK)
@@ -524,6 +526,8 @@ class RotateSessionView(APIView):
         new_session_id = _create_session_id(request.user, profile.role)
 
         if previous_session_id and previous_session_id != new_session_id:
+            from users.authentication import session_cache_key
+            cache.delete(session_cache_key(previous_session_id))
             Session.objects.filter(session_key=previous_session_id).delete()
 
         return Response({'session_id': new_session_id}, status=status.HTTP_200_OK)
