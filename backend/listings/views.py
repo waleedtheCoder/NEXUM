@@ -1,4 +1,4 @@
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Avg, F, OuterRef, Subquery
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -138,13 +138,43 @@ class ListingDetailView(APIView):
     permission_classes = []
 
     def get(self, request, pk):
+        from orders.models import Review, Order as OrderModel
         try:
-            listing = Listing.objects.select_related('supplier__profile', 'promotion').prefetch_related('images').get(pk=pk)
+            listing = (
+                Listing.objects
+                .select_related('supplier__profile', 'promotion')
+                .prefetch_related('images')
+                .annotate(
+                    # Correlated subqueries — one DB round trip instead of 3.
+                    _supplier_avg_rating=Subquery(
+                        Review.objects
+                        .filter(supplier_id=OuterRef('supplier_id'))
+                        .values('supplier_id')
+                        .annotate(avg=Avg('rating'))
+                        .values('avg')[:1]
+                    ),
+                    _supplier_review_count=Subquery(
+                        Review.objects
+                        .filter(supplier_id=OuterRef('supplier_id'))
+                        .values('supplier_id')
+                        .annotate(cnt=Count('id'))
+                        .values('cnt')[:1]
+                    ),
+                    _supplier_sales=Subquery(
+                        OrderModel.objects
+                        .filter(supplier_id=OuterRef('supplier_id'), status='delivered')
+                        .values('supplier_id')
+                        .annotate(cnt=Count('id'))
+                        .values('cnt')[:1]
+                    ),
+                )
+                .get(pk=pk)
+            )
         except Listing.DoesNotExist:
             return Response({'detail': 'Listing not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Increment view counter (fire-and-forget)
-        Listing.objects.filter(pk=pk).update(views=listing.views + 1)
+        # Atomic increment — avoids the read-modify-write race condition.
+        Listing.objects.filter(pk=pk).update(views=F('views') + 1)
 
         data = ListingDetailSerializer(listing).data
         data['is_saved'] = (
@@ -186,7 +216,7 @@ class SearchView(APIView):
             Q(category__icontains=q) |
             Q(location__icontains=q) |
             Q(description__icontains=q)
-        ).select_related('supplier__profile').prefetch_related('images')
+        ).select_related('supplier__profile', 'promotion').prefetch_related('images')
 
         price_min = request.query_params.get('price_min', '').strip()
         price_max = request.query_params.get('price_max', '').strip()
@@ -429,13 +459,18 @@ class SupplierDashboardView(APIView):
     """
     def get(self, request):
         # Import here to avoid circular dependency at module load time
-        from chat.models import Conversation, Message
+        from chat.models import Conversation
 
         user = request.user
 
         # ── Performance stats ─────────────────────────────────────────────
-        active_count  = Listing.objects.filter(supplier=user, status='active').count()
-        pending_count = Listing.objects.filter(supplier=user, status='pending').count()
+        # Collapse two same-table counts into one aggregate query.
+        listing_agg   = Listing.objects.filter(supplier=user).aggregate(
+            active=Count('id', filter=Q(status='active')),
+            pending=Count('id', filter=Q(status='pending')),
+        )
+        active_count    = listing_agg['active']
+        pending_count   = listing_agg['pending']
         total_inquiries = Conversation.objects.filter(seller=user).count()
 
         performance = [
@@ -469,16 +504,14 @@ class SupplierDashboardView(APIView):
 
         recent_inquiries = []
         for conv in recent_convs:
-            # Get the latest message in this conversation
-            last_msg = conv.messages.order_by('-created_at').first()
             buyer_name = conv.buyer.first_name or conv.buyer.email or 'Buyer'
             recent_inquiries.append({
                 'id': f'INQ-{conv.pk:03d}',
                 'buyer': buyer_name,
                 'product': conv.listing.product_name if conv.listing else 'Product inquiry',
-                'message': last_msg.text if last_msg else '',
+                'message': conv.last_message,
                 'time': time_ago(conv.updated_at),
-                'read': last_msg.is_read if last_msg else True,
+                'read': conv.seller_unread == 0,
                 'avatarColor': avatar_color_for(conv.buyer_id),
                 'init': get_initials(buyer_name),
             })

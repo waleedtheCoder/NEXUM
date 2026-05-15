@@ -17,33 +17,66 @@ def _current_period_start() -> datetime.date:
     return today.replace(day=1)
 
 
-def _needs_refresh(listing) -> bool:
-    from analytics.models import SupplierAnalysis
-    period = _current_period_start()
-    return not SupplierAnalysis.objects.filter(listing=listing, period_start=period).exists()
+def _compute_listing_analysis(listing, supplier_cats: set) -> dict:
+    """
+    Compute per-listing analysis.
 
-
-def _compute_listing_analysis(listing) -> dict:
+    supplier_cats is pre-computed by the caller (once for all listings) to avoid
+    an extra DB query per listing.
+    """
     from orders.models import Order
-    from listings.models import Listing
     from analytics.models import MarketSnapshot
     from analytics.services.embeddings import category_avg_price
-    from django.db.models import Avg, Sum
+    from django.db.models import Sum
 
-    today = datetime.date.today()
+    today        = datetime.date.today()
     window_start = today - datetime.timedelta(days=90)
 
-    recent_orders = list(
-        Order.objects.filter(
+    # Detect active promotion before deciding how to fetch orders.
+    has_active_promo = False
+    promo_start      = None
+    try:
+        if listing.promotion.is_active:
+            has_active_promo = True
+            promo_start = listing.promotion.created_at.date()
+    except Exception:
+        pass
+
+    if has_active_promo:
+        # Need per-order dates for promo/pre-promo split.
+        # Use .values() to load only the two columns we need — avoids full ORM
+        # object construction and reduces memory.
+        orders_qs = (
+            Order.objects
+            .filter(
+                listing=listing,
+                status__in=['confirmed', 'shipped', 'delivered'],
+                created_at__date__gte=window_start,
+            )
+            .order_by('created_at')
+            .values('quantity', 'created_at')
+        )
+        # Single pass through the result set.
+        total_units = promo_units = pre_units = 0
+        for o in orders_qs:
+            q = o['quantity']
+            total_units += q
+            if o['created_at'].date() >= promo_start:
+                promo_units += q
+            else:
+                pre_units += q
+    else:
+        # No per-order iteration needed — let the DB do the sum.
+        agg = Order.objects.filter(
             listing=listing,
             status__in=['confirmed', 'shipped', 'delivered'],
             created_at__date__gte=window_start,
-        ).order_by('created_at')
-    )
-    total_units = sum(o.quantity for o in recent_orders)
+        ).aggregate(total=Sum('quantity'))
+        total_units = agg['total'] or 0
+        promo_units = pre_units = 0
 
     # ── Price impact ─────────────────────────────────────────────────────────
-    avg_market = category_avg_price(listing.category)
+    avg_market    = category_avg_price(listing.category)
     current_price = float(listing.price)
 
     if avg_market and avg_market > 0:
@@ -61,26 +94,20 @@ def _compute_listing_analysis(listing) -> dict:
             )
             recommended_price = Decimal(str(round(avg_market * 0.92, 2)))
         else:
-            price_impact = (
-                f"Your price is competitive (market avg: {avg_market:.0f})."
-            )
+            price_impact = f"Your price is competitive (market avg: {avg_market:.0f})."
             recommended_price = listing.price
     else:
-        price_impact = "Insufficient market data to compare pricing for this category."
+        price_impact      = "Insufficient market data to compare pricing for this category."
         recommended_price = listing.price
 
-    # Promotion effect
-    if hasattr(listing, 'promotion') and listing.promotion.is_active:
-        promo_start = listing.promotion.created_at.date()
-        promo_units = sum(o.quantity for o in recent_orders if o.created_at.date() >= promo_start)
-        pre_units = sum(o.quantity for o in recent_orders if o.created_at.date() < promo_start)
-        if pre_units > 0 and promo_units > 0:
-            boost = (promo_units / pre_units - 1) * 100
-            price_impact += f" Active promotion boosted sales by {boost:.0f}%."
+    if has_active_promo and pre_units > 0 and promo_units > 0:
+        boost = (promo_units / pre_units - 1) * 100
+        price_impact += f" Active promotion boosted sales by {boost:.0f}%."
 
     # ── Best city targeting ───────────────────────────────────────────────────
     city_demand = (
-        MarketSnapshot.objects.filter(
+        MarketSnapshot.objects
+        .filter(
             category__iexact=listing.category,
             month__gte=(today.replace(day=1) - datetime.timedelta(days=90)),
         )
@@ -102,11 +129,11 @@ def _compute_listing_analysis(listing) -> dict:
                 f"Add {best_city} to your listing's cities for maximum reach."
             )
     else:
-        best_city = listing.location
+        best_city      = listing.location
         city_reasoning = "Not enough city data yet. Keep your current listing city."
 
     # ── Low-performing guidance ───────────────────────────────────────────────
-    is_low = total_units < _LOW_UNITS_THRESHOLD
+    is_low         = total_units < _LOW_UNITS_THRESHOLD
     low_perf_guidance = ''
     if is_low:
         price_floor = round(float(recommended_price) * 0.85, 0)
@@ -118,18 +145,16 @@ def _compute_listing_analysis(listing) -> dict:
         )
 
     # ── Portfolio expansion suggestions ──────────────────────────────────────
+    # supplier_cats is passed in — computed once for all listings by the caller.
     top_categories = (
-        MarketSnapshot.objects.filter(
+        MarketSnapshot.objects
+        .filter(
             city__iexact=listing.location,
             month__gte=(today.replace(day=1) - datetime.timedelta(days=90)),
         )
         .values('category')
         .annotate(total=Sum('units_sold'))
         .order_by('-total')[:10]
-    )
-    supplier_cats = set(
-        Listing.objects.filter(supplier=listing.supplier, status='active')
-        .values_list('category', flat=True)
     )
     portfolio_suggestions = [
         c['category']
@@ -139,11 +164,11 @@ def _compute_listing_analysis(listing) -> dict:
 
     return {
         'price_impact_summary': price_impact,
-        'recommended_price': recommended_price,
-        'best_city': best_city,
-        'city_reasoning': city_reasoning,
-        'is_low_performing': is_low,
-        'low_perf_guidance': low_perf_guidance,
+        'recommended_price':    recommended_price,
+        'best_city':            best_city,
+        'city_reasoning':       city_reasoning,
+        'is_low_performing':    is_low,
+        'low_perf_guidance':    low_perf_guidance,
         'portfolio_suggestions': portfolio_suggestions,
     }
 
@@ -162,46 +187,61 @@ def get_supplier_analysis(user) -> dict:
     from listings.models import Listing
     from analytics.models import SupplierAnalysis
 
+    period = _current_period_start()
+
     listings = list(
         Listing.objects.filter(supplier=user, status='active')
-        .prefetch_related('promotion')
+        .select_related('promotion')
+    )
+
+    # Pre-fetch all cached analyses for this period in one query.
+    existing = {
+        sa.listing_id: sa
+        for sa in SupplierAnalysis.objects.filter(listing__in=listings, period_start=period)
+    }
+
+    # Pre-compute supplier's own active categories once — avoids one DB query
+    # per listing inside _compute_listing_analysis.
+    supplier_cats = set(
+        Listing.objects
+        .filter(supplier=user, status='active')
+        .values_list('category', flat=True)
     )
 
     result = []
     for listing in listings:
-        if _needs_refresh(listing):
-            data = _compute_listing_analysis(listing)
+        saved = existing.get(listing.id)
+        if saved is None:
+            data = _compute_listing_analysis(listing, supplier_cats)
             _save_analysis(listing, data)
         else:
-            period = _current_period_start()
-            saved = SupplierAnalysis.objects.get(listing=listing, period_start=period)
             data = {
                 'price_impact_summary': saved.price_impact_summary,
-                'recommended_price': saved.recommended_price,
-                'best_city': saved.best_city,
-                'city_reasoning': saved.city_reasoning,
-                'is_low_performing': saved.is_low_performing,
-                'low_perf_guidance': saved.low_perf_guidance,
+                'recommended_price':    saved.recommended_price,
+                'best_city':            saved.best_city,
+                'city_reasoning':       saved.city_reasoning,
+                'is_low_performing':    saved.is_low_performing,
+                'low_perf_guidance':    saved.low_perf_guidance,
                 'portfolio_suggestions': saved.portfolio_suggestions,
             }
 
         result.append({
-            'listingId': listing.id,
-            'title': listing.product_name,
-            'category': listing.category,
+            'listingId':    listing.id,
+            'title':        listing.product_name,
+            'category':     listing.category,
             'currentPrice': str(listing.price),
             'analysis': {
-                'priceImpact': data['price_impact_summary'],
-                'recommendedPrice': str(data['recommended_price']),
-                'bestCity': data['best_city'],
-                'cityReasoning': data['city_reasoning'],
-                'isLowPerforming': data['is_low_performing'],
-                'lowPerfGuidance': data['low_perf_guidance'],
-                'portfolioSuggestions': data['portfolio_suggestions'],
+                'priceImpact':           data['price_impact_summary'],
+                'recommendedPrice':      str(data['recommended_price']),
+                'bestCity':              data['best_city'],
+                'cityReasoning':         data['city_reasoning'],
+                'isLowPerforming':       data['is_low_performing'],
+                'lowPerfGuidance':       data['low_perf_guidance'],
+                'portfolioSuggestions':  data['portfolio_suggestions'],
             },
         })
 
     return {
-        'listings': result,
+        'listings':    result,
         'periodStart': _current_period_start().isoformat(),
     }

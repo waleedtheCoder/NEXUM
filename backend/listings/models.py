@@ -34,8 +34,8 @@ class Listing(models.Model):
     unit = models.CharField(max_length=20, choices=UNIT_CHOICES, default='kg')
     condition = models.CharField(max_length=30, choices=CONDITION_CHOICES, default='New')
     location = models.CharField(max_length=255)
-    category = models.CharField(max_length=100, default='General')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    category = models.CharField(max_length=100, default='General', db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
     # Accepts a URL string — suppliers can paste a product image URL.
     # File upload can be layered on top later without a DB migration.
     image_url = models.URLField(blank=True, default='')

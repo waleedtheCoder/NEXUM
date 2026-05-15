@@ -1,3 +1,5 @@
+from django.db.models import Count, Q
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -24,19 +26,19 @@ class SupplierNetworkView(APIView):
             FavouriteSupplier.objects
             .filter(shopkeeper=request.user)
             .select_related('supplier')
+            .annotate(_active_listings=Count('supplier__listings', filter=Q(supplier__listings__status='active')))
         )
 
         result = []
         for fav in favourites:
             sup = fav.supplier
             name = sup.get_full_name() or sup.username
-            listing_count = sup.listings.filter(status='active').count()
             result.append({
                 'id':            sup.id,
                 'name':          name,
                 'initials':      get_initials(name),
                 'avatarColor':   avatar_color_for(sup.id),
-                'totalListings': listing_count,
+                'totalListings': fav._active_listings,
             })
 
         return Response(result)
@@ -59,8 +61,8 @@ class ToggleFavouriteSupplierView(APIView):
             return Response({'detail': 'supplier_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            supplier = User.objects.get(id=supplier_id)
-            profile  = UserProfile.objects.get(user=supplier)
+            supplier = User.objects.select_related('profile').get(id=supplier_id)
+            profile  = supplier.profile
         except (User.DoesNotExist, UserProfile.DoesNotExist):
             return Response({'detail': 'Supplier not found.'}, status=status.HTTP_404_NOT_FOUND)
 

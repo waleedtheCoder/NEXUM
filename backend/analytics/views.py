@@ -1,12 +1,40 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from rest_framework import status
+
+
+def _bootstrap_if_empty():
+    """
+    Auto-seed MarketSnapshot on the very first market request.
+    Only fires when the table is completely empty AND qualifying orders exist.
+    Subsequent calls are free (the table has rows, exists() returns True immediately).
+    """
+    from analytics.models import MarketSnapshot
+    if MarketSnapshot.objects.exists():
+        return
+    from orders.models import Order
+    has_orders = Order.objects.filter(
+        status__in=['confirmed', 'shipped', 'delivered'],
+        listing__isnull=False,
+    ).exists()
+    if not has_orders:
+        return
+    from analytics.services.market import rebuild_snapshots, rebuild_top_products
+    try:
+        rebuild_snapshots()
+        rebuild_top_products()
+    except Exception:
+        pass
 
 
 class MarketCurrentView(APIView):
     """GET /api/analytics/market/current/?city=Karachi"""
+    authentication_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request):
+        _bootstrap_if_empty()
         from analytics.services.market import get_current_month_summary
         city = request.query_params.get('city', '')
         return Response(get_current_month_summary(city))
@@ -14,8 +42,11 @@ class MarketCurrentView(APIView):
 
 class MarketHistoryView(APIView):
     """GET /api/analytics/market/history/?city=Karachi&category=Electronics"""
+    authentication_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request):
+        _bootstrap_if_empty()
         from analytics.services.market import get_history
         city = request.query_params.get('city', '')
         category = request.query_params.get('category', '')
@@ -24,8 +55,11 @@ class MarketHistoryView(APIView):
 
 class MarketForecastView(APIView):
     """GET /api/analytics/market/forecast/?city=Karachi"""
+    authentication_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request):
+        _bootstrap_if_empty()
         from analytics.services.forecast import get_forecast
         city = request.query_params.get('city', '')
         return Response(get_forecast(city))
@@ -33,8 +67,11 @@ class MarketForecastView(APIView):
 
 class MarketTopProductsView(APIView):
     """GET /api/analytics/market/top-products/?city=Karachi"""
+    authentication_classes = []
+    permission_classes = [AllowAny]
 
     def get(self, request):
+        _bootstrap_if_empty()
         from analytics.services.market import get_top_products
         city = request.query_params.get('city', '')
         return Response(get_top_products(city))

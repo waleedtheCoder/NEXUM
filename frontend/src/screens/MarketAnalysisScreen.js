@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, StatusBar, ActivityIndicator, Dimensions,
@@ -52,18 +52,24 @@ export default function MarketAnalysisScreen() {
     onTokenRefreshed: (t) => updateUser({ idToken: t }),
   };
 
-  const [activeTab, setActiveTab]     = useState('overview');
+  const [activeTab, setActiveTab]       = useState('overview');
   const [selectedCity, setSelectedCity] = useState('');
-  const [tabData, setTabData]         = useState({});
-  const [loading, setLoading]         = useState(false);
-  const [error, setError]             = useState(null);
-  const [cities, setCities]           = useState([]);
+  const [tabData, setTabData]           = useState({});
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState(null);
+  const [cities, setCities]             = useState([]);
 
-  const cacheKey  = `${activeTab}::${selectedCity}`;
-  const data      = tabData[cacheKey];
+  const scrollRef  = useRef(null);
+  const tabDataRef = useRef(tabData);
+  tabDataRef.current = tabData;
+
+  const cacheKey = `${activeTab}::${selectedCity}`;
+  const data     = tabData[cacheKey];
 
   const fetchTab = useCallback(async (tab, city) => {
     const key = `${tab}::${city}`;
+    // Skip if already cached — use ref to get live value, not stale closure
+    if (tabDataRef.current[key]) return;
     setLoading(true);
     setError(null);
     try {
@@ -85,11 +91,21 @@ export default function MarketAnalysisScreen() {
     }
   }, [idToken, sessionId]);
 
+  // Always reset error/loading on tab or city change, then fetch if not cached.
+  // fetchTab in deps ensures a retry when auth tokens finish loading.
   useEffect(() => {
-    if (!tabData[cacheKey]) {
+    setError(null);
+    if (tabDataRef.current[cacheKey]) {
+      setLoading(false);
+    } else {
       fetchTab(activeTab, selectedCity);
     }
-  }, [activeTab, selectedCity]);
+  }, [activeTab, selectedCity, fetchTab]);
+
+  // Scroll content back to top on every tab/city switch without remounting the ScrollView.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [cacheKey]);
 
   const handleTabPress = (tab) => {
     setActiveTab(tab);
@@ -442,9 +458,9 @@ export default function MarketAnalysisScreen() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
-        key={cacheKey}
       >
         {renderContent()}
       </ScrollView>

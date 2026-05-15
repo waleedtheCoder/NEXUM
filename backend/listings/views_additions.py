@@ -80,7 +80,7 @@ class SavedListingsView(APIView):
             user=request.user
         ).values_list('listing_id', flat=True)
 
-        listings = Listing.objects.filter(id__in=saved_ids, status='active').prefetch_related('images')
+        listings = Listing.objects.filter(id__in=saved_ids, status='active').select_related('supplier__profile', 'promotion').prefetch_related('images')
         serializer = ListingCardSerializer(listings, many=True)
         return Response(serializer.data)
 

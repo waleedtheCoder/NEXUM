@@ -4,6 +4,7 @@ Uses scikit-learn LinearRegression per (city, category) pair.
 Requires at least 2 months of data; returns None when insufficient.
 """
 import datetime
+from collections import defaultdict
 
 import numpy as np
 from sklearn.linear_model import LinearRegression
@@ -15,48 +16,50 @@ def _next_month(d: datetime.date) -> datetime.date:
     return datetime.date(d.year, d.month + 1, 1)
 
 
-def _forecast_pair(city: str, category: str, forecast_month: datetime.date) -> dict | None:
-    from analytics.models import MarketSnapshot
-
-    snaps = list(
-        MarketSnapshot.objects.filter(city=city, category=category)
-        .order_by('month')
-        .values('month', 'units_sold')
-    )
-
+def _forecast_from_snaps(city: str, category: str, snaps: list, forecast_month: datetime.date) -> dict | None:
     if len(snaps) < 2:
         return None
 
     X = np.array([[i] for i in range(len(snaps))], dtype=float)
     y = np.array([s['units_sold'] for s in snaps], dtype=float)
 
-    model = LinearRegression().fit(X, y)
+    model     = LinearRegression().fit(X, y)
     predicted = float(max(0.0, model.predict([[len(snaps)]])[0]))
-    r2 = float(model.score(X, y))
+    r2        = float(model.score(X, y))
     confidence = max(0.0, min(1.0, r2))
 
     return {
-        'city': city,
-        'category': category,
-        'forecastMonth': forecast_month.strftime('%Y-%m'),
+        'city':           city,
+        'category':       category,
+        'forecastMonth':  forecast_month.strftime('%Y-%m'),
         'predictedUnits': round(predicted, 1),
-        'confidence': round(confidence, 3),
+        'confidence':     round(confidence, 3),
     }
 
 
-def get_forecast(city: str = '') -> dict:
+def _load_grouped_snaps(city: str = '') -> dict:
+    """Load all MarketSnapshot rows in one query, grouped by (city, category)."""
     from analytics.models import MarketSnapshot
 
-    today = datetime.date.today()
-    forecast_month = _next_month(today.replace(day=1))
-
-    qs = MarketSnapshot.objects.values('city', 'category').distinct()
+    qs = MarketSnapshot.objects.order_by('city', 'category', 'month').values('city', 'category', 'month', 'units_sold')
     if city:
         qs = qs.filter(city__iexact=city)
 
+    grouped: dict[tuple, list] = defaultdict(list)
+    for snap in qs:
+        grouped[(snap['city'], snap['category'])].append(snap)
+    return grouped
+
+
+def get_forecast(city: str = '') -> dict:
+    today          = datetime.date.today()
+    forecast_month = _next_month(today.replace(day=1))
+
+    grouped = _load_grouped_snaps(city)
+
     predictions = []
-    for row in qs:
-        result = _forecast_pair(row['city'], row['category'], forecast_month)
+    for (city_key, category_key), snaps in grouped.items():
+        result = _forecast_from_snaps(city_key, category_key, snaps, forecast_month)
         if result:
             predictions.append(result)
 
@@ -64,30 +67,37 @@ def get_forecast(city: str = '') -> dict:
 
     return {
         'forecastMonth': forecast_month.strftime('%Y-%m'),
-        'predictions': predictions,
+        'predictions':   predictions,
     }
 
 
 def rebuild_forecasts() -> int:
-    """Persist DemandForecast rows for all city+category pairs."""
-    from analytics.models import DemandForecast, MarketSnapshot
+    """Persist DemandForecast rows for all city+category pairs via a single bulk upsert."""
+    from analytics.models import DemandForecast
 
-    today = datetime.date.today()
+    today          = datetime.date.today()
     forecast_month = _next_month(today.replace(day=1))
 
-    pairs = MarketSnapshot.objects.values('city', 'category').distinct()
-    count = 0
-    for row in pairs:
-        result = _forecast_pair(row['city'], row['category'], forecast_month)
+    grouped = _load_grouped_snaps()
+
+    to_upsert = []
+    for (city_key, category_key), snaps in grouped.items():
+        result = _forecast_from_snaps(city_key, category_key, snaps, forecast_month)
         if result:
-            DemandForecast.objects.update_or_create(
-                city=row['city'],
-                category=row['category'],
+            to_upsert.append(DemandForecast(
+                city=city_key,
+                category=category_key,
                 forecast_month=forecast_month,
-                defaults={
-                    'predicted_units': result['predictedUnits'],
-                    'confidence': result['confidence'],
-                },
-            )
-            count += 1
-    return count
+                predicted_units=result['predictedUnits'],
+                confidence=result['confidence'],
+            ))
+
+    if to_upsert:
+        DemandForecast.objects.bulk_create(
+            to_upsert,
+            update_conflicts=True,
+            unique_fields=['city', 'category', 'forecast_month'],
+            update_fields=['predicted_units', 'confidence'],
+        )
+
+    return len(to_upsert)

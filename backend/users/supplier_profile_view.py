@@ -33,10 +33,16 @@ class SupplierPublicProfileView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, supplier_id):
+        # Single JOIN query instead of two separate lookups.
         try:
-            user    = User.objects.get(id=supplier_id)
-            profile = UserProfile.objects.get(user=user)
-        except (User.DoesNotExist, UserProfile.DoesNotExist):
+            user    = User.objects.select_related('profile').get(id=supplier_id)
+            profile = user.profile
+        except User.DoesNotExist:
+            return Response(
+                {'detail': 'Supplier not found.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except UserProfile.DoesNotExist:
             return Response(
                 {'detail': 'Supplier not found.'},
                 status=status.HTTP_404_NOT_FOUND,
@@ -48,8 +54,7 @@ class SupplierPublicProfileView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        listings = Listing.objects.filter(supplier=user, status='active').order_by('-created_at')
-        name     = user.get_full_name() or user.username
+        name = user.get_full_name() or user.username
 
         is_favourite = False
         if request.user and request.user.is_authenticated:
@@ -61,6 +66,11 @@ class SupplierPublicProfileView(APIView):
         from django.db.models import Avg, Count
         agg = Review.objects.filter(supplier=user).aggregate(avg=Avg('rating'), count=Count('id'))
 
+        # Use a single queryset: count() uses SELECT COUNT(*) and the slice adds LIMIT.
+        listings_base  = Listing.objects.filter(supplier=user, status='active').order_by('-created_at')
+        total_listings = listings_base.count()
+        listing_page   = listings_base.select_related('promotion').prefetch_related('images')[:20]
+
         return Response({
             'id':            str(user.id),
             'name':          name,
@@ -68,7 +78,7 @@ class SupplierPublicProfileView(APIView):
             'avatarColor':   avatar_color_for(user.id),
             'rating':        round(agg['avg'], 1) if agg['avg'] else None,
             'totalReviews':  agg['count'],
-            'totalListings': listings.count(),
+            'totalListings': total_listings,
             'is_favourite':  is_favourite,
-            'listings':      ListingCardSerializer(listings[:20], many=True).data,
+            'listings':      ListingCardSerializer(listing_page, many=True).data,
         })

@@ -3,7 +3,6 @@ from decimal import Decimal
 from rest_framework import serializers
 from .models import Listing, SavedListing, ListingPromotion, ListingImage
 from .utils import time_ago, get_initials, compute_total_value
-from orders.models import Order
 
 
 class ListingCardSerializer(serializers.ModelSerializer):
@@ -92,21 +91,20 @@ class ListingDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_seller(self, obj):
-        from orders.models import Review
-        from django.db.models import Avg, Count
         supplier = obj.supplier
         name     = supplier.first_name or supplier.email or 'Supplier'
         profile  = getattr(supplier, 'profile', None)
-        agg = Review.objects.filter(supplier=supplier).aggregate(
-            avg=Avg('rating'), count=Count('id')
-        )
-        sales = Order.objects.filter(supplier=supplier, status='delivered').count()
+        # Read values pre-computed as correlated subqueries in ListingDetailView —
+        # no extra DB queries needed here.
+        avg_r = getattr(obj, '_supplier_avg_rating', None)
+        count = getattr(obj, '_supplier_review_count', 0) or 0
+        sales = getattr(obj, '_supplier_sales', 0) or 0
         return {
             'id':           supplier.pk,
             'name':         name,
             'initials':     get_initials(name),
-            'rating':       round(agg['avg'], 1) if agg['avg'] else None,
-            'totalReviews': agg['count'],
+            'rating':       round(avg_r, 1) if avg_r else None,
+            'totalReviews': count,
             'sales':        sales,
             'phone':        (profile.phone_number or '') if profile else '',
         }

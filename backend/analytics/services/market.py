@@ -21,7 +21,7 @@ def _next_month(d: datetime.date) -> datetime.date:
 
 
 def rebuild_snapshots(months_back: int = 13) -> int:
-    """Recompute MarketSnapshot rows for the last N months from live Order data."""
+    """Recompute MarketSnapshot rows for the last N months via a single bulk upsert."""
     from orders.models import Order
     from analytics.models import MarketSnapshot
 
@@ -43,64 +43,78 @@ def rebuild_snapshots(months_back: int = 13) -> int:
         )
     )
 
-    count = 0
+    to_upsert = []
     for r in rows:
-        raw_month = r['month']
+        raw_month  = r['month']
         month_date = raw_month.date() if hasattr(raw_month, 'date') else raw_month
-        MarketSnapshot.objects.update_or_create(
+        to_upsert.append(MarketSnapshot(
             city=r['listing__location'] or '',
             category=r['listing__category'] or '',
             month=month_date,
-            defaults={
-                'units_sold': r['total_units'] or 0,
-                'revenue': r['total_revenue'] or Decimal('0'),
-                'order_count': r['total_orders'] or 0,
-            },
+            units_sold=r['total_units'] or 0,
+            revenue=r['total_revenue'] or Decimal('0'),
+            order_count=r['total_orders'] or 0,
+        ))
+
+    if to_upsert:
+        MarketSnapshot.objects.bulk_create(
+            to_upsert,
+            update_conflicts=True,
+            unique_fields=['city', 'category', 'month'],
+            update_fields=['units_sold', 'revenue', 'order_count'],
         )
-        count += 1
-    return count
+
+    return len(to_upsert)
 
 
 def rebuild_top_products() -> None:
-    """Recompute top-10 products per city for the current month."""
+    """Recompute top-10 products per city for the current month via a single cross-city query."""
     from orders.models import Order
-    from listings.models import Listing
     from analytics.models import TopProduct
 
-    today = datetime.date.today()
+    today      = datetime.date.today()
     month_start = today.replace(day=1)
-    month_end = _next_month(month_start)
+    month_end   = _next_month(month_start)
 
-    cities = (
-        Listing.objects.filter(status='active')
-        .values_list('location', flat=True)
-        .distinct()
+    # One query across all cities — avoids O(n_cities) round trips.
+    rows = (
+        Order.objects
+        .filter(
+            created_at__date__gte=month_start,
+            created_at__date__lt=month_end,
+            status__in=['confirmed', 'shipped', 'delivered'],
+            listing__isnull=False,
+        )
+        .values('listing__location', 'listing')
+        .annotate(units=Sum('quantity'))
+        .order_by('listing__location', '-units')
     )
 
-    for city in cities:
-        top = (
-            Order.objects.filter(
-                created_at__date__gte=month_start,
-                created_at__date__lt=month_end,
-                status__in=['confirmed', 'shipped', 'delivered'],
-                listing__location=city,
-                listing__isnull=False,
-            )
-            .values('listing')
-            .annotate(units=Sum('quantity'))
-            .order_by('-units')[:10]
-        )
+    # Group by city in Python, keep top-10 per city.
+    by_city: dict[str, list] = {}
+    for row in rows:
+        city = row['listing__location'] or ''
+        if city not in by_city:
+            by_city[city] = []
+        if len(by_city[city]) < 10 and row['listing']:
+            by_city[city].append(row)
 
-        TopProduct.objects.filter(city=city, month=month_start).delete()
-        for rank, item in enumerate(top, 1):
-            if item['listing']:
-                TopProduct.objects.create(
-                    city=city,
-                    listing_id=item['listing'],
-                    rank=rank,
-                    units_sold=item['units'],
-                    month=month_start,
-                )
+    # Delete all existing rows for this month, then bulk create the new rankings.
+    TopProduct.objects.filter(month=month_start).delete()
+
+    to_create = []
+    for city, city_rows in by_city.items():
+        for rank, item in enumerate(city_rows, 1):
+            to_create.append(TopProduct(
+                city=city,
+                listing_id=item['listing'],
+                rank=rank,
+                units_sold=item['units'],
+                month=month_start,
+            ))
+
+    if to_create:
+        TopProduct.objects.bulk_create(to_create)
 
 
 # ── Read helpers ──────────────────────────────────────────────────────────────
@@ -108,7 +122,7 @@ def rebuild_top_products() -> None:
 def get_current_month_summary(city: str = '') -> dict:
     from analytics.models import MarketSnapshot
 
-    today = datetime.date.today()
+    today       = datetime.date.today()
     month_start = today.replace(day=1)
 
     qs = MarketSnapshot.objects.filter(month=month_start)
@@ -123,8 +137,8 @@ def get_current_month_summary(city: str = '') -> dict:
         c = categories.setdefault(snap.category, {
             'category': snap.category, 'unitsSold': 0, 'revenue': '0.00', 'orderCount': 0
         })
-        c['unitsSold'] += snap.units_sold
-        c['revenue'] = str(Decimal(c['revenue']) + snap.revenue)
+        c['unitsSold']  += snap.units_sold
+        c['revenue']     = str(Decimal(c['revenue']) + snap.revenue)
         c['orderCount'] += snap.order_count
 
         # city roll-up
@@ -133,7 +147,7 @@ def get_current_month_summary(city: str = '') -> dict:
         })
         ct['unitsSold'] += snap.units_sold
         if snap.units_sold > ct['_top']:
-            ct['_top'] = snap.units_sold
+            ct['_top']        = snap.units_sold
             ct['topCategory'] = snap.category
 
     # compute growth vs previous month
@@ -157,8 +171,8 @@ def get_current_month_summary(city: str = '') -> dict:
     city_list = [{k: v for k, v in ct.items() if k != '_top'} for ct in city_totals.values()]
 
     return {
-        'month': month_start.strftime('%Y-%m'),
-        'categories': sorted(categories.values(), key=lambda x: -x['unitsSold']),
+        'month':         month_start.strftime('%Y-%m'),
+        'categories':    sorted(categories.values(), key=lambda x: -x['unitsSold']),
         'cityBreakdown': sorted(city_list, key=lambda x: -x['unitsSold']),
     }
 
@@ -166,7 +180,7 @@ def get_current_month_summary(city: str = '') -> dict:
 def get_history(city: str = '', category: str = '', months: int = 12) -> dict:
     from analytics.models import MarketSnapshot
 
-    today = datetime.date.today()
+    today  = datetime.date.today()
     cutoff = (today.replace(day=1) - datetime.timedelta(days=months * 31)).replace(day=1)
 
     qs = MarketSnapshot.objects.filter(month__gte=cutoff).order_by('month')
@@ -178,13 +192,13 @@ def get_history(city: str = '', category: str = '', months: int = 12) -> dict:
     by_month: dict[str, dict] = {}
     for snap in qs:
         key = snap.month.strftime('%Y-%m')
-        m = by_month.setdefault(key, {
+        m   = by_month.setdefault(key, {
             'month': key, 'totalUnits': 0, 'totalRevenue': '0.00',
             'totalOrders': 0, 'categories': {}
         })
-        m['totalUnits'] += snap.units_sold
-        m['totalRevenue'] = str(Decimal(m['totalRevenue']) + snap.revenue)
-        m['totalOrders'] += snap.order_count
+        m['totalUnits']   += snap.units_sold
+        m['totalRevenue']  = str(Decimal(m['totalRevenue']) + snap.revenue)
+        m['totalOrders']  += snap.order_count
         cat = m['categories'].setdefault(snap.category, {
             'category': snap.category, 'unitsSold': 0
         })
@@ -202,7 +216,7 @@ def get_top_products(city: str = '') -> dict:
     from analytics.models import TopProduct
     from listings.models import Listing
 
-    today = datetime.date.today()
+    today       = datetime.date.today()
     month_start = today.replace(day=1)
 
     qs = TopProduct.objects.filter(month=month_start).select_related(
@@ -215,16 +229,16 @@ def get_top_products(city: str = '') -> dict:
     for tp in qs:
         lst = tp.listing
         by_city.setdefault(tp.city, []).append({
-            'rank': tp.rank,
-            'id': lst.id,
-            'title': lst.product_name,
-            'category': lst.category,
-            'price': str(lst.price),
+            'rank':      tp.rank,
+            'id':        lst.id,
+            'title':     lst.product_name,
+            'category':  lst.category,
+            'price':     str(lst.price),
             'unitsSold': tp.units_sold,
-            'imageUrl': lst.image_url,
+            'imageUrl':  lst.image_url,
             'supplier': {
-                'id': lst.supplier_id,
-                'name': lst.supplier.get_full_name() or lst.supplier.username,
+                'id':       lst.supplier_id,
+                'name':     lst.supplier.get_full_name() or lst.supplier.username,
                 'verified': lst.supplier.profile.verification_status == 'verified',
             },
         })

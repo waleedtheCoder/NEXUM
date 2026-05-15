@@ -19,9 +19,9 @@ def _is_stale(rec) -> bool:
 
 def _trusted_supplier_ids() -> set[int]:
     """IDs of verified OR highly-rated (avg rating ≥ 4) suppliers."""
-    from django.contrib.auth.models import User
     from django.db.models import Avg
     from users.models import UserProfile
+    from orders.models import Review
 
     verified = set(
         UserProfile.objects.filter(
@@ -29,10 +29,14 @@ def _trusted_supplier_ids() -> set[int]:
         ).values_list('user_id', flat=True)
     )
 
+    # Aggregate on the Review table grouped by supplier — avoids annotating
+    # every User in the system just to find a few high-rated suppliers.
     highly_rated = set(
-        User.objects.annotate(avg_r=Avg('reviews_received__rating'))
+        Review.objects
+        .values('supplier_id')
+        .annotate(avg_r=Avg('rating'))
         .filter(avg_r__gte=4.0)
-        .values_list('id', flat=True)
+        .values_list('supplier_id', flat=True)
     )
 
     return verified | highly_rated
