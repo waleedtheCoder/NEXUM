@@ -1,3 +1,5 @@
+from django.db.models import Count, Q
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -11,21 +13,20 @@ class SupplierDashboardView(APIView):
     GET /api/listings/supplier/dashboard/
     Protected (supplier only).
 
-    REPLACES the existing SupplierDashboardView in listings/views.py.
-    Change from the original: adds 'Completed Sales' to the performance array
-    by querying the orders app once it is migrated. Falls back to 0 gracefully
-    so the app continues working before the orders app is set up.
-
-    Response shape is identical to the existing endpoint — no frontend changes needed.
+    Response shape is identical to the SupplierDashboardView in listings/views.py.
     """
     def get(self, request):
         user = request.user
 
-        active_count  = Listing.objects.filter(supplier=user, status='active').count()
-        pending_count = Listing.objects.filter(supplier=user, status='pending').count()
+        # Collapse the three Listing counts into one aggregate query.
+        listing_agg = Listing.objects.filter(supplier=user).aggregate(
+            active=Count('id', filter=Q(status='active')),
+            pending=Count('id', filter=Q(status='pending')),
+        )
+        active_count  = listing_agg['active']
+        pending_count = listing_agg['pending']
         total_inquiries = Conversation.objects.filter(seller=user).count()
 
-        # Graceful fallback while orders app migration is pending
         try:
             from orders.models import Order
             completed_sales = Order.objects.filter(

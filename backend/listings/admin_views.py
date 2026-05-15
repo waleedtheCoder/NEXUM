@@ -20,7 +20,7 @@ class AdminListingsView(APIView):
         if not _is_admin(request):
             return Response({'detail': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
 
-        listings = Listing.objects.select_related('supplier').order_by('-created_at')
+        listings = Listing.objects.select_related('supplier').order_by('-created_at')[:500]
         results = []
         for l in listings:
             results.append({

@@ -326,9 +326,12 @@ class CreateListingView(APIView):
             is_featured=is_verified,
         )
 
-        # Create ListingImage records for each uploaded photo
-        for i, url in enumerate(image_urls):
-            ListingImage.objects.create(listing=listing, url=url, order=i)
+        # Create ListingImage records for each uploaded photo (single bulk INSERT).
+        if image_urls:
+            ListingImage.objects.bulk_create([
+                ListingImage(listing=listing, url=url, order=i)
+                for i, url in enumerate(image_urls)
+            ])
 
         # Prefetch for serializer
         listing = Listing.objects.prefetch_related('images').get(pk=listing.pk)
@@ -386,12 +389,15 @@ class ListingManageView(APIView):
         if 'cities' in d:
             listing.location = ', '.join(d['cities']) if d['cities'] else 'Pakistan'
 
-        # Handle image updates — replace all images when imageUrls is provided
+        # Handle image updates — replace all images when imageUrls is provided.
         image_urls = d.get('imageUrls')
         if image_urls is not None:
             ListingImage.objects.filter(listing=listing).delete()
-            for i, url in enumerate(image_urls):
-                ListingImage.objects.create(listing=listing, url=url, order=i)
+            if image_urls:
+                ListingImage.objects.bulk_create([
+                    ListingImage(listing=listing, url=url, order=i)
+                    for i, url in enumerate(image_urls)
+                ])
             listing.image_url = image_urls[0] if image_urls else ''
         elif 'imageUrl' in d:
             # Legacy single-image update
