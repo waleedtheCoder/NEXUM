@@ -25,6 +25,7 @@ Pillow==12.2.0
 httpx==0.28.1
 requests==2.33.0
 django-cors-headers==4.9.0
+whitenoise==6.12.0
 
 # Cache / Messaging
 redis==7.4.0
@@ -37,6 +38,6 @@ PyJWT==2.12.1
 reportlab==4.4.10
 
 # ── Analytics / AI ────────────────────────────────────────────────────────────
-numpy>=1.26
-pandas>=2.2
-scikit-learn>=1.4
+numpy==2.4.4
+pandas==3.0.2
+scikit-learn==1.8.0

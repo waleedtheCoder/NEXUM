@@ -13,11 +13,7 @@ from .models import UserProfile
 from listings.models import Listing
 from orders.models import Order
 
-ADMIN_SECRET = 'nexum_admin_2024'
-
-
-def _is_admin(request):
-    return request.headers.get('X-Admin-Secret') == ADMIN_SECRET
+from .admin_auth import is_admin as _is_admin
 
 
 class AdminStatsView(APIView):

@@ -1,10 +1,11 @@
 import config from '../../config';
-import { ADMIN_SECRET } from '../constants/adminConfig';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BASE_URL = (config.BACKEND_URL || '').replace(/\/$/, '');
 const TIMEOUT_MS = 15000;
 
 async function _adminFetch(path, { method = 'GET', body } = {}) {
+  const adminToken = await AsyncStorage.getItem('admin_token');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -14,7 +15,7 @@ async function _adminFetch(path, { method = 'GET', body } = {}) {
       method,
       headers: {
         'Content-Type': 'application/json',
-        'X-Admin-Secret': ADMIN_SECRET,
+        ...(adminToken ? { 'X-Admin-Token': adminToken } : {}),
       },
       body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal,
@@ -37,6 +38,11 @@ async function _adminFetch(path, { method = 'GET', body } = {}) {
     throw new Error(payload?.detail || 'Request failed.');
   }
   return payload;
+}
+
+// Returns { token, email } on success; throws on bad credentials.
+export async function adminLoginRequest(email, password) {
+  return _adminFetch('/api/users/admin/login/', { method: 'POST', body: { email, password } });
 }
 
 export async function getAdminStats() {

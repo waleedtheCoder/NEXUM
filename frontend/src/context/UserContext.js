@@ -147,9 +147,9 @@ export function UserProvider({ children }) {
   };
 
   // ── Admin login / logout ──────────────────────────────────────────────────
-  const adminLogin = async (email) => {
+  const adminLogin = async (email, token) => {
     try {
-      await AsyncStorage.multiSet([['is_admin', 'true'], ['admin_email', email]]);
+      await AsyncStorage.multiSet([['is_admin', 'true'], ['admin_email', email], ['admin_token', token]]);
       setIsAdmin(true);
       setAdminEmail(email);
     } catch (e) {
@@ -159,7 +159,7 @@ export function UserProvider({ children }) {
 
   const adminLogout = async () => {
     try {
-      await AsyncStorage.multiRemove(['is_admin', 'admin_email']);
+      await AsyncStorage.multiRemove(['is_admin', 'admin_email', 'admin_token']);
       setIsAdmin(false);
       setAdminEmail(null);
     } catch (e) {

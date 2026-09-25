@@ -18,6 +18,7 @@ from .supplier_profile_view import SupplierPublicProfileView
 from .network_views import SupplierNetworkView, ToggleFavouriteSupplierView
 from .reminder_views import RemindersView, ReminderDetailView
 from .profile_image_view import ProfileImageUploadView
+from .admin_auth import AdminLoginView
 from .admin_views import AdminStatsView, AdminSuppliersView, AdminShopkeepersView, AdminVerificationsView
 from .verification_view import SupplierVerificationView
 
@@ -47,6 +48,7 @@ urlpatterns = [
     # ── Verification ─────────────────────────────────────────────────────
     path('verification/request/', SupplierVerificationView.as_view(), name='verification-request'),
     # ── Admin ────────────────────────────────────────────────────────────
+    path('admin/login/',                        AdminLoginView.as_view(),          name='admin-login'),
     path('admin/stats/',                        AdminStatsView.as_view(),          name='admin-stats'),
     path('admin/suppliers/',                    AdminSuppliersView.as_view(),      name='admin-suppliers'),
     path('admin/shopkeepers/',                  AdminShopkeepersView.as_view(),    name='admin-shopkeepers'),

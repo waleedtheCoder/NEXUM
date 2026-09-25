@@ -29,14 +29,34 @@ def _env_to_bool(value, default=False):
 
 _load_env_file(os.path.join(BASE_DIR, '.env'))
 
+# Render sets RENDER=true on its servers — default to production-safe values there.
+IS_RENDER = _env_to_bool(os.getenv('RENDER'))
+
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-change-me')
-DEBUG      = _env_to_bool(os.getenv('DJANGO_DEBUG'), default=True)
+DEBUG      = _env_to_bool(os.getenv('DJANGO_DEBUG'), default=not IS_RENDER)
+
+if not DEBUG and SECRET_KEY == 'django-insecure-change-me':
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is False.')
 
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost,192.168.110.200').split(',')
     if host.strip()
 ]
+
+# Render provides the service's public hostname automatically.
+_render_host = os.getenv('RENDER_EXTERNAL_HOSTNAME', '').strip()
+if _render_host:
+    ALLOWED_HOSTS.append(_render_host)
+
+CSRF_TRUSTED_ORIGINS = [f'https://{host}' for host in ALLOWED_HOSTS if host not in {'127.0.0.1', 'localhost'}]
+
+if not DEBUG:
+    # Render terminates TLS at its proxy and forwards plain HTTP.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE   = True
+    CSRF_COOKIE_SECURE      = True
 
 # ── Application definition ────────────────────────────────────────────────────
 INSTALLED_APPS = [
@@ -62,6 +82,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -173,10 +194,13 @@ CORS_ALLOWED_ORIGINS = [
     f"http://{os.getenv('LAN_IP', '192.168.1.100')}:8081",
 ]
 
-# In production (DJANGO_DEBUG=False), restrict to your real domain
+# In production (DJANGO_DEBUG=False), only origins listed in CORS_ALLOWED_ORIGINS.
+# The native mobile app does not send CORS requests, so this can stay empty.
 if not DEBUG:
     CORS_ALLOWED_ORIGINS = [
-        'https://nexum.app',   # replace with real domain before go-live
+        origin.strip()
+        for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+        if origin.strip()
     ]
 
 CORS_ALLOW_HEADERS = [
@@ -193,7 +217,13 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # ── Static & Media files ──────────────────────────────────────────────────────
-STATIC_URL = 'static/'
+STATIC_URL  = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'   # collectstatic target, served by WhiteNoise
+
+STORAGES = {
+    'default':     {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+}
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Media (uploaded images) — local dev only

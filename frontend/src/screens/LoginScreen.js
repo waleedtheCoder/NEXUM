@@ -10,7 +10,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import BubblyButton from '../components/BubblyButton';
 import { useUser } from '../context/UserContext';
 import { loginWithBackend, normalizeRoleFromApi } from '../services/authApi';
-import { isAdminEmail, ADMIN_PASSWORD } from '../constants/adminConfig';
+import { adminLoginRequest } from '../services/adminApi';
 import { fonts, spacing, radii } from '../constants/theme';
 import { useTheme } from '../hooks/useTheme';
 import { useLanguage } from '../hooks/useLanguage';
@@ -34,13 +34,16 @@ export default function LoginScreen() {
     }
     setLoading(true);
 
-    // ── Admin bypass — no Firebase needed ────────────────────────────────────
+    // ── Admin login — verified by the backend; falls through for normal users ──
     const trimmedEmail = email.trim().toLowerCase();
-    if (isAdminEmail(trimmedEmail) && password === ADMIN_PASSWORD) {
-      await adminLogin(trimmedEmail);
+    try {
+      const admin = await adminLoginRequest(trimmedEmail, password);
+      await adminLogin(admin.email, admin.token);
       setLoading(false);
       navigation.reset({ index: 0, routes: [{ name: 'AdminDashboard' }] });
       return;
+    } catch {
+      // Not an admin (or admin login unavailable) — continue with normal login.
     }
 
     try {

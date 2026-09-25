@@ -1,7 +1,4 @@
-import os
 import uuid
-import urllib.request
-import urllib.error
 
 from django.db.models import Count
 
@@ -12,11 +9,7 @@ from rest_framework import status
 
 from .models import Listing, SavedListing
 from .serializers import ListingCardSerializer
-
-
-SUPABASE_URL            = os.getenv('SUPABASE_URL', '').rstrip('/')
-SUPABASE_SERVICE_KEY    = os.getenv('SUPABASE_SERVICE_ROLE_KEY', '')
-SUPABASE_BUCKET         = 'listings'
+from core.storage import upload_image, StorageNotConfigured, StorageUploadFailed
 
 
 # ── 3. Trending search ───────────────────────────────────────────────────────
@@ -115,36 +108,14 @@ class ImageUploadView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-            return Response(
-                {'detail': 'Image storage is not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing).'},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-
         ext      = image.name.rsplit('.', 1)[-1].lower() if '.' in image.name else 'jpg'
         filename = f"{uuid.uuid4().hex}.{ext}"
-        object_path = f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_BUCKET}/{filename}"
 
-        data = image.read()
-        req  = urllib.request.Request(
-            object_path,
-            data=data,
-            method='POST',
-            headers={
-                'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}',
-                'Content-Type':  image.content_type,
-                'x-upsert':      'true',
-            },
-        )
         try:
-            with urllib.request.urlopen(req) as resp:
-                resp.read()
-        except urllib.error.HTTPError as exc:
-            body = exc.read().decode('utf-8', errors='replace')
-            return Response(
-                {'detail': f'Storage upload failed: {body}'},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
+            public_url = upload_image(image.read(), image.content_type, filename)
+        except StorageNotConfigured as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        except StorageUploadFailed as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
 
-        public_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET}/{filename}"
         return Response({'imageUrl': public_url}, status=status.HTTP_201_CREATED)

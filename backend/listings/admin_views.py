@@ -5,11 +5,7 @@ from rest_framework.permissions import AllowAny
 
 from .models import Listing
 
-ADMIN_SECRET = 'nexum_admin_2024'
-
-
-def _is_admin(request):
-    return request.headers.get('X-Admin-Secret') == ADMIN_SECRET
+from users.admin_auth import is_admin as _is_admin
 
 
 class AdminListingsView(APIView):

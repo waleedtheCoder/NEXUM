@@ -25,14 +25,6 @@
       },
       "package": "com.nexum.app"
     },
-    "fonts": [
-      {
-        "Montserrat-Regular": "./assets/fonts/Montserrat-Regular.ttf",
-        "Montserrat-Medium": "./assets/fonts/Montserrat-Medium.ttf",
-        "Montserrat-SemiBold": "./assets/fonts/Montserrat-SemiBold.ttf",
-        "Montserrat-Bold": "./assets/fonts/Montserrat-Bold.ttf"
-      }
-    ],
     "plugins": [
       "expo-font"
     ]
